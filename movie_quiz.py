@@ -13,7 +13,7 @@ st.set_page_config(layout="wide")
 # --- App Title ---
 st.title("SQL Knowledge Game 🎮")
 st.write("Welcome to the SQL quiz app!")
-st.markdown("**Note:** Learn about SQL and Python using IMDb ratings of movies.")
+st.markdown("**Note:** Learn about SQL and Python - Database contains only films that I have rated on IMDb - 1339 titles rated since 2012.")
 
 # --- Question 1 ---
 st.write("---")
@@ -29,9 +29,9 @@ answer1 = st.radio(question1, options1, key="q1")
 
 if answer1 == "SELECT * FROM movies WHERE [IMDb Rating] > 8.0":
     st.success("✅ Correct!")
-    st.write("Here are the top 5 IMDb rated movies:")
-    top_movies = movies_df.sort_values("IMDb Rating", ascending=False).head(5)
-    st.dataframe(top_movies, width="stretch")
+    st.write("Here are all movies with IMDb rating above 8.0:")
+    top_movies = movies_df[movies_df["IMDb Rating"] > 8.0].sort_values("IMDb Rating", ascending=False)
+    st.dataframe(top_movies, width="stretch", height=400)
 elif answer1 != "-- Select an option --":
     st.error("❌ Try again.")
 
@@ -50,8 +50,8 @@ answer2 = st.radio(question2, options2, key="q2")
 if answer2 == "SELECT COUNT(*) FROM movies WHERE [IMDb Rating] > 9.0":
     st.success("✅ Correct!")
     st.write("Here are movies with IMDb rating above 9.0:")
-    top_rated = movies_df[movies_df["IMDb Rating"] > 9.0]
-    st.dataframe(top_rated, width="stretch")
+    top_rated = movies_df[movies_df["IMDb Rating"] > 9.0].sort_values("IMDb Rating", ascending=False)
+    st.dataframe(top_rated, width="stretch", height=400)
 elif answer2 != "-- Select an option --":
     st.error("❌ Not quite. Hint: COUNT(*) counts rows matching a condition.")
 
@@ -70,8 +70,8 @@ answer3 = st.radio(question3, options3, key="q3")
 if answer3 == "SELECT Title, [IMDb Rating] FROM movies WHERE Year > 2015":
     st.success("✅ Correct!")
     st.write("Here are movies released after 2015:")
-    recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "IMDb Rating", "Year"]]
-    st.dataframe(recent_movies, width="stretch")
+    recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "IMDb Rating", "Year"]].sort_values("IMDb Rating", ascending=False)
+    st.dataframe(recent_movies, width="stretch", height=400)
 elif answer3 != "-- Select an option --":
     st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
 
@@ -79,5 +79,5 @@ elif answer3 != "-- Select an option --":
 st.write("---")
 st.write("### Explore movies by IMDb rating")
 min_rating = st.slider("Show movies with IMDb rating at least:", 0, 10, 7)
-filtered_movies = movies_df[movies_df["IMDb Rating"] >= min_rating]
-st.dataframe(filtered_movies, width="stretch")
+filtered_movies = movies_df[movies_df["IMDb Rating"] >= min_rating].sort_values("IMDb Rating", ascending=False)
+st.dataframe(filtered_movies, width="stretch", height=400)
