@@ -1,0 +1,68 @@
+import streamlit as st
+import pandas as pd
+
+# --- Load Movies CSV ---
+# Make sure movies.csv is in the same folder as app.py in your GitHub repo
+movies_df = pd.read_csv("movies.csv")
+
+# --- App Title ---
+st.title("SQL Knowledge Game 🎮")
+st.write("Welcome to the SQL quiz app!")
+
+# --- Question 1 ---
+question1 = "Which SQL command retrieves all movies with an IMDb rating greater than 8.0?"
+options1 = [
+    "SELECT * FROM movies WHERE IMDb_Rating > 8.0",
+    "INSERT INTO movies WHERE IMDb_Rating > 8.0",
+    "UPDATE movies SET IMDb_Rating > 8.0",
+    "DELETE FROM movies WHERE IMDb_Rating > 8.0"
+]
+answer1 = st.radio(question1, options1, key="q1")
+
+if answer1 == "SELECT * FROM movies WHERE IMDb_Rating > 8.0":
+    st.success("✅ Correct!")
+    st.write("Here are your top 5 rated movies:")
+    st.table(movies_df.sort_values("IMDb Rating", ascending=False).head(5))
+elif answer1:
+    st.error("❌ Try again.")
+
+# --- Question 2 ---
+question2 = "How do you count the number of movies directed by 'Christopher Nolan'?"
+options2 = [
+    "SELECT COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'",
+    "SELECT SUM(Directors) FROM movies",
+    "SELECT Directors FROM movies",
+    "COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'"
+]
+answer2 = st.radio(question2, options2, key="q2")
+
+if answer2 == "SELECT COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'":
+    st.success("✅ Correct!")
+    st.write("Here are Christopher Nolan movies you rated:")
+    st.table(movies_df[movies_df["Directors"] == "Christopher Nolan"])
+elif answer2:
+    st.error("❌ Not quite. Hint: COUNT(*) counts rows matching a condition.")
+
+# --- Question 3 ---
+question3 = "Which SQL query lists the titles and your rating of movies released after 2015?"
+options3 = [
+    "SELECT Title, Your Rating FROM movies WHERE Year > 2015",
+    "SELECT Title, Your Rating FROM movies WHERE Year < 2015",
+    "UPDATE movies SET Year > 2015",
+    "DELETE FROM movies WHERE Year > 2015"
+]
+answer3 = st.radio(question3, options3, key="q3")
+
+if answer3 == "SELECT Title, Your Rating FROM movies WHERE Year > 2015":
+    st.success("✅ Correct!")
+    st.write("Here are movies released after 2015 that you rated:")
+    st.table(movies_df[movies_df["Year"] > 2015][["Title", "Your Rating"]])
+elif answer3:
+    st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
+
+# --- Optional: Filter by rating ---
+st.write("---")
+st.write("### Explore your movies")
+min_rating = st.slider("Show movies with rating at least:", 0, 10, 7)
+filtered_movies = movies_df[movies_df["Your Rating"] >= min_rating]
+st.dataframe(filtered_movies)
