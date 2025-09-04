@@ -25,7 +25,7 @@ if answer1 == "SELECT * FROM movies WHERE IMDb_Rating > 8.0":
     st.success("✅ Correct!")
     st.write("Here are your top 5 rated movies:")
     top_movies = movies_df.sort_values("IMDb Rating", ascending=False).head(5)
-    st.dataframe(top_movies, use_container_width=True)
+    st.dataframe(top_movies, width="stretch")
 elif answer1:
     st.error("❌ Try again.")
 
@@ -43,7 +43,7 @@ if answer2 == "SELECT COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'
     st.success("✅ Correct!")
     st.write("Here are Christopher Nolan movies you rated:")
     nolan_movies = movies_df[movies_df["Directors"] == "Christopher Nolan"]
-    st.dataframe(nolan_movies, use_container_width=True)
+    st.dataframe(nolan_movies, width="stretch")
 elif answer2:
     st.error("❌ Not quite. Hint: COUNT(*) counts rows matching a condition.")
 
@@ -61,7 +61,7 @@ if answer3 == "SELECT Title, Your_Rating FROM movies WHERE Year > 2015":
     st.success("✅ Correct!")
     st.write("Here are movies released after 2015 that you rated:")
     recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "Your Rating", "Year"]]
-    st.dataframe(recent_movies, use_container_width=True)
+    st.dataframe(recent_movies, width="stretch")
 elif answer3:
     st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
 
@@ -70,4 +70,4 @@ st.write("---")
 st.write("### Explore your movies")
 min_rating = st.slider("Show movies with rating at least:", 0, 10, 7)
 filtered_movies = movies_df[movies_df["Your Rating"] >= min_rating]
-st.dataframe(filtered_movies, use_container_width=True)
+st.dataframe(filtered_movies, width="stretch")
