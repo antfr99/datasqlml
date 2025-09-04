@@ -4,6 +4,12 @@ import pandas as pd
 # --- Load Movies CSV ---
 movies_df = pd.read_csv("movies.csv")
 
+# --- Clean column names to remove spaces ---
+movies_df.columns = movies_df.columns.str.strip()
+
+# Optional: show columns to verify
+# st.write("Columns in CSV:", movies_df.columns.tolist())
+
 # --- Page Config (make app wider) ---
 st.set_page_config(layout="wide")
 
