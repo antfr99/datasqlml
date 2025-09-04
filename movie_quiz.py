@@ -4,20 +4,23 @@ import pandas as pd
 # --- Load Movies CSV ---
 movies_df = pd.read_csv("movies.csv")
 
-# --- Clean column names to remove spaces ---
+# --- Clean column names ---
 movies_df.columns = movies_df.columns.str.strip()
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
 
 # --- App Title ---
-st.title("SQL Knowledge Game 🎮")
-st.write("Welcome to the SQL quiz app!")
-st.markdown("**Note:** Learn about SQL and Python - Database contains only films that I have rated on IMDb - 1339 titles rated since 2012.")
+st.title("SQL & Python Movie Quiz 🎮")
+st.write("Welcome to the SQL & Python quiz app!")
+st.markdown(
+    "**Note:** Learn about SQL and Python using my IMDb movie ratings. "
+    "The database contains only films I have rated - 1339 titles since 2012."
+)
 
-# --- Question 1 ---
+# --- QUESTION 1: SQL ---
 st.write("---")
-question1 = "Which SQL command retrieves all movies with an IMDb rating greater than 8.0?"
+question1 = "SQL: Which command retrieves all movies with an IMDb rating greater than 8.0?"
 options1 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE [IMDb Rating] > 8.0",
@@ -35,29 +38,29 @@ if answer1 == "SELECT * FROM movies WHERE [IMDb Rating] > 8.0":
 elif answer1 != "-- Select an option --":
     st.error("❌ Try again.")
 
-# --- Question 2 ---
+# --- QUESTION 2: Python ---
 st.write("---")
-question2 = "How do you count the number of movies with an IMDb rating above 9.0?"
+question2 = "Python: How do you filter movies with IMDb rating above 9.0 using pandas?"
 options2 = [
     "-- Select an option --",
-    "SELECT COUNT(*) FROM movies WHERE [IMDb Rating] > 9.0",
-    "SELECT SUM([IMDb Rating]) FROM movies",
-    "SELECT [IMDb Rating] FROM movies",
-    "COUNT(*) FROM movies WHERE [IMDb Rating] > 9.0"
+    "movies_df[movies_df['IMDb Rating'] > 9.0]",
+    "movies_df['IMDb Rating'] > 9.0",
+    "movies_df.filter('IMDb Rating' > 9.0)",
+    "movies_df.where('IMDb Rating' > 9.0)"
 ]
 answer2 = st.radio(question2, options2, key="q2")
 
-if answer2 == "SELECT COUNT(*) FROM movies WHERE [IMDb Rating] > 9.0":
+if answer2 == "movies_df[movies_df['IMDb Rating'] > 9.0]":
     st.success("✅ Correct!")
     st.write("Here are movies with IMDb rating above 9.0:")
     top_rated = movies_df[movies_df["IMDb Rating"] > 9.0].sort_values("IMDb Rating", ascending=False)
     st.dataframe(top_rated, width="stretch", height=400)
 elif answer2 != "-- Select an option --":
-    st.error("❌ Not quite. Hint: COUNT(*) counts rows matching a condition.")
+    st.error("❌ Not quite. Hint: Use pandas boolean indexing.")
 
-# --- Question 3 ---
+# --- QUESTION 3: SQL ---
 st.write("---")
-question3 = "Which SQL query lists the titles and IMDb rating of movies released after 2015?"
+question3 = "SQL: Which query lists the titles and IMDb rating of movies released after 2015?"
 options3 = [
     "-- Select an option --",
     "SELECT Title, [IMDb Rating] FROM movies WHERE Year > 2015",
@@ -73,7 +76,27 @@ if answer3 == "SELECT Title, [IMDb Rating] FROM movies WHERE Year > 2015":
     recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "IMDb Rating", "Year"]].sort_values("IMDb Rating", ascending=False)
     st.dataframe(recent_movies, width="stretch", height=400)
 elif answer3 != "-- Select an option --":
-    st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
+    st.error("❌ Not quite. Hint: Use SELECT with WHERE clause.")
+
+# --- QUESTION 4: Python ---
+st.write("---")
+question4 = "Python: How do you select the 'Title' and 'IMDb Rating' columns for movies after 2015?"
+options4 = [
+    "-- Select an option --",
+    "movies_df[movies_df['Year'] > 2015][['Title','IMDb Rating']]",
+    "movies_df[['Title','IMDb Rating'] > 2015]",
+    "movies_df.filter(['Title','IMDb Rating'], Year>2015)",
+    "movies_df[['Title','IMDb Rating']].where(Year>2015)"
+]
+answer4 = st.radio(question4, options4, key="q4")
+
+if answer4 == "movies_df[movies_df['Year'] > 2015][['Title','IMDb Rating']]":
+    st.success("✅ Correct!")
+    st.write("Here are movies released after 2015:")
+    recent_movies_py = movies_df[movies_df["Year"] > 2015][["Title", "IMDb Rating", "Year"]].sort_values("IMDb Rating", ascending=False)
+    st.dataframe(recent_movies_py, width="stretch", height=400)
+elif answer4 != "-- Select an option --":
+    st.error("❌ Not quite. Hint: Use pandas boolean indexing and column selection.")
 
 # --- Optional: Filter by IMDb rating ---
 st.write("---")
