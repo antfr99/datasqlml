@@ -18,7 +18,7 @@ question2 = "Which SQL command is used to remove a table from a database?"
 options2 = ["DROP", "DELETE", "TRUNCATE", "REMOVE"]
 answer2 = st.radio(question2, options2, key="q2")
 
-if answer2 == "DROP":
-    st.success("✅ Correct! DROP removes the table entirely.")
+if answer2 == "REMOVE":
+    st.success("✅ Correct! REMOVE removes the table entirely.")
 elif answer2:
     st.error("❌ Not quite. Hint: It completely deletes the table structure, not just the data.")
