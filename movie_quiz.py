@@ -16,6 +16,7 @@ st.markdown("**Note:** These are my personal ratings on IMDb.")
 st.write("---")
 question1 = "Which SQL command retrieves all movies with an IMDb rating greater than 8.0?"
 options1 = [
+    "-- Select an option --",
     "SELECT * FROM movies WHERE IMDb_Rating > 8.0",
     "INSERT INTO movies WHERE IMDb_Rating > 8.0",
     "UPDATE movies SET IMDb_Rating > 8.0",
@@ -28,13 +29,14 @@ if answer1 == "SELECT * FROM movies WHERE IMDb_Rating > 8.0":
     st.write("Here are your top 5 rated movies:")
     top_movies = movies_df.sort_values("IMDb Rating", ascending=False).head(5)
     st.dataframe(top_movies, width="stretch")
-elif answer1 != "":
+elif answer1 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # --- Question 2 ---
 st.write("---")
 question2 = "How do you count the number of movies directed by 'Christopher Nolan'?"
 options2 = [
+    "-- Select an option --",
     "SELECT COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'",
     "SELECT SUM(Directors) FROM movies",
     "SELECT Directors FROM movies",
@@ -47,13 +49,14 @@ if answer2 == "SELECT COUNT(*) FROM movies WHERE Directors = 'Christopher Nolan'
     st.write("Here are Christopher Nolan movies you rated:")
     nolan_movies = movies_df[movies_df["Directors"] == "Christopher Nolan"]
     st.dataframe(nolan_movies, width="stretch")
-elif answer2 != "":
+elif answer2 != "-- Select an option --":
     st.error("❌ Not quite. Hint: COUNT(*) counts rows matching a condition.")
 
 # --- Question 3 ---
 st.write("---")
 question3 = "Which SQL query lists the titles and your rating of movies released after 2015?"
 options3 = [
+    "-- Select an option --",
     "SELECT Title, Your_Rating FROM movies WHERE Year > 2015",
     "SELECT Title, Your_Rating FROM movies WHERE Year < 2015",
     "UPDATE movies SET Year > 2015",
@@ -66,7 +69,7 @@ if answer3 == "SELECT Title, Your_Rating FROM movies WHERE Year > 2015":
     st.write("Here are movies released after 2015 that you rated:")
     recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "Your Rating", "Year"]]
     st.dataframe(recent_movies, width="stretch")
-elif answer3 != "":
+elif answer3 != "-- Select an option --":
     st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
 
 # --- Optional: Filter by rating ---
