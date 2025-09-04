@@ -26,7 +26,7 @@ answer1 = st.radio(question1, options1, key="q1")
 
 if answer1 == "SELECT * FROM movies WHERE antfr99_Rating > 8.0":
     st.success("✅ Correct!")
-    st.write("Here are your top 5 rated movies:")
+    st.write("Here are antfr99 top 5 rated movies:")
     top_movies = movies_df.sort_values("IMDb Rating", ascending=False).head(5)
     st.dataframe(top_movies, width="stretch")
 elif answer1 != "-- Select an option --":
@@ -54,7 +54,7 @@ elif answer2 != "-- Select an option --":
 
 # --- Question 3 ---
 st.write("---")
-question3 = "Which SQL query lists the titles and your rating of movies released after 2015?"
+question3 = "Which SQL query lists the titles and antfr99 rating of movies released after 2015?"
 options3 = [
     "-- Select an option --",
     "SELECT Title, antfr99_Rating FROM movies WHERE Year > 2015",
@@ -67,14 +67,14 @@ answer3 = st.radio(question3, options3, key="q3")
 if answer3 == "SELECT Title, antfr99_Rating FROM movies WHERE Year > 2015":
     st.success("✅ Correct!")
     st.write("Here are movies released after 2015 that you rated:")
-    recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "Your Rating", "Year"]]
+    recent_movies = movies_df[movies_df["Year"] > 2015][["Title", "antfr99 Rating", "Year"]]
     st.dataframe(recent_movies, width="stretch")
 elif answer3 != "-- Select an option --":
     st.error("❌ Not quite. Hint: Use SELECT to get columns and a WHERE clause for filtering.")
 
 # --- Optional: Filter by rating ---
 st.write("---")
-st.write("### Explore your movies")
+st.write("### Explore antfr99 movies")
 min_rating = st.slider("Show movies with rating at least:", 0, 10, 7)
-filtered_movies = movies_df[movies_df["Your Rating"] >= min_rating]
+filtered_movies = movies_df[movies_df["antfr99 Rating"] >= min_rating]
 st.dataframe(filtered_movies, width="stretch")
