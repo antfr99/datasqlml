@@ -185,8 +185,179 @@ if ans15 == "SELECT Title, [Runtime (mins)] FROM movies ORDER BY [Runtime (mins)
 elif ans15 != "-- Select an option --":
     st.error("❌ Try again.")
 
-# Q16–Q25 follow the same structure: adjust all queries to use [IMDb Rating], numbered questions, label_visibility="collapsed".
-# For brevity, you can copy Q16–Q25 logic from your previous script and just replace [Your Rating] with [IMDb Rating] where applicable and add label_visibility="collapsed".
+# =========================
+# DIFFICULT SQL QUESTIONS CONTINUED
+# =========================
+
+# Q16
+st.write("**Q16.** SQL: Find the movie with the second-highest IMDb Rating using DENSE_RANK().")
+options16 = [
+    "-- Select an option --",
+    "SELECT Title, [IMDb Rating] FROM (SELECT Title, [IMDb Rating], DENSE_RANK() OVER (ORDER BY [IMDb Rating] DESC) AS rnk FROM movies) t WHERE rnk = 2",
+    "SELECT Title, MAX([IMDb Rating]) FROM movies",
+    "SELECT * FROM movies WHERE [IMDb Rating] = 2"
+]
+ans16 = st.radio("Q16", options16, key="q16", label_visibility="collapsed")
+if ans16.startswith("SELECT Title, [IMDb Rating] FROM (SELECT"):
+    st.success("✅ Correct!")
+    movies_df["Rank"] = movies_df["IMDb Rating"].rank(method="dense", ascending=False)
+    second_highest = movies_df[movies_df["Rank"] == 2][["Title", "IMDb Rating"]]
+    st.dataframe(second_highest, width="stretch")
+elif ans16 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q17
+st.write("**Q17.** SQL: Use a CTE to find the top-rated movie (IMDb Rating) per director.")
+options17 = [
+    "-- Select an option --",
+    "WITH cte AS (SELECT Directors, Title, [IMDb Rating], ROW_NUMBER() OVER (PARTITION BY Directors ORDER BY [IMDb Rating] DESC) AS rn FROM movies) SELECT * FROM cte WHERE rn = 1",
+    "SELECT Directors, MAX([IMDb Rating]) FROM movies GROUP BY Directors",
+    "SELECT DISTINCT Directors FROM movies"
+]
+ans17 = st.radio("Q17", options17, key="q17", label_visibility="collapsed")
+if ans17.startswith("WITH cte AS"):
+    st.success("✅ Correct!")
+    top_per_director = movies_df.sort_values(["Directors", "IMDb Rating"], ascending=[True, False]).groupby("Directors").head(1)
+    st.dataframe(top_per_director[["Directors", "Title", "IMDb Rating"]], width="stretch")
+elif ans17 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q18
+st.write("**Q18.** SQL: Calculate a running total of Num Votes ordered by Release Date.")
+options18 = [
+    "-- Select an option --",
+    "SELECT [Release Date], [Num Votes], SUM([Num Votes]) OVER (ORDER BY [Release Date]) AS RunningTotal FROM movies",
+    "SELECT SUM([Num Votes]) FROM movies",
+    "SELECT * FROM movies ORDER BY [Num Votes]"
+]
+ans18 = st.radio("Q18", options18, key="q18", label_visibility="collapsed")
+if ans18.startswith("SELECT [Release Date], [Num Votes], SUM([Num Votes])"):
+    st.success("✅ Correct!")
+    running = movies_df.sort_values("Release Date").copy()
+    running["Running Total"] = running["Num Votes"].cumsum()
+    st.dataframe(running[["Release Date", "Num Votes", "Running Total"]], width="stretch")
+elif ans18 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q19
+st.write("**Q19.** SQL: Find directors who have movies in the most unique Genres.")
+options19 = [
+    "-- Select an option --",
+    "SELECT Directors, COUNT(DISTINCT Genres) AS GenreCount FROM movies GROUP BY Directors ORDER BY GenreCount DESC",
+    "SELECT Directors, COUNT(*) FROM movies GROUP BY Directors",
+    "SELECT DISTINCT Genres FROM movies"
+]
+ans19 = st.radio("Q19", options19, key="q19", label_visibility="collapsed")
+if ans19.startswith("SELECT Directors, COUNT(DISTINCT Genres)"):
+    st.success("✅ Correct!")
+    genre_diversity = movies_df.groupby("Directors")["Genres"].nunique().reset_index(name="Unique Genres")
+    st.dataframe(genre_diversity.sort_values("Unique Genres", ascending=False), width="stretch")
+elif ans19 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q20
+st.write("**Q20.** SQL: Compare IMDb Rating of each movie with the one released just before it (LAG function).")
+options20 = [
+    "-- Select an option --",
+    "SELECT Title, [IMDb Rating], LAG([IMDb Rating]) OVER (ORDER BY [Release Date]) AS PrevRating FROM movies",
+    "SELECT Title, [IMDb Rating] FROM movies ORDER BY [Release Date]",
+    "SELECT * FROM movies WHERE [IMDb Rating] > 5"
+]
+ans20 = st.radio("Q20", options20, key="q20", label_visibility="collapsed")
+if ans20.startswith("SELECT Title, [IMDb Rating], LAG"):
+    st.success("✅ Correct!")
+    lagged = movies_df.sort_values("Release Date").copy()
+    lagged["Prev Rating"] = lagged["IMDb Rating"].shift(1)
+    st.dataframe(lagged[["Release Date", "Title", "IMDb Rating", "Prev Rating"]], width="stretch")
+elif ans20 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q21
+st.write("**Q21.** SQL: Perform a self-join to find movies with the same director released on the same year.")
+options21 = [
+    "-- Select an option --",
+    "SELECT a.Title, b.Title, a.Directors, a.Year FROM movies a JOIN movies b ON a.Directors = b.Directors AND a.Year = b.Year AND a.Title <> b.Title",
+    "SELECT * FROM movies WHERE Directors IS NOT NULL",
+    "SELECT DISTINCT Directors FROM movies"
+]
+ans21 = st.radio("Q21", options21, key="q21", label_visibility="collapsed")
+if ans21.startswith("SELECT a.Title, b.Title"):
+    st.success("✅ Correct!")
+    self_join = movies_df.merge(movies_df, on=["Directors", "Year"], suffixes=("_a", "_b"))
+    self_join = self_join[self_join["Title_a"] != self_join["Title_b"]]
+    st.dataframe(self_join[["Title_a", "Title_b", "Directors", "Year"]], width="stretch")
+elif ans21 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q22
+st.write("**Q22.** SQL: Find years between earliest and latest Release Date where no movie was released.")
+options22 = [
+    "-- Select an option --",
+    "SELECT y.Year FROM (SELECT MIN([Release Date]) AS MinYear, MAX([Release Date]) AS MaxYear FROM movies) r CROSS JOIN Years y WHERE y.Year BETWEEN r.MinYear AND r.MaxYear AND y.Year NOT IN (SELECT DISTINCT Year FROM movies)",
+    "SELECT DISTINCT Year FROM movies",
+    "SELECT * FROM movies ORDER BY [Release Date]"
+]
+ans22 = st.radio("Q22", options22, key="q22", label_visibility="collapsed")
+if ans22.startswith("SELECT y.Year FROM (SELECT MIN([Release Date])"):
+    st.success("✅ Correct!")
+    release_years = pd.to_datetime(movies_df["Release Date"], errors="coerce").dt.year.dropna().astype(int)
+    all_years = pd.Series(range(release_years.min(), release_years.max() + 1))
+    missing_years = all_years[~all_years.isin(release_years.unique())]
+    st.write("Years with no movies:", missing_years.tolist())
+elif ans22 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q23
+st.write("**Q23.** SQL: Find genres where average IMDb Rating is below the overall average.")
+options23 = [
+    "-- Select an option --",
+    "SELECT Genres FROM movies GROUP BY Genres HAVING AVG([IMDb Rating]) < (SELECT AVG([IMDb Rating]) FROM movies)",
+    "SELECT AVG([IMDb Rating]) FROM movies",
+    "SELECT DISTINCT Genres FROM movies"
+]
+ans23 = st.radio("Q23", options23, key="q23", label_visibility="collapsed")
+if ans23.startswith("SELECT Genres FROM movies GROUP BY Genres HAVING"):
+    st.success("✅ Correct!")
+    overall_avg = movies_df["IMDb Rating"].mean()
+    low_genres = movies_df.groupby("Genres")["IMDb Rating"].mean().reset_index().query("`IMDb Rating` < @overall_avg")
+    st.dataframe(low_genres, width="stretch")
+elif ans23 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q24
+st.write("**Q24.** SQL: Find the IMDb Rating value that appears most frequently.")
+options24 = [
+    "-- Select an option --",
+    "SELECT [IMDb Rating], COUNT(*) AS cnt FROM movies GROUP BY [IMDb Rating] ORDER BY cnt DESC LIMIT 1",
+    "SELECT MAX([IMDb Rating]) FROM movies",
+    "SELECT DISTINCT [IMDb Rating] FROM movies"
+]
+ans24 = st.radio("Q24", options24, key="q24", label_visibility="collapsed")
+if ans24.startswith("SELECT [IMDb Rating], COUNT(*)"):
+    st.success("✅ Correct!")
+    most_common = movies_df["IMDb Rating"].mode()[0]
+    freq = (movies_df["IMDb Rating"] == most_common).sum()
+    st.metric("Most Common IMDb Rating", most_common, help=f"Appears {freq} times")
+elif ans24 != "-- Select an option --":
+    st.error("❌ Try again.")
+
+# Q25
+st.write("**Q25.** SQL: Find average IMDb Rating per Year and difference to Your Rating.")
+options25 = [
+    "-- Select an option --",
+    "SELECT Year, AVG([IMDb Rating]) AS AvgIMDb, AVG([Your Rating]) AS AvgYour, (AVG([Your Rating]) - AVG([IMDb Rating])) AS Diff FROM movies GROUP BY Year ORDER BY Year",
+    "SELECT AVG([IMDb Rating]), AVG([Your Rating]) FROM movies",
+    "SELECT Year, [IMDb Rating], [Your Rating] FROM movies"
+]
+ans25 = st.radio("Q25", options25, key="q25", label_visibility="collapsed")
+if ans25.startswith("SELECT Year, AVG([IMDb Rating]) AS AvgIMDb"):
+    st.success("✅ Correct!")
+    year_compare = movies_df.groupby("Year")[["IMDb Rating", "Your Rating"]].mean().reset_index()
+    year_compare["Diff"] = year_compare["Your Rating"] - year_compare["IMDb Rating"]
+    st.dataframe(year_compare.sort_values("Year"), width="stretch")
+elif ans25 != "-- Select an option --":
+    st.error("❌ Try again.")
+
 
 # Optional: Explore by IMDb rating
 st.write("---")
