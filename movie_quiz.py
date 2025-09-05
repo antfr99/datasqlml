@@ -23,11 +23,11 @@ The goal is to practice coding in multiple languages, manipulate data, and creat
 st.header("Easy SQL Questions")
 
 # Q1
-st.write("**Q1.** SQL: Retrieve all movies you've rated.")
+st.write("**Q1.** SQL: Retrieve all movies.")
 options1 = [
     "-- Select an option --",
     "SELECT * FROM movies",
-    "SELECT Title, Your Rating FROM movies",
+    "SELECT Title, [IMDb Rating] FROM movies",
     "DELETE FROM movies"
 ]
 ans1 = st.radio("", options1, key="q1")
@@ -39,58 +39,58 @@ elif ans1 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q2
-st.write("**Q2.** SQL: Retrieve the Title and Your Rating for all movies in your list.")
+st.write("**Q2.** SQL: Retrieve the Title and IMDb Rating for all movies in your list.")
 options2 = [
     "-- Select an option --",
-    "SELECT Title, [Your Rating] FROM movies",
+    "SELECT Title, [IMDb Rating] FROM movies",
     "SELECT * FROM movies",
     "SELECT COUNT(*) FROM movies"
 ]
 ans2 = st.radio("", options2, key="q2")
 
-if ans2 == "SELECT Title, [Your Rating] FROM movies":
+if ans2 == "SELECT Title, [IMDb Rating] FROM movies":
     st.success("✅ Correct!")
-    st.dataframe(movies_df[["Title", "Your Rating"]], width="stretch", height=400)
+    st.dataframe(movies_df[["Title", "IMDb Rating"]], width="stretch", height=400)
 elif ans2 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q3
-st.write("**Q3.** SQL: Find all movies where Your Rating is greater than or equal to 9.")
+st.write("**Q3.** SQL: Find all movies where IMDb Rating is greater than or equal to 9.")
 options3 = [
     "-- Select an option --",
-    "SELECT * FROM movies WHERE [Your Rating] >= 9",
     "SELECT * FROM movies WHERE [IMDb Rating] >= 9",
-    "DELETE FROM movies WHERE [Your Rating] >= 9"
+    "SELECT * FROM movies WHERE [IMDb Rating] <= 9",
+    "DELETE FROM movies WHERE [IMDb Rating] >= 9"
 ]
 ans3 = st.radio("", options3, key="q3")
 
-if ans3 == "SELECT * FROM movies WHERE [Your Rating] >= 9":
+if ans3 == "SELECT * FROM movies WHERE [IMDb Rating] >= 9":
     st.success("✅ Correct!")
     st.dataframe(
-        movies_df[movies_df["Your Rating"] >= 9].sort_values("Your Rating", ascending=False),
+        movies_df[movies_df["IMDb Rating"] >= 9].sort_values("IMDb Rating", ascending=False),
         width="stretch", height=400
     )
 elif ans3 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q4
-st.write("**Q4.** SQL: Count the total number of movies you've rated.")
+st.write("**Q4.** SQL: Count the total number of movies.")
 options4 = [
     "-- Select an option --",
     "SELECT COUNT(*) FROM movies",
-    "SELECT SUM([Your Rating]) FROM movies",
+    "SELECT SUM([IMDb Rating]) FROM movies",
     "SELECT * FROM movies"
 ]
 ans4 = st.radio("", options4, key="q4")
 
 if ans4 == "SELECT COUNT(*) FROM movies":
     st.success("✅ Correct!")
-    st.metric("Total Movies Rated", len(movies_df))
+    st.metric("Total Movies", len(movies_df))
 elif ans4 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q5
-st.write("**Q5.** SQL: Find all unique Title Types in your ratings list.")
+st.write("**Q5.** SQL: Find all unique Title Types in your list.")
 options5 = [
     "-- Select an option --",
     "SELECT DISTINCT [Title Type] FROM movies",
@@ -115,7 +115,7 @@ st.write("**Q6.** SQL: Find all movies released after the year 2015.")
 options6 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE Year > 2015",
-    "SELECT * FROM movies WHERE [Your Rating] > 2015",
+    "SELECT * FROM movies WHERE [IMDb Rating] > 2015",
     "SELECT Year FROM movies"
 ]
 ans6 = st.radio("", options6, key="q6")
@@ -127,18 +127,18 @@ elif ans6 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q7
-st.write("**Q7.** SQL: List all movies sorted by Your Rating in descending order.")
+st.write("**Q7.** SQL: List all movies sorted by IMDb Rating in descending order.")
 options7 = [
     "-- Select an option --",
-    "SELECT * FROM movies ORDER BY [Your Rating] DESC",
     "SELECT * FROM movies ORDER BY [IMDb Rating] DESC",
-    "SELECT * FROM movies ORDER BY Title ASC"
+    "SELECT * FROM movies ORDER BY Title ASC",
+    "SELECT * FROM movies ORDER BY Year DESC"
 ]
 ans7 = st.radio("", options7, key="q7")
 
-if ans7 == "SELECT * FROM movies ORDER BY [Your Rating] DESC":
+if ans7 == "SELECT * FROM movies ORDER BY [IMDb Rating] DESC":
     st.success("✅ Correct!")
-    st.dataframe(movies_df.sort_values("Your Rating", ascending=False), width="stretch", height=400)
+    st.dataframe(movies_df.sort_values("IMDb Rating", ascending=False), width="stretch", height=400)
 elif ans7 != "-- Select an option --":
     st.error("❌ Try again.")
 
@@ -147,7 +147,7 @@ st.write("**Q8.** SQL: Find the average IMDb Rating of all movies.")
 options8 = [
     "-- Select an option --",
     "SELECT AVG([IMDb Rating]) FROM movies",
-    "SELECT AVG([Your Rating]) FROM movies",
+    "SELECT AVG([IMDb Rating]) FROM movies WHERE Year > 2000",
     "SELECT * FROM movies"
 ]
 ans8 = st.radio("", options8, key="q8")
@@ -163,8 +163,8 @@ st.write("**Q9.** SQL: Group movies by Genre and count how many there are in eac
 options9 = [
     "-- Select an option --",
     "SELECT Genres, COUNT(*) FROM movies GROUP BY Genres",
-    "SELECT COUNT(Genres) FROM movies",
-    "SELECT DISTINCT Genres FROM movies"
+    "SELECT DISTINCT Genres FROM movies",
+    "SELECT SUM([IMDb Rating]) FROM movies GROUP BY Genres"
 ]
 ans9 = st.radio("", options9, key="q9")
 
@@ -175,21 +175,25 @@ elif ans9 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q10
-st.write("**Q10.** SQL: Find the highest-rated movie (Your Rating).")
+st.write("**Q10.** SQL: Find the highest-rated movie (IMDb Rating).")
 options10 = [
     "-- Select an option --",
-    "SELECT Title, [Your Rating] FROM movies ORDER BY [Your Rating] DESC LIMIT 1",
-    "SELECT MAX([Your Rating]) FROM movies",
-    "SELECT Title FROM movies WHERE [Your Rating] = 10"
+    "SELECT Title, [IMDb Rating] FROM movies ORDER BY [IMDb Rating] DESC LIMIT 1",
+    "SELECT MAX([IMDb Rating]) FROM movies",
+    "SELECT Title FROM movies WHERE [IMDb Rating] = 10"
 ]
 ans10 = st.radio("", options10, key="q10")
 
-if ans10 == "SELECT Title, [Your Rating] FROM movies ORDER BY [Your Rating] DESC LIMIT 1":
+if ans10 == "SELECT Title, [IMDb Rating] FROM movies ORDER BY [IMDb Rating] DESC LIMIT 1":
     st.success("✅ Correct!")
-    top_movie = movies_df.sort_values("Your Rating", ascending=False).head(1)
-    st.dataframe(top_movie[["Title", "Your Rating"]], width="stretch")
+    top_movie = movies_df.sort_values("IMDb Rating", ascending=False).head(1)
+    st.dataframe(top_movie[["Title", "IMDb Rating"]], width="stretch")
 elif ans10 != "-- Select an option --":
     st.error("❌ Try again.")
+
+# -------------------------
+# INTERMEDIATE SQL QUESTIONS CONTINUED
+# -------------------------
 
 # Q11
 st.write("**Q11.** SQL: Find all movies directed by Christopher Nolan.")
@@ -208,18 +212,18 @@ elif ans11 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q12
-st.write("**Q12.** SQL: Calculate the average Your Rating for each Year.")
+st.write("**Q12.** SQL: Calculate the average IMDb Rating for each Year.")
 options12 = [
     "-- Select an option --",
-    "SELECT Year, AVG([Your Rating]) FROM movies GROUP BY Year",
     "SELECT Year, AVG([IMDb Rating]) FROM movies GROUP BY Year",
+    "SELECT Year, AVG([IMDb Rating]) FROM movies WHERE Year > 2000",
     "SELECT * FROM movies"
 ]
 ans12 = st.radio("", options12, key="q12")
 
-if ans12 == "SELECT Year, AVG([Your Rating]) FROM movies GROUP BY Year":
+if ans12 == "SELECT Year, AVG([IMDb Rating]) FROM movies GROUP BY Year":
     st.success("✅ Correct!")
-    avg_ratings = movies_df.groupby("Year")["Your Rating"].mean().reset_index()
+    avg_ratings = movies_df.groupby("Year")["IMDb Rating"].mean().reset_index()
     st.dataframe(avg_ratings, width="stretch", height=400)
 elif ans12 != "-- Select an option --":
     st.error("❌ Try again.")
@@ -241,18 +245,18 @@ elif ans13 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q14
-st.write("**Q14.** SQL: Retrieve movies where Your Rating is greater than the IMDb Rating.")
+st.write("**Q14.** SQL: Retrieve movies where IMDb Rating is greater than 8.")
 options14 = [
     "-- Select an option --",
-    "SELECT * FROM movies WHERE [Your Rating] > [IMDb Rating]",
-    "SELECT * FROM movies WHERE [IMDb Rating] > [Your Rating]",
+    "SELECT * FROM movies WHERE [IMDb Rating] > 8",
+    "SELECT * FROM movies WHERE [IMDb Rating] < 8",
     "SELECT * FROM movies"
 ]
 ans14 = st.radio("", options14, key="q14")
 
-if ans14 == "SELECT * FROM movies WHERE [Your Rating] > [IMDb Rating]":
+if ans14 == "SELECT * FROM movies WHERE [IMDb Rating] > 8":
     st.success("✅ Correct!")
-    st.dataframe(movies_df[movies_df["Your Rating"] > movies_df["IMDb Rating"]], width="stretch")
+    st.dataframe(movies_df[movies_df["IMDb Rating"] > 8], width="stretch")
 elif ans14 != "-- Select an option --":
     st.error("❌ Try again.")
 
@@ -279,29 +283,29 @@ elif ans15 != "-- Select an option --":
 st.header("Difficult SQL Questions")
 
 # Q16
-st.write("**Q16.** SQL: Find the movie with the second-highest Your Rating using DENSE_RANK().")
+st.write("**Q16.** SQL: Find the movie with the second-highest IMDb Rating using DENSE_RANK().")
 options16 = [
     "-- Select an option --",
-    "SELECT Title, [Your Rating] FROM (SELECT Title, [Your Rating], DENSE_RANK() OVER (ORDER BY [Your Rating] DESC) AS rnk FROM movies) t WHERE rnk = 2",
-    "SELECT Title, MAX([Your Rating]) FROM movies",
-    "SELECT * FROM movies WHERE [Your Rating] = 2"
+    "SELECT Title, [IMDb Rating] FROM (SELECT Title, [IMDb Rating], DENSE_RANK() OVER (ORDER BY [IMDb Rating] DESC) AS rnk FROM movies) t WHERE rnk = 2",
+    "SELECT Title, MAX([IMDb Rating]) FROM movies",
+    "SELECT * FROM movies WHERE [IMDb Rating] = 2"
 ]
 ans16 = st.radio("", options16, key="q16")
 
-if ans16.startswith("SELECT Title, [Your Rating] FROM (SELECT"):
+if ans16.startswith("SELECT Title, [IMDb Rating] FROM (SELECT"):
     st.success("✅ Correct!")
-    movies_df["Rank"] = movies_df["Your Rating"].rank(method="dense", ascending=False)
-    second_highest = movies_df[movies_df["Rank"] == 2][["Title", "Your Rating"]]
+    movies_df["Rank"] = movies_df["IMDb Rating"].rank(method="dense", ascending=False)
+    second_highest = movies_df[movies_df["Rank"] == 2][["Title", "IMDb Rating"]]
     st.dataframe(second_highest, width="stretch")
 elif ans16 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q17
-st.write("**Q17.** SQL: Use a CTE to find the top-rated movie (Your Rating) per director.")
+st.write("**Q17.** SQL: Use a CTE to find the top-rated movie (IMDb Rating) per director.")
 options17 = [
     "-- Select an option --",
-    "WITH cte AS (SELECT Directors, Title, [Your Rating], ROW_NUMBER() OVER (PARTITION BY Directors ORDER BY [Your Rating] DESC) AS rn FROM movies) SELECT * FROM cte WHERE rn = 1",
-    "SELECT Directors, MAX([Your Rating]) FROM movies GROUP BY Directors",
+    "WITH cte AS (SELECT Directors, Title, [IMDb Rating], ROW_NUMBER() OVER (PARTITION BY Directors ORDER BY [IMDb Rating] DESC) AS rn FROM movies) SELECT * FROM cte WHERE rn = 1",
+    "SELECT Directors, MAX([IMDb Rating]) FROM movies GROUP BY Directors",
     "SELECT DISTINCT Directors FROM movies"
 ]
 ans17 = st.radio("", options17, key="q17")
@@ -309,10 +313,10 @@ ans17 = st.radio("", options17, key="q17")
 if ans17.startswith("WITH cte AS"):
     st.success("✅ Correct!")
     top_per_director = (
-        movies_df.sort_values(["Directors", "Your Rating"], ascending=[True, False])
+        movies_df.sort_values(["Directors", "IMDb Rating"], ascending=[True, False])
         .groupby("Directors").head(1)
     )
-    st.dataframe(top_per_director[["Directors", "Title", "Your Rating"]], width="stretch")
+    st.dataframe(top_per_director[["Directors", "Title", "IMDb Rating"]], width="stretch")
 elif ans17 != "-- Select an option --":
     st.error("❌ Try again.")
 
@@ -354,20 +358,20 @@ elif ans19 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q20
-st.write("**Q20.** SQL: Compare Your Rating of each movie with the one you rated just before it (LAG function).")
+st.write("**Q20.** SQL: Compare IMDb Rating of each movie with the one just before it (LAG function).")
 options20 = [
     "-- Select an option --",
-    "SELECT Title, [Your Rating], LAG([Your Rating]) OVER (ORDER BY [Date Rated]) AS PrevRating FROM movies",
-    "SELECT Title, [Your Rating] FROM movies ORDER BY [Date Rated]",
-    "SELECT * FROM movies WHERE [Your Rating] > 5"
+    "SELECT Title, [IMDb Rating], LAG([IMDb Rating]) OVER (ORDER BY [Date Rated]) AS PrevRating FROM movies",
+    "SELECT Title, [IMDb Rating] FROM movies ORDER BY [Date Rated]",
+    "SELECT * FROM movies WHERE [IMDb Rating] > 5"
 ]
 ans20 = st.radio("", options20, key="q20")
 
-if ans20.startswith("SELECT Title, [Your Rating], LAG"):
+if ans20.startswith("SELECT Title, [IMDb Rating], LAG"):
     st.success("✅ Correct!")
     lagged = movies_df.sort_values("Date Rated").copy()
-    lagged["Prev Rating"] = lagged["Your Rating"].shift(1)
-    st.dataframe(lagged[["Date Rated", "Title", "Your Rating", "Prev Rating"]], width="stretch")
+    lagged["Prev Rating"] = lagged["IMDb Rating"].shift(1)
+    st.dataframe(lagged[["Date Rated", "Title", "IMDb Rating", "Prev Rating"]], width="stretch")
 elif ans20 != "-- Select an option --":
     st.error("❌ Try again.")
 
@@ -394,7 +398,7 @@ elif ans21 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q22
-st.write("**Q22.** SQL: Find years between the earliest and latest Release Date where you didn’t rate any movie.")
+st.write("**Q22.** SQL: Find years between earliest and latest Release Date where no movies were rated.")
 options22 = [
     "-- Select an option --",
     "SELECT y.Year FROM (SELECT MIN([Release Date]) AS MinYear, MAX([Release Date]) AS MaxYear FROM movies) r CROSS JOIN Years y WHERE y.Year BETWEEN r.MinYear AND r.MaxYear AND y.Year NOT IN (SELECT DISTINCT Year FROM movies)",
@@ -413,63 +417,59 @@ elif ans22 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q23
-st.write("**Q23.** SQL: Find genres where the average Your Rating is below the overall average of all Your Ratings.")
+st.write("**Q23.** SQL: Find genres where the average IMDb Rating is below the overall average of all IMDb Ratings.")
 options23 = [
     "-- Select an option --",
-    "SELECT Genres FROM movies GROUP BY Genres HAVING AVG([Your Rating]) < (SELECT AVG([Your Rating]) FROM movies)",
-    "SELECT AVG([Your Rating]) FROM movies",
+    "SELECT Genres FROM movies GROUP BY Genres HAVING AVG([IMDb Rating]) < (SELECT AVG([IMDb Rating]) FROM movies)",
+    "SELECT AVG([IMDb Rating]) FROM movies",
     "SELECT DISTINCT Genres FROM movies"
 ]
 ans23 = st.radio("", options23, key="q23")
 
 if ans23.startswith("SELECT Genres FROM movies GROUP BY Genres HAVING"):
     st.success("✅ Correct!")
-    overall_avg = movies_df["Your Rating"].mean()
+    overall_avg = movies_df["IMDb Rating"].mean()
     low_genres = (
-        movies_df.groupby("Genres")["Your Rating"].mean().reset_index()
-        .query("`Your Rating` < @overall_avg")
+        movies_df.groupby("Genres")["IMDb Rating"].mean().reset_index()
+        .query("`IMDb Rating` < @overall_avg")
     )
     st.dataframe(low_genres, width="stretch")
 elif ans23 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q24
-st.write("**Q24.** SQL: Find the Your Rating value that appears most frequently.")
+st.write("**Q24.** SQL: Find the IMDb Rating value that appears most frequently.")
 options24 = [
     "-- Select an option --",
-    "SELECT [Your Rating], COUNT(*) AS cnt FROM movies GROUP BY [Your Rating] ORDER BY cnt DESC LIMIT 1",
-    "SELECT MAX([Your Rating]) FROM movies",
-    "SELECT DISTINCT [Your Rating] FROM movies"
+    "SELECT [IMDb Rating], COUNT(*) AS cnt FROM movies GROUP BY [IMDb Rating] ORDER BY cnt DESC LIMIT 1",
+    "SELECT MAX([IMDb Rating]) FROM movies",
+    "SELECT DISTINCT [IMDb Rating] FROM movies"
 ]
 ans24 = st.radio("", options24, key="q24")
 
-if ans24.startswith("SELECT [Your Rating], COUNT(*)"):
+if ans24.startswith("SELECT [IMDb Rating], COUNT(*)"):
     st.success("✅ Correct!")
-    most_common = movies_df["Your Rating"].mode()[0]
-    freq = (movies_df["Your Rating"] == most_common).sum()
-    st.metric("Most Common Rating", most_common, help=f"Appears {freq} times")
+    most_common = movies_df["IMDb Rating"].mode()[0]
+    freq = (movies_df["IMDb Rating"] == most_common).sum()
+    st.metric("Most Common IMDb Rating", most_common, help=f"Appears {freq} times")
 elif ans24 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q25
-st.write("**Q25.** SQL: Find the average Your Rating and IMDb Rating per Year, and the difference between them.")
+st.write("**Q25.** SQL: Find the average IMDb Rating per Year and its difference from the overall average.")
 options25 = [
     "-- Select an option --",
-    "SELECT Year, AVG([Your Rating]) AS AvgYour, AVG([IMDb Rating]) AS AvgIMDb, (AVG([Your Rating]) - AVG([IMDb Rating])) AS Diff FROM movies GROUP BY Year ORDER BY Year",
-    "SELECT AVG([Your Rating]), AVG([IMDb Rating]) FROM movies",
-    "SELECT Year, [Your Rating], [IMDb Rating] FROM movies"
+    "SELECT Year, AVG([IMDb Rating]) AS AvgIMDb FROM movies GROUP BY Year ORDER BY Year",
+    "SELECT AVG([IMDb Rating]) FROM movies",
+    "SELECT Year, [IMDb Rating] FROM movies"
 ]
 ans25 = st.radio("", options25, key="q25")
 
-if ans25.startswith("SELECT Year, AVG([Your Rating])"):
+if ans25.startswith("SELECT Year, AVG([IMDb Rating])"):
     st.success("✅ Correct!")
-    year_compare = (
-        movies_df.groupby("Year")[["Your Rating", "IMDb Rating"]].mean().reset_index()
-    )
-    year_compare["Diff"] = year_compare["Your Rating"] - year_compare["IMDb Rating"]
+    year_compare = movies_df.groupby("Year")[["IMDb Rating"]].mean().reset_index()
+    year_compare["DiffFromOverall"] = year_compare["IMDb Rating"] - movies_df["IMDb Rating"].mean()
     st.dataframe(year_compare.sort_values("Year"), width="stretch")
-elif ans25 != "-- Select an option --":
-    st.error("❌ Try again.")
 
 # --- Optional: Filter by IMDb rating ---
 st.write("---")
@@ -477,3 +477,4 @@ st.write("### Explore movies by IMDb rating")
 min_rating = st.slider("Show movies with IMDb rating at least:", 0, 10, 7)
 filtered_movies = movies_df[movies_df["IMDb Rating"] >= min_rating].sort_values("IMDb Rating", ascending=False)
 st.dataframe(filtered_movies, width="stretch", height=400)
+
