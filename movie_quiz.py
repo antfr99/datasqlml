@@ -10,24 +10,27 @@ movies_df.columns = movies_df.columns.str.strip()
 # --- Page Config ---
 st.set_page_config(layout="wide")
 
-# --- App Title ---
+# --- Project Explanation ---
 st.title("SQL Movie Quiz 🎬")
-st.write("Test your SQL knowledge using my IMDb ratings export!")
+st.markdown("""
+Welcome! This is a small personal project combining **AI, Python, SQL, IMDb, GitHub, and Streamlit**.
+The goal is to practice coding in multiple languages, manipulate data, and create an interactive quiz using your own IMDb ratings export.
+""")
 
 # -------------------------
 # EASY SQL QUESTIONS
 # -------------------------
+st.header("Easy SQL Questions")
 
 # Q1
-st.write("---")
-q1 = "SQL: Retrieve all movies you've rated."
+st.write("**Q1.** SQL: Retrieve all movies you've rated.")
 options1 = [
     "-- Select an option --",
     "SELECT * FROM movies",
     "SELECT Title, Your Rating FROM movies",
     "DELETE FROM movies"
 ]
-ans1 = st.radio(q1, options1, key="q1")
+ans1 = st.radio("", options1, key="q1")
 
 if ans1 == "SELECT * FROM movies":
     st.success("✅ Correct!")
@@ -36,15 +39,14 @@ elif ans1 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q2
-st.write("---")
-q2 = "SQL: Retrieve the Title and Your Rating for all movies in your list."
+st.write("**Q2.** SQL: Retrieve the Title and Your Rating for all movies in your list.")
 options2 = [
     "-- Select an option --",
     "SELECT Title, [Your Rating] FROM movies",
     "SELECT * FROM movies",
     "SELECT COUNT(*) FROM movies"
 ]
-ans2 = st.radio(q2, options2, key="q2")
+ans2 = st.radio("", options2, key="q2")
 
 if ans2 == "SELECT Title, [Your Rating] FROM movies":
     st.success("✅ Correct!")
@@ -53,15 +55,14 @@ elif ans2 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q3
-st.write("---")
-q3 = "SQL: Find all movies where Your Rating is greater than or equal to 9."
+st.write("**Q3.** SQL: Find all movies where Your Rating is greater than or equal to 9.")
 options3 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE [Your Rating] >= 9",
     "SELECT * FROM movies WHERE [IMDb Rating] >= 9",
     "DELETE FROM movies WHERE [Your Rating] >= 9"
 ]
-ans3 = st.radio(q3, options3, key="q3")
+ans3 = st.radio("", options3, key="q3")
 
 if ans3 == "SELECT * FROM movies WHERE [Your Rating] >= 9":
     st.success("✅ Correct!")
@@ -73,15 +74,14 @@ elif ans3 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q4
-st.write("---")
-q4 = "SQL: Count the total number of movies you've rated."
+st.write("**Q4.** SQL: Count the total number of movies you've rated.")
 options4 = [
     "-- Select an option --",
     "SELECT COUNT(*) FROM movies",
     "SELECT SUM([Your Rating]) FROM movies",
     "SELECT * FROM movies"
 ]
-ans4 = st.radio(q4, options4, key="q4")
+ans4 = st.radio("", options4, key="q4")
 
 if ans4 == "SELECT COUNT(*) FROM movies":
     st.success("✅ Correct!")
@@ -90,15 +90,14 @@ elif ans4 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q5
-st.write("---")
-q5 = "SQL: Find all unique Title Types in your ratings list."
+st.write("**Q5.** SQL: Find all unique Title Types in your ratings list.")
 options5 = [
     "-- Select an option --",
     "SELECT DISTINCT [Title Type] FROM movies",
     "SELECT * FROM movies",
     "SELECT Title FROM movies WHERE [Title Type] = 'movie'"
 ]
-ans5 = st.radio(q5, options5, key="q5")
+ans5 = st.radio("", options5, key="q5")
 
 if ans5 == "SELECT DISTINCT [Title Type] FROM movies":
     st.success("✅ Correct!")
@@ -109,17 +108,17 @@ elif ans5 != "-- Select an option --":
 # -------------------------
 # INTERMEDIATE SQL QUESTIONS
 # -------------------------
+st.header("Intermediate SQL Questions")
 
 # Q6
-st.write("---")
-q6 = "SQL: Find all movies released after the year 2015."
+st.write("**Q6.** SQL: Find all movies released after the year 2015.")
 options6 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE Year > 2015",
     "SELECT * FROM movies WHERE [Your Rating] > 2015",
     "SELECT Year FROM movies"
 ]
-ans6 = st.radio(q6, options6, key="q6")
+ans6 = st.radio("", options6, key="q6")
 
 if ans6 == "SELECT * FROM movies WHERE Year > 2015":
     st.success("✅ Correct!")
@@ -128,15 +127,14 @@ elif ans6 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q7
-st.write("---")
-q7 = "SQL: List all movies sorted by Your Rating in descending order."
+st.write("**Q7.** SQL: List all movies sorted by Your Rating in descending order.")
 options7 = [
     "-- Select an option --",
     "SELECT * FROM movies ORDER BY [Your Rating] DESC",
     "SELECT * FROM movies ORDER BY [IMDb Rating] DESC",
     "SELECT * FROM movies ORDER BY Title ASC"
 ]
-ans7 = st.radio(q7, options7, key="q7")
+ans7 = st.radio("", options7, key="q7")
 
 if ans7 == "SELECT * FROM movies ORDER BY [Your Rating] DESC":
     st.success("✅ Correct!")
@@ -145,15 +143,14 @@ elif ans7 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q8
-st.write("---")
-q8 = "SQL: Find the average IMDb Rating of all movies."
+st.write("**Q8.** SQL: Find the average IMDb Rating of all movies.")
 options8 = [
     "-- Select an option --",
     "SELECT AVG([IMDb Rating]) FROM movies",
     "SELECT AVG([Your Rating]) FROM movies",
     "SELECT * FROM movies"
 ]
-ans8 = st.radio(q8, options8, key="q8")
+ans8 = st.radio("", options8, key="q8")
 
 if ans8 == "SELECT AVG([IMDb Rating]) FROM movies":
     st.success("✅ Correct!")
@@ -162,15 +159,14 @@ elif ans8 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q9
-st.write("---")
-q9 = "SQL: Group movies by Genre and count how many there are in each genre."
+st.write("**Q9.** SQL: Group movies by Genre and count how many there are in each genre.")
 options9 = [
     "-- Select an option --",
     "SELECT Genres, COUNT(*) FROM movies GROUP BY Genres",
     "SELECT COUNT(Genres) FROM movies",
     "SELECT DISTINCT Genres FROM movies"
 ]
-ans9 = st.radio(q9, options9, key="q9")
+ans9 = st.radio("", options9, key="q9")
 
 if ans9 == "SELECT Genres, COUNT(*) FROM movies GROUP BY Genres":
     st.success("✅ Correct!")
@@ -179,15 +175,14 @@ elif ans9 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q10
-st.write("---")
-q10 = "SQL: Find the highest-rated movie (Your Rating)."
+st.write("**Q10.** SQL: Find the highest-rated movie (Your Rating).")
 options10 = [
     "-- Select an option --",
     "SELECT Title, [Your Rating] FROM movies ORDER BY [Your Rating] DESC LIMIT 1",
     "SELECT MAX([Your Rating]) FROM movies",
     "SELECT Title FROM movies WHERE [Your Rating] = 10"
 ]
-ans10 = st.radio(q10, options10, key="q10")
+ans10 = st.radio("", options10, key="q10")
 
 if ans10 == "SELECT Title, [Your Rating] FROM movies ORDER BY [Your Rating] DESC LIMIT 1":
     st.success("✅ Correct!")
@@ -197,15 +192,14 @@ elif ans10 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q11
-st.write("---")
-q11 = "SQL: Find all movies directed by Christopher Nolan."
+st.write("**Q11.** SQL: Find all movies directed by Christopher Nolan.")
 options11 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE Directors = 'Christopher Nolan'",
     "SELECT * FROM movies WHERE Title = 'Christopher Nolan'",
     "SELECT * FROM movies"
 ]
-ans11 = st.radio(q11, options11, key="q11")
+ans11 = st.radio("", options11, key="q11")
 
 if ans11 == "SELECT * FROM movies WHERE Directors = 'Christopher Nolan'":
     st.success("✅ Correct!")
@@ -214,15 +208,14 @@ elif ans11 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q12
-st.write("---")
-q12 = "SQL: Calculate the average Your Rating for each Year."
+st.write("**Q12.** SQL: Calculate the average Your Rating for each Year.")
 options12 = [
     "-- Select an option --",
     "SELECT Year, AVG([Your Rating]) FROM movies GROUP BY Year",
     "SELECT Year, AVG([IMDb Rating]) FROM movies GROUP BY Year",
     "SELECT * FROM movies"
 ]
-ans12 = st.radio(q12, options12, key="q12")
+ans12 = st.radio("", options12, key="q12")
 
 if ans12 == "SELECT Year, AVG([Your Rating]) FROM movies GROUP BY Year":
     st.success("✅ Correct!")
@@ -232,15 +225,14 @@ elif ans12 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q13
-st.write("---")
-q13 = "SQL: Find the top 5 movies with the most Num Votes."
+st.write("**Q13.** SQL: Find the top 5 movies with the most Num Votes.")
 options13 = [
     "-- Select an option --",
     "SELECT * FROM movies ORDER BY [Num Votes] DESC LIMIT 5",
     "SELECT MAX([Num Votes]) FROM movies",
     "SELECT COUNT(*) FROM movies"
 ]
-ans13 = st.radio(q13, options13, key="q13")
+ans13 = st.radio("", options13, key="q13")
 
 if ans13 == "SELECT * FROM movies ORDER BY [Num Votes] DESC LIMIT 5":
     st.success("✅ Correct!")
@@ -249,15 +241,14 @@ elif ans13 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q14
-st.write("---")
-q14 = "SQL: Retrieve movies where Your Rating is greater than the IMDb Rating."
+st.write("**Q14.** SQL: Retrieve movies where Your Rating is greater than the IMDb Rating.")
 options14 = [
     "-- Select an option --",
     "SELECT * FROM movies WHERE [Your Rating] > [IMDb Rating]",
     "SELECT * FROM movies WHERE [IMDb Rating] > [Your Rating]",
     "SELECT * FROM movies"
 ]
-ans14 = st.radio(q14, options14, key="q14")
+ans14 = st.radio("", options14, key="q14")
 
 if ans14 == "SELECT * FROM movies WHERE [Your Rating] > [IMDb Rating]":
     st.success("✅ Correct!")
@@ -266,15 +257,14 @@ elif ans14 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q15
-st.write("---")
-q15 = "SQL: Find the longest movie (Runtime in minutes)."
+st.write("**Q15.** SQL: Find the longest movie (Runtime in minutes).")
 options15 = [
     "-- Select an option --",
     "SELECT Title, [Runtime (mins)] FROM movies ORDER BY [Runtime (mins)] DESC LIMIT 1",
     "SELECT MAX([Runtime (mins)]) FROM movies",
     "SELECT Title FROM movies WHERE [Runtime (mins)] = 90"
 ]
-ans15 = st.radio(q15, options15, key="q15")
+ans15 = st.radio("", options15, key="q15")
 
 if ans15 == "SELECT Title, [Runtime (mins)] FROM movies ORDER BY [Runtime (mins)] DESC LIMIT 1":
     st.success("✅ Correct!")
@@ -286,22 +276,17 @@ elif ans15 != "-- Select an option --":
 # -------------------------
 # DIFFICULT SQL QUESTIONS
 # -------------------------
-# (Paste the Difficult Q16–Q25 block I gave you earlier here – already updated with width="stretch")
-
-# -------------------------
-# DIFFICULT SQL QUESTIONS
-# -------------------------
+st.header("Difficult SQL Questions")
 
 # Q16
-st.write("---")
-q16 = "SQL: Find the movie with the second-highest Your Rating using DENSE_RANK()."
+st.write("**Q16.** SQL: Find the movie with the second-highest Your Rating using DENSE_RANK().")
 options16 = [
     "-- Select an option --",
     "SELECT Title, [Your Rating] FROM (SELECT Title, [Your Rating], DENSE_RANK() OVER (ORDER BY [Your Rating] DESC) AS rnk FROM movies) t WHERE rnk = 2",
     "SELECT Title, MAX([Your Rating]) FROM movies",
     "SELECT * FROM movies WHERE [Your Rating] = 2"
 ]
-ans16 = st.radio(q16, options16, key="q16")
+ans16 = st.radio("", options16, key="q16")
 
 if ans16.startswith("SELECT Title, [Your Rating] FROM (SELECT"):
     st.success("✅ Correct!")
@@ -312,15 +297,14 @@ elif ans16 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q17
-st.write("---")
-q17 = "SQL: Use a CTE to find the top-rated movie (Your Rating) per director."
+st.write("**Q17.** SQL: Use a CTE to find the top-rated movie (Your Rating) per director.")
 options17 = [
     "-- Select an option --",
     "WITH cte AS (SELECT Directors, Title, [Your Rating], ROW_NUMBER() OVER (PARTITION BY Directors ORDER BY [Your Rating] DESC) AS rn FROM movies) SELECT * FROM cte WHERE rn = 1",
     "SELECT Directors, MAX([Your Rating]) FROM movies GROUP BY Directors",
     "SELECT DISTINCT Directors FROM movies"
 ]
-ans17 = st.radio(q17, options17, key="q17")
+ans17 = st.radio("", options17, key="q17")
 
 if ans17.startswith("WITH cte AS"):
     st.success("✅ Correct!")
@@ -333,15 +317,14 @@ elif ans17 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q18
-st.write("---")
-q18 = "SQL: Calculate a running total of Num Votes ordered by Release Date."
+st.write("**Q18.** SQL: Calculate a running total of Num Votes ordered by Release Date.")
 options18 = [
     "-- Select an option --",
     "SELECT [Release Date], [Num Votes], SUM([Num Votes]) OVER (ORDER BY [Release Date]) AS RunningTotal FROM movies",
     "SELECT SUM([Num Votes]) FROM movies",
     "SELECT * FROM movies ORDER BY [Num Votes]"
 ]
-ans18 = st.radio(q18, options18, key="q18")
+ans18 = st.radio("", options18, key="q18")
 
 if ans18.startswith("SELECT [Release Date], [Num Votes], SUM([Num Votes])"):
     st.success("✅ Correct!")
@@ -352,15 +335,14 @@ elif ans18 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q19
-st.write("---")
-q19 = "SQL: Find directors who have movies in the most unique Genres."
+st.write("**Q19.** SQL: Find directors who have movies in the most unique Genres.")
 options19 = [
     "-- Select an option --",
     "SELECT Directors, COUNT(DISTINCT Genres) AS GenreCount FROM movies GROUP BY Directors ORDER BY GenreCount DESC",
     "SELECT Directors, COUNT(*) FROM movies GROUP BY Directors",
     "SELECT DISTINCT Genres FROM movies"
 ]
-ans19 = st.radio(q19, options19, key="q19")
+ans19 = st.radio("", options19, key="q19")
 
 if ans19.startswith("SELECT Directors, COUNT(DISTINCT Genres)"):
     st.success("✅ Correct!")
@@ -372,15 +354,14 @@ elif ans19 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q20
-st.write("---")
-q20 = "SQL: Compare Your Rating of each movie with the one you rated just before it (LAG function)."
+st.write("**Q20.** SQL: Compare Your Rating of each movie with the one you rated just before it (LAG function).")
 options20 = [
     "-- Select an option --",
     "SELECT Title, [Your Rating], LAG([Your Rating]) OVER (ORDER BY [Date Rated]) AS PrevRating FROM movies",
     "SELECT Title, [Your Rating] FROM movies ORDER BY [Date Rated]",
     "SELECT * FROM movies WHERE [Your Rating] > 5"
 ]
-ans20 = st.radio(q20, options20, key="q20")
+ans20 = st.radio("", options20, key="q20")
 
 if ans20.startswith("SELECT Title, [Your Rating], LAG"):
     st.success("✅ Correct!")
@@ -391,15 +372,14 @@ elif ans20 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q21
-st.write("---")
-q21 = "SQL: Perform a self-join to find movies with the same director rated on the same Date Rated."
+st.write("**Q21.** SQL: Perform a self-join to find movies with the same director rated on the same Date Rated.")
 options21 = [
     "-- Select an option --",
     "SELECT a.Title, b.Title, a.Directors, a.[Date Rated] FROM movies a JOIN movies b ON a.Directors = b.Directors AND a.[Date Rated] = b.[Date Rated] AND a.Const <> b.Const",
     "SELECT * FROM movies WHERE Directors IS NOT NULL",
     "SELECT DISTINCT Directors FROM movies"
 ]
-ans21 = st.radio(q21, options21, key="q21")
+ans21 = st.radio("", options21, key="q21")
 
 if ans21.startswith("SELECT a.Title, b.Title"):
     st.success("✅ Correct!")
@@ -414,15 +394,14 @@ elif ans21 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q22
-st.write("---")
-q22 = "SQL: Find years between the earliest and latest Release Date where you didn’t rate any movie."
+st.write("**Q22.** SQL: Find years between the earliest and latest Release Date where you didn’t rate any movie.")
 options22 = [
     "-- Select an option --",
     "SELECT y.Year FROM (SELECT MIN([Release Date]) AS MinYear, MAX([Release Date]) AS MaxYear FROM movies) r CROSS JOIN Years y WHERE y.Year BETWEEN r.MinYear AND r.MaxYear AND y.Year NOT IN (SELECT DISTINCT Year FROM movies)",
     "SELECT DISTINCT Year FROM movies",
     "SELECT * FROM movies ORDER BY [Release Date]"
 ]
-ans22 = st.radio(q22, options22, key="q22")
+ans22 = st.radio("", options22, key="q22")
 
 if ans22.startswith("SELECT y.Year FROM (SELECT MIN([Release Date])"):
     st.success("✅ Correct!")
@@ -434,15 +413,14 @@ elif ans22 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q23
-st.write("---")
-q23 = "SQL: Find genres where the average Your Rating is below the overall average of all Your Ratings."
+st.write("**Q23.** SQL: Find genres where the average Your Rating is below the overall average of all Your Ratings.")
 options23 = [
     "-- Select an option --",
     "SELECT Genres FROM movies GROUP BY Genres HAVING AVG([Your Rating]) < (SELECT AVG([Your Rating]) FROM movies)",
     "SELECT AVG([Your Rating]) FROM movies",
     "SELECT DISTINCT Genres FROM movies"
 ]
-ans23 = st.radio(q23, options23, key="q23")
+ans23 = st.radio("", options23, key="q23")
 
 if ans23.startswith("SELECT Genres FROM movies GROUP BY Genres HAVING"):
     st.success("✅ Correct!")
@@ -456,15 +434,14 @@ elif ans23 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q24
-st.write("---")
-q24 = "SQL: Find the Your Rating value that appears most frequently."
+st.write("**Q24.** SQL: Find the Your Rating value that appears most frequently.")
 options24 = [
     "-- Select an option --",
     "SELECT [Your Rating], COUNT(*) AS cnt FROM movies GROUP BY [Your Rating] ORDER BY cnt DESC LIMIT 1",
     "SELECT MAX([Your Rating]) FROM movies",
     "SELECT DISTINCT [Your Rating] FROM movies"
 ]
-ans24 = st.radio(q24, options24, key="q24")
+ans24 = st.radio("", options24, key="q24")
 
 if ans24.startswith("SELECT [Your Rating], COUNT(*)"):
     st.success("✅ Correct!")
@@ -475,15 +452,14 @@ elif ans24 != "-- Select an option --":
     st.error("❌ Try again.")
 
 # Q25
-st.write("---")
-q25 = "SQL: Find the average Your Rating and IMDb Rating per Year, and the difference between them."
+st.write("**Q25.** SQL: Find the average Your Rating and IMDb Rating per Year, and the difference between them.")
 options25 = [
     "-- Select an option --",
     "SELECT Year, AVG([Your Rating]) AS AvgYour, AVG([IMDb Rating]) AS AvgIMDb, (AVG([Your Rating]) - AVG([IMDb Rating])) AS Diff FROM movies GROUP BY Year ORDER BY Year",
     "SELECT AVG([Your Rating]), AVG([IMDb Rating]) FROM movies",
     "SELECT Year, [Your Rating], [IMDb Rating] FROM movies"
 ]
-ans25 = st.radio(q25, options25, key="q25")
+ans25 = st.radio("", options25, key="q25")
 
 if ans25.startswith("SELECT Year, AVG([Your Rating])"):
     st.success("✅ Correct!")
