@@ -247,6 +247,10 @@ if ans14 == options14[1]:
 elif ans14 != "-- Select an option --":
     st.error("❌ Try again.")
 
+# Clear previous selection for Q15
+if "q15" in st.session_state:
+    del st.session_state["q15"]
+
 # Q15
 st.write("**Q15.** Find the longest movie (Runtime in minutes).")
 options15 = [
@@ -256,7 +260,7 @@ options15 = [
     "SELECT Title FROM movies WHERE [Runtime (mins)] = 90"
 ]
 ans15 = st.radio("Q15", options15, key="q15", label_visibility="collapsed")
-if ans15 == options15[0]:
+if ans15 == options15[1]:  # Correct answer is now the 2nd option
     st.success("✅ Correct!")
     longest = movies_df.sort_values("Runtime (mins)", ascending=False).head(1)
     st.dataframe(longest[["Title", "Runtime (mins)"]], width="stretch")
