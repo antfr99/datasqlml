@@ -161,16 +161,16 @@ st.write("**Q1.** List the top 10 movies where Personal rating differs from IMDb
 
 sql_options1 = [
     """SELECT Title,
-              [Personal Ratings] AS "Personal Ratings",
-              [IMDb Rating] AS "IMDb Rating"
+              [Personal Ratings],
+              [IMDb Rating]
        FROM Personal_Ratings
        WHERE [Personal Ratings] - [IMDb Rating] > 2
        ORDER BY [Personal Ratings] DESC
        LIMIT 10;""",
 
     """SELECT pr.Title,
-              pr.[Personal Ratings] AS "Personal Ratings",
-              ir.[IMDb Rating] AS "IMDb Rating",
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
               ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
        FROM Personal_Ratings pr
        JOIN IMDB_Ratings ir 
@@ -180,8 +180,8 @@ sql_options1 = [
        LIMIT 10;""",  # ✅ correct
 
     """SELECT pr.Title,
-              pr.[Personal Ratings] AS "Personal Ratings",
-              ir.[IMDb Rating] AS "IMDb Rating",
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
               ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
        FROM Personal_Ratings pr
        JOIN IMDB_Ratings ir 
@@ -223,19 +223,19 @@ st.write("**Q2.** Find the highest-rated movie for each year (IMDb rating) and o
 sql_options2 = [
     """SELECT ir.Year,
               ir.Title,
-              ir.[IMDb Rating] AS "IMDb Rating"
+              ir.[IMDb Rating]
        FROM IMDB_Ratings ir
        GROUP BY ir.Year;""",  # ❌ Incorrect
 
     """SELECT ir.Year,
               ir.Title,
-              ir.[IMDb Rating] AS "IMDb Rating"
+              ir.[IMDb Rating]
        FROM IMDB_Ratings ir
        ORDER BY ir.Year ASC;""",  # ❌ Incorrect
 
     """SELECT ir1.Year,
               ir1.Title,
-              ir1.[IMDb Rating] AS "IMDb Rating"
+              ir1.[IMDb Rating]
        FROM IMDB_Ratings ir1
        WHERE ir1.[IMDb Rating] = (
            SELECT MAX(ir2.[IMDb Rating])
