@@ -255,6 +255,7 @@ if selected_index2 is not None:
     else:
         st.error("❌ Try again.")
 
+
 # ================= Q3 =================
 st.write("---")
 st.write("**Q3.** Show your top 10 rated movies by difference from IMDb, descending.")
@@ -269,10 +270,11 @@ sql_options3 = [
        ORDER BY Diff DESC
        LIMIT 10;""",  # ✅ correct
 
-    """SELECT Title,
-              [Personal Ratings],
-              [IMDb Rating]
-       FROM Personal_Ratings
+    """SELECT pr.Title,
+              pr.[Personal Ratings],
+              ir.[IMDb Rating]
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir ON pr.[Movie ID] = ir.[Movie ID]
        ORDER BY Diff DESC
        LIMIT 10;""",  # ❌ Incorrect
 
@@ -317,28 +319,30 @@ st.write("---")
 st.write("**Q4.** Find top 10 movie pairs by the same director with largest IMDb rating difference.")
 
 sql_options4 = [
-    """SELECT director,
-              Title
-       FROM IMDB_Ratings;""",  # ❌ Incorrect
+    """SELECT ir1.director,
+              ir1.Title
+       FROM IMDB_Ratings ir1;""",  # ❌ Incorrect
 
-    """SELECT m1.director,
-              m1.Title AS Movie1,
-              m2.Title AS Movie2,
-              ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
-       FROM IMDB_Ratings m1
-       JOIN IMDB_Ratings m2
-         ON m1.director = m2.director
-        AND m1.[Movie ID] < m2.[Movie ID]
+    """SELECT ir1.director,
+              ir1.Title AS Movie1,
+              ir2.Title AS Movie2,
+              ABS(ir1.[IMDb Rating] - ir2.[IMDb Rating]) AS Rating_Diff
+       FROM IMDB_Ratings ir1
+       JOIN IMDB_Ratings ir2
+         ON ir1.director = ir2.director
+        AND ir1.[Movie ID] < ir2.[Movie ID]
+       WHERE ir1.director IS NOT NULL
        ORDER BY Rating_Diff DESC
        LIMIT 10;""",  # ✅ Correct
 
-    """SELECT m1.director,
-              m1.Title AS Movie1,
-              m2.Title AS Movie2,
-              ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
-       FROM IMDB_Ratings m1
-       JOIN IMDB_Ratings m2
-         ON m1.director = m2.director
+    """SELECT ir1.director,
+              ir1.Title AS Movie1,
+              ir2.Title AS Movie2,
+              ABS(ir1.[IMDb Rating] - ir2.[IMDb Rating]) AS Rating_Diff
+       FROM IMDB_Ratings ir1
+       JOIN IMDB_Ratings ir2
+         ON ir1.director = ir2.director
+       WHERE ir1.director IS NOT NULL
        ORDER BY Rating_Diff ASC
        LIMIT 10;"""  # ❌ Incorrect
 ]
@@ -364,42 +368,46 @@ if selected_index4 is not None:
         st.markdown("""
 **Explanation:**
 1️⃣ Option 1 is incorrect because the query does nothing useful.  
-3️⃣ Option 3 is incorrect because ASC and missing ID filter create duplicates.
+3️⃣ Option 3 is incorrect because ASC and missing ID filter create duplicates.  
+✅ Null directors are excluded in Option 2.
 """)
     else:
         st.error("❌ Try again.")
+
 
 # ================= Q5 =================
 st.write("---")
 st.write("**Q5.** Find movies released in the same year with identical runtime (self-join).")
 
 sql_options5 = [
-    """SELECT Title,
-              Year,
-              [Runtime (mins)]
-       FROM IMDB_Ratings;""",  # ❌ Incorrect
+    """SELECT ir1.Title,
+              ir1.Year,
+              ir1.[Runtime (mins)]
+       FROM IMDB_Ratings ir1;""",  # ❌ Incorrect
 
-    """SELECT m1.Title AS Movie1,
-              m2.Title AS Movie2,
-              m1.Year,
-              m1.[Runtime (mins)] AS "Runtime (mins)"
-       FROM IMDB_Ratings m1
-       JOIN IMDB_Ratings m2
-         ON m1.Year = m2.Year
-        AND m1.[Runtime (mins)] = m2.[Runtime (mins)]
-        AND m1.[Movie ID] < m2.[Movie ID]
-       ORDER BY m1.Year DESC,
-                m1.[Runtime (mins)] DESC
+    """SELECT ir1.Title AS Movie1,
+              ir2.Title AS Movie2,
+              ir1.Year,
+              ir1.[Runtime (mins)] AS "Runtime (mins)"
+       FROM IMDB_Ratings ir1
+       JOIN IMDB_Ratings ir2
+         ON ir1.Year = ir2.Year
+        AND ir1.[Runtime (mins)] = ir2.[Runtime (mins)]
+        AND ir1.[Movie ID] < ir2.[Movie ID]
+       WHERE ir1.[Runtime (mins)] IS NOT NULL
+       ORDER BY ir1.Year DESC,
+                ir1.[Runtime (mins)] DESC
        LIMIT 10;""",  # ✅ Correct
 
-    """SELECT m1.Title AS Movie1,
-              m2.Title AS Movie2,
-              m1.Year,
-              m1.[Runtime (mins)]
-       FROM IMDB_Ratings m1
-       JOIN IMDB_Ratings m2
-         ON m1.Year = m2.Year
-       ORDER BY m1.Year DESC
+    """SELECT ir1.Title AS Movie1,
+              ir2.Title AS Movie2,
+              ir1.Year,
+              ir1.[Runtime (mins)]
+       FROM IMDB_Ratings ir1
+       JOIN IMDB_Ratings ir2
+         ON ir1.Year = ir2.Year
+       WHERE ir1.[Runtime (mins)] IS NOT NULL
+       ORDER BY ir1.Year DESC
        LIMIT 10;"""  # ❌ Incorrect
 ]
 
@@ -424,7 +432,8 @@ if selected_index5 is not None:
         st.markdown("""
 **Explanation:**
 1️⃣ Option 1 is incorrect because query does not pair movies correctly (no self-join logic).  
-3️⃣ Option 3 is incorrect because it only matches on year, not runtime, and allows duplicates.
+3️⃣ Option 3 is incorrect because it only matches on year, not runtime, and allows duplicates.  
+✅ Null runtimes are excluded in Option 2.
 """)
     else:
         st.error("❌ Try again.")
