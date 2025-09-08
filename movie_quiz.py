@@ -26,6 +26,22 @@ if "Directors" in IMDB_Ratings.columns:
 
 IMDB_Ratings = IMDB_Ratings.reset_index(drop=True)
 
+# 4️⃣ Keep only the first director per movie and rename to 'director'
+if "Directors" in IMDB_Ratings.columns:
+    IMDB_Ratings["director"] = IMDB_Ratings["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
+    IMDB_Ratings = IMDB_Ratings.drop(columns=["Directors"])
+
+# ✅ Clean director column (remove blanks, placeholders, normalize)
+bad_tokens = {"", "nan", "none", "null", "n/a", "unknown"}
+IMDB_Ratings["director"] = (
+    IMDB_Ratings["director"]
+    .astype(str)
+    .str.strip()
+    .replace(bad_tokens, None)   # replace bad tokens with real None/NaN
+)
+
 # --- Create Personal Ratings table ---
 Personal_Ratings = movies_df.copy()
 
