@@ -278,8 +278,8 @@ st.write("**Q3.** Show your top 10 rated movies by difference from IMDb, descend
 
 sql_options3 = [
     """SELECT pr.Title,
-              pr.[Personal Ratings] AS "Personal Ratings",
-              ir.[IMDb Rating] AS "IMDb Rating",
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
               (pr.[Personal Ratings] - ir.[IMDb Rating]) AS Diff
        FROM Personal_Ratings pr
        JOIN IMDB_Ratings ir ON pr.[Movie ID] = ir.[Movie ID]
@@ -295,8 +295,8 @@ sql_options3 = [
        LIMIT 10;""",  # ❌ Incorrect
 
     """SELECT pr.Title,
-              pr.[Personal Ratings] AS "Personal Ratings",
-              ir.[IMDb Rating] AS "IMDb Rating",
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
               (pr.[Personal Ratings] - ir.[IMDb Rating]) AS Diff
        FROM Personal_Ratings pr
        JOIN IMDB_Ratings ir ON pr.[Movie ID] = ir.[Movie ID]
