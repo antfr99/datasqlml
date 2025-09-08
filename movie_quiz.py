@@ -347,7 +347,6 @@ sql_options4 = [
        JOIN IMDB_Ratings ir2
          ON ir1.director = ir2.director
         AND ir1.[Movie ID] < ir2.[Movie ID]
-       WHERE ir1.director IS NOT NULL
        ORDER BY Rating_Diff DESC
        LIMIT 10;""",  # ✅ Correct
 
@@ -358,8 +357,7 @@ sql_options4 = [
        FROM IMDB_Ratings ir1
        JOIN IMDB_Ratings ir2
          ON ir1.director = ir2.director
-       WHERE ir1.director IS NOT NULL
-       ORDER BY Rating_Diff ASC
+         ORDER BY Rating_Diff ASC
        LIMIT 10;"""  # ❌ Incorrect
 ]
 
@@ -385,7 +383,7 @@ if selected_index4 is not None:
 **Explanation:**
 1️⃣ Option 1 is incorrect because the query does nothing useful.  
 3️⃣ Option 3 is incorrect because ASC and missing ID filter create duplicates.  
-✅ Null directors are excluded in Option 2.
+
 """)
     else:
         st.error("❌ Try again.")
@@ -410,7 +408,6 @@ sql_options5 = [
          ON ir1.Year = ir2.Year
         AND ir1.[Runtime (mins)] = ir2.[Runtime (mins)]
         AND ir1.[Movie ID] < ir2.[Movie ID]
-       WHERE ir1.[Runtime (mins)] IS NOT NULL
        ORDER BY ir1.Year DESC,
                 ir1.[Runtime (mins)] DESC
        LIMIT 10;""",  # ✅ Correct
@@ -422,7 +419,6 @@ sql_options5 = [
        FROM IMDB_Ratings ir1
        JOIN IMDB_Ratings ir2
          ON ir1.Year = ir2.Year
-       WHERE ir1.[Runtime (mins)] IS NOT NULL
        ORDER BY ir1.Year DESC
        LIMIT 10;"""  # ❌ Incorrect
 ]
@@ -449,7 +445,7 @@ if selected_index5 is not None:
 **Explanation:**
 1️⃣ Option 1 is incorrect because query does not pair movies correctly (no self-join logic).  
 3️⃣ Option 3 is incorrect because it only matches on year, not runtime, and allows duplicates.  
-✅ Null runtimes are excluded in Option 2.
+
 """)
     else:
         st.error("❌ Try again.")
