@@ -265,7 +265,7 @@ if selected_index2 is not None:
         st.dataframe(result_q2, width="stretch", height=400)
         st.markdown("""
 **Explanation:**
-1️⃣ Option 1 is incorrect because GROUP BY + MAX does not return the correct title reliably.  
+1️⃣ Option 1** is incorrect because it groups only by `Year` without aggregating `Title` or `IMDb Rating`. This either causes an SQL error or returns arbitrary movies per year.   
 2️⃣ Option 2 is incorrect because it does not select the maximum rating per year.
 """)
     else:
