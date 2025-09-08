@@ -132,183 +132,299 @@ st.dataframe(
 # =====================
 # SQL QUIZ
 # =====================
-# ---------------- Q1 ----------------
+
+# =====================
+# SQL QUIZ
+# =====================
+import streamlit as st
+import pandas as pd
+import pandasql as ps
+
+# ================= Q1 =================
 st.write("**Q1.** List the top 10 movies where Personal rating differs from IMDb rating by more than 2 points, ordered by difference descending.")
 
-options1 = [
-    "-- Select an option --",
-    """SELECT Title, [Personal Ratings], [IMDb Rating]
-FROM Personal_Ratings
-WHERE [Personal Ratings] - [IMDb Rating] > 2
-ORDER BY [Personal Ratings] DESC
-LIMIT 10;""",  # Incorrect
-    """SELECT mr.Title, mr.[Personal Ratings], mc.[IMDb Rating],
-       ABS(mr.[Personal Ratings] - mc.[IMDb Rating]) AS Rating_Diff
-FROM Personal_Ratings mr
-JOIN IMDB_Ratings mc ON mr.[Movie ID] = mc.[Movie ID]
-WHERE mr.[Personal Ratings] IS NOT NULL
-  AND ABS(mr.[Personal Ratings] - mc.[IMDb Rating]) > 2
-ORDER BY Rating_Diff DESC
-LIMIT 10;""",  # ✅ correct
-    """SELECT mr.Title, mr.[Personal Ratings], mc.[IMDb Rating],
-       ABS(mr.[Personal Ratings] - mc.[IMDb Rating]) AS Rating_Diff
-FROM Personal_Ratings mr
-JOIN IMDB_Ratings mc ON mr.[Movie ID] = mc.[Movie ID]
-WHERE mr.[Personal Ratings] IS NOT NULL
-ORDER BY Rating_Diff ASC
-LIMIT 10;"""  # Incorrect
+sql_options1 = [
+    """SELECT Title,
+              [Personal Ratings] AS "Personal Ratings",
+              [IMDb Rating] AS "IMDb Rating"
+       FROM Personal_Ratings
+       WHERE [Personal Ratings] - [IMDb Rating] > 2
+       ORDER BY [Personal Ratings] DESC
+       LIMIT 10;""",
+
+    """SELECT pr.Title,
+              pr.[Personal Ratings] AS "Personal Ratings",
+              ir.[IMDb Rating] AS "IMDb Rating",
+              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir 
+           ON pr.[Movie ID] = ir.[Movie ID]
+       WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
+       ORDER BY Rating_Diff DESC
+       LIMIT 10;""",  # ✅ correct
+
+    """SELECT pr.Title,
+              pr.[Personal Ratings] AS "Personal Ratings",
+              ir.[IMDb Rating] AS "IMDb Rating",
+              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir 
+           ON pr.[Movie ID] = ir.[Movie ID]
+       ORDER BY Rating_Diff ASC
+       LIMIT 10;"""  # ❌ incorrect
 ]
 
-ans1 = st.radio("Q1", options1, key="q1", label_visibility="collapsed")
+labels1 = ["Option 1", "Option 2", "Option 3"]
 
-if ans1 == options1[2]:
-    st.success("✅ Correct!")
-    result_q1 = ps.sqldf(options1[2], locals())
-    st.dataframe(result_q1, width="stretch", height=400)
-    st.write("**Explanation:**")
-    st.write("1️⃣ Incorrect because it does not join with IMDB_Ratings to get IMDb rating.")
-    st.write("3️⃣ Incorrect because it orders ascending instead of descending.")
-elif ans1 != "-- Select an option --":
-    st.error("❌ Try again.")
+selected_index1 = st.radio(
+    "Select your answer:", 
+    options=[None, 0, 1, 2], 
+    format_func=lambda x: "Select an Option" if x is None else labels1[x],
+    key="q1_radio"
+)
 
+for i, sql in enumerate(sql_options1):
+    st.markdown(f"**{labels1[i]}**")
+    st.code(sql, language="sql")
 
-# ---------------- Q2 ----------------
+if selected_index1 is not None:
+    if selected_index1 == 1:
+        st.success("✅ Correct!")
+        result_q1 = ps.sqldf(sql_options1[selected_index1], locals())
+        st.dataframe(result_q1, width="stretch", height=400)
+        st.markdown("""
+**Explanation:**
+1️⃣ Option 1 is incorrect because it does not join with IMDB_Ratings.  
+3️⃣ Option 3 is incorrect because it orders ascending instead of descending.
+""")
+    else:
+        st.error("❌ Try again.")
+
+# ================= Q2 =================
 st.write("---")
 st.write("**Q2.** Find the highest-rated movie for each year (IMDb rating) and order by year ascending.")
 
-options2 = [
-    "-- Select an option --",
-    """SELECT Year, Title, MAX([IMDb Rating]) FROM IMDB_Ratings GROUP BY Year;""",  # Incorrect
-    """SELECT Year, Title, [IMDb Rating]
-FROM IMDB_Ratings
-ORDER BY Year ASC;""",  # Incorrect
-    """SELECT Year, Title, [IMDb Rating]
-FROM IMDB_Ratings mc1
-WHERE [IMDb Rating] = (
-    SELECT MAX([IMDb Rating])
-    FROM IMDB_Ratings mc2
-    WHERE mc2.Year = mc1.Year
-)
-ORDER BY Year ASC;"""  # ✅ correct
+sql_options2 = [
+    """SELECT ir.Year,
+              ir.Title,
+              ir.[IMDb Rating] AS "IMDb Rating"
+       FROM IMDB_Ratings ir
+       GROUP BY ir.Year;""",  # ❌ Incorrect
+
+    """SELECT ir.Year,
+              ir.Title,
+              ir.[IMDb Rating] AS "IMDb Rating"
+       FROM IMDB_Ratings ir
+       ORDER BY ir.Year ASC;""",  # ❌ Incorrect
+
+    """SELECT ir1.Year,
+              ir1.Title,
+              ir1.[IMDb Rating] AS "IMDb Rating"
+       FROM IMDB_Ratings ir1
+       WHERE ir1.[IMDb Rating] = (
+           SELECT MAX(ir2.[IMDb Rating])
+           FROM IMDB_Ratings ir2
+           WHERE ir2.Year = ir1.Year
+       )
+       ORDER BY ir1.Year ASC;"""  # ✅ Correct
 ]
 
-ans2 = st.radio("Q2", options2, key="q2", label_visibility="collapsed")
+labels2 = ["Option 1", "Option 2", "Option 3"]
 
-if ans2 == options2[3]:
-    st.success("✅ Correct!")
-    result_q2 = ps.sqldf(options2[3], locals())
-    st.dataframe(result_q2, width="stretch", height=400)
-    st.write("**Explanation:**")
-    st.write("1️⃣ Incorrect because SQLite syntax doesn’t match expected result per year.")
-    st.write("2️⃣ Incorrect because it does not select max per year.")
-elif ans2 != "-- Select an option --":
-    st.error("❌ Try again.")
+selected_index2 = st.radio(
+    "Select your answer:", 
+    options=[None, 0, 1, 2],
+    format_func=lambda x: "Select an Option" if x is None else labels2[x],
+    key="q2_radio"
+)
 
+for i, sql in enumerate(sql_options2):
+    st.markdown(f"**{labels2[i]}**")
+    st.code(sql, language="sql")
 
-# ---------------- Q3 ----------------
+if selected_index2 is not None:
+    if selected_index2 == 2:
+        st.success("✅ Correct!")
+        result_q2 = ps.sqldf(sql_options2[selected_index2], locals())
+        st.dataframe(result_q2, width="stretch", height=400)
+        st.markdown("""
+**Explanation:**
+1️⃣ Option 1 is incorrect because GROUP BY + MAX does not return the correct title reliably.  
+2️⃣ Option 2 is incorrect because it does not select the maximum rating per year.
+""")
+    else:
+        st.error("❌ Try again.")
+
+# ================= Q3 =================
 st.write("---")
 st.write("**Q3.** Show your top 10 rated movies by difference from IMDb, descending.")
 
-options3 = [
-    "-- Select an option --",
-    """SELECT mr.Title, mr.[Personal Ratings], mc.[IMDb Rating], 
-       (mr.[Personal Ratings] - mc.[IMDb Rating]) AS Diff
-FROM Personal_Ratings mr
-JOIN IMDB_Ratings mc ON mr.[Movie ID] = mc.[Movie ID]
-WHERE mr.[Personal Ratings] IS NOT NULL
-ORDER BY Diff DESC
-LIMIT 10;""",  # ✅ correct
-    """SELECT Title, [Personal Ratings], [IMDb Rating] 
-FROM Personal_Ratings
-ORDER BY Diff DESC
-LIMIT 10;""",  # Incorrect (Diff not defined)
-    """SELECT mr.Title, mr.[Personal Ratings], mc.[IMDb Rating], 
-       (mr.[Personal Ratings] - mc.[IMDb Rating]) AS Diff
-FROM Personal_Ratings mr
-JOIN IMDB_Ratings mc ON mr.[Movie ID] = mc.[Movie ID]
-WHERE mr.[Personal Ratings] IS NOT NULL
-ORDER BY Diff ASC
-LIMIT 10;"""  # Incorrect (wrong sort)
+sql_options3 = [
+    """SELECT pr.Title,
+              pr.[Personal Ratings] AS "Personal Ratings",
+              ir.[IMDb Rating] AS "IMDb Rating",
+              (pr.[Personal Ratings] - ir.[IMDb Rating]) AS Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir ON pr.[Movie ID] = ir.[Movie ID]
+       ORDER BY Diff DESC
+       LIMIT 10;""",  # ✅ correct
+
+    """SELECT Title,
+              [Personal Ratings],
+              [IMDb Rating]
+       FROM Personal_Ratings
+       ORDER BY Diff DESC
+       LIMIT 10;""",  # ❌ Incorrect
+
+    """SELECT pr.Title,
+              pr.[Personal Ratings] AS "Personal Ratings",
+              ir.[IMDb Rating] AS "IMDb Rating",
+              (pr.[Personal Ratings] - ir.[IMDb Rating]) AS Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir ON pr.[Movie ID] = ir.[Movie ID]
+       ORDER BY Diff ASC
+       LIMIT 10;"""  # ❌ Incorrect
 ]
 
-ans3 = st.radio("Q3", options3, key="q3", label_visibility="collapsed")
+labels3 = ["Option 1", "Option 2", "Option 3"]
 
-if ans3 == options3[1]:
-    st.success("✅ Correct!")
-    result_q3 = ps.sqldf(options3[1], locals())
-    st.dataframe(result_q3, width="stretch", height=400)
-    st.write("**Explanation:**")
-    st.write("2️⃣ Incorrect because Diff is not defined.")
-    st.write("3️⃣ Incorrect because ASC orders smallest difference first.")
-elif ans3 != "-- Select an option --":
-    st.error("❌ Try again.")
+selected_index3 = st.radio(
+    "Select your answer:", 
+    options=[None, 0, 1, 2],
+    format_func=lambda x: "Select an Option" if x is None else labels3[x],
+    key="q3_radio"
+)
 
+for i, sql in enumerate(sql_options3):
+    st.markdown(f"**{labels3[i]}**")
+    st.code(sql, language="sql")
 
-# ---------------- Q4 ----------------
+if selected_index3 is not None:
+    if selected_index3 == 0:
+        st.success("✅ Correct!")
+        result_q3 = ps.sqldf(sql_options3[selected_index3], locals())
+        st.dataframe(result_q3, width="stretch", height=400)
+        st.markdown("""
+**Explanation:**
+2️⃣ Option 2 is incorrect because Diff is not defined.  
+3️⃣ Option 3 is incorrect because ASC orders smallest difference first.
+""")
+    else:
+        st.error("❌ Try again.")
+
+# ================= Q4 =================
 st.write("---")
 st.write("**Q4.** Find top 10 movie pairs by the same director with largest IMDb rating difference.")
 
-options4 = [
-    "-- Select an option --",
-    """SELECT director, Title FROM IMDB_Ratings;""",  # Incorrect
-    """SELECT m1.director, m1.Title AS Movie1, m2.Title AS Movie2,
-ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
-FROM IMDB_Ratings m1
-JOIN IMDB_Ratings m2 ON m1.director = m2.director
-AND m1.[Movie ID] < m2.[Movie ID]
-ORDER BY Rating_Diff DESC
-LIMIT 10;""",  # ✅ correct
-    """SELECT m1.director, m1.Title AS Movie1, m2.Title AS Movie2,
-ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
-FROM IMDB_Ratings m1
-JOIN IMDB_Ratings m2 ON m1.director = m2.director
-ORDER BY Rating_Diff ASC
-LIMIT 10;"""  # Incorrect
+sql_options4 = [
+    """SELECT director,
+              Title
+       FROM IMDB_Ratings;""",  # ❌ Incorrect
+
+    """SELECT m1.director,
+              m1.Title AS Movie1,
+              m2.Title AS Movie2,
+              ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
+       FROM IMDB_Ratings m1
+       JOIN IMDB_Ratings m2
+         ON m1.director = m2.director
+        AND m1.[Movie ID] < m2.[Movie ID]
+       ORDER BY Rating_Diff DESC
+       LIMIT 10;""",  # ✅ Correct
+
+    """SELECT m1.director,
+              m1.Title AS Movie1,
+              m2.Title AS Movie2,
+              ABS(m1.[IMDb Rating] - m2.[IMDb Rating]) AS Rating_Diff
+       FROM IMDB_Ratings m1
+       JOIN IMDB_Ratings m2
+         ON m1.director = m2.director
+       ORDER BY Rating_Diff ASC
+       LIMIT 10;"""  # ❌ Incorrect
 ]
 
-ans4 = st.radio("Q4", options4, key="q4", label_visibility="collapsed")
+labels4 = ["Option 1", "Option 2", "Option 3"]
 
-if ans4 == options4[2]:
-    st.success("✅ Correct!")
-    result_q4 = ps.sqldf(options4[2], locals())
-    st.dataframe(result_q4, width="stretch", height=400)
-    st.write("**Explanation:**")
-    st.write("1️⃣ Incorrect because query does nothing useful.")
-    st.write("3️⃣ Incorrect because ASC and missing ID filter create duplicates.")
-elif ans4 != "-- Select an option --":
-    st.error("❌ Try again.")
+selected_index4 = st.radio(
+    "Select your answer:", 
+    options=[None, 0, 1, 2],
+    format_func=lambda x: "Select an Option" if x is None else labels4[x],
+    key="q4_radio"
+)
 
+for i, sql in enumerate(sql_options4):
+    st.markdown(f"**{labels4[i]}**")
+    st.code(sql, language="sql")
 
-# ---------------- Q5 ----------------
+if selected_index4 is not None:
+    if selected_index4 == 1:
+        st.success("✅ Correct!")
+        result_q4 = ps.sqldf(sql_options4[selected_index4], locals())
+        st.dataframe(result_q4, width="stretch", height=400)
+        st.markdown("""
+**Explanation:**
+1️⃣ Option 1 is incorrect because the query does nothing useful.  
+3️⃣ Option 3 is incorrect because ASC and missing ID filter create duplicates.
+""")
+    else:
+        st.error("❌ Try again.")
+
+# ================= Q5 =================
 st.write("---")
 st.write("**Q5.** Find movies released in the same year with identical runtime (self-join).")
 
-options6 = [
-    "-- Select an option --",
-    """SELECT Title, Year, [Runtime (mins)] FROM IMDB_Ratings;""",  # Incorrect
-    """SELECT m1.Title AS Movie1, m2.Title AS Movie2, m1.Year, m1.[Runtime (mins)]
-FROM IMDB_Ratings m1
-JOIN IMDB_Ratings m2 
-ON m1.Year = m2.Year AND m1.[Runtime (mins)] = m2.[Runtime (mins)]
-AND m1.[Movie ID] < m2.[Movie ID]
-ORDER BY m1.Year DESC, m1.[Runtime (mins)] DESC
-LIMIT 10;""",  # ✅ correct
-    """SELECT m1.Title AS Movie1, m2.Title AS Movie2, m1.Year, m1.[Runtime (mins)]
-FROM IMDB_Ratings m1
-JOIN IMDB_Ratings m2 
-ON m1.Year = m2.Year
-ORDER BY m1.Year DESC
-LIMIT 10;"""  # Incorrect
+sql_options5 = [
+    """SELECT Title,
+              Year,
+              [Runtime (mins)]
+       FROM IMDB_Ratings;""",  # ❌ Incorrect
+
+    """SELECT m1.Title AS Movie1,
+              m2.Title AS Movie2,
+              m1.Year,
+              m1.[Runtime (mins)] AS "Runtime (mins)"
+       FROM IMDB_Ratings m1
+       JOIN IMDB_Ratings m2
+         ON m1.Year = m2.Year
+        AND m1.[Runtime (mins)] = m2.[Runtime (mins)]
+        AND m1.[Movie ID] < m2.[Movie ID]
+       ORDER BY m1.Year DESC,
+                m1.[Runtime (mins)] DESC
+       LIMIT 10;""",  # ✅ Correct
+
+    """SELECT m1.Title AS Movie1,
+              m2.Title AS Movie2,
+              m1.Year,
+              m1.[Runtime (mins)]
+       FROM IMDB_Ratings m1
+       JOIN IMDB_Ratings m2
+         ON m1.Year = m2.Year
+       ORDER BY m1.Year DESC
+       LIMIT 10;"""  # ❌ Incorrect
 ]
 
-ans6 = st.radio("Q6", options6, key="q6", label_visibility="collapsed")
+labels5 = ["Option 1", "Option 2", "Option 3"]
 
-if ans6 == options6[2]:
-    st.success("✅ Correct!")
-    result_q6 = ps.sqldf(options6[2], locals())
-    st.dataframe(result_q6, width="stretch", height=400)
-    st.write("**Explanation:**")
-    st.write("1️⃣ Incorrect because query does not pair movies correctly (no self-join logic).")
-    st.write("3️⃣ Incorrect because it only matches on year, not runtime, and also allows duplicates.")
-elif ans6 != "-- Select an option --":
-    st.error("❌ Try again.")
+selected_index5 = st.radio(
+    "Select your answer:", 
+    options=[None, 0, 1, 2],
+    format_func=lambda x: "Select an Option" if x is None else labels5[x],
+    key="q5_radio"
+)
+
+for i, sql in enumerate(sql_options5):
+    st.markdown(f"**{labels5[i]}**")
+    st.code(sql, language="sql")
+
+if selected_index5 is not None:
+    if selected_index5 == 1:
+        st.success("✅ Correct!")
+        result_q5 = ps.sqldf(sql_options5[selected_index5], locals())
+        st.dataframe(result_q5, width="stretch", height=400)
+        st.markdown("""
+**Explanation:**
+1️⃣ Option 1 is incorrect because query does not pair movies correctly (no self-join logic).  
+3️⃣ Option 3 is incorrect because it only matches on year, not runtime, and allows duplicates.
+""")
+    else:
+        st.error("❌ Try again.")
