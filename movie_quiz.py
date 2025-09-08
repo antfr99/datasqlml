@@ -108,7 +108,7 @@ if st.button("Run SQL Query"):
 # --- Explore movies by IMDb rating ---        
 
 st.write("---")
-st.write("### Explore movies by IMDb Ratings")
+st.write("### Movies I’ve seen, sorted by IMDb rating")
 min_rating = st.slider(
     "Show movies with IMDb rating at least:",
     0, 10, 7,
