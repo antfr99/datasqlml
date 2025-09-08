@@ -108,7 +108,7 @@ if st.button("Run SQL Query"):
 # --- Explore movies by IMDb rating ---        
 
 st.write("---")
-st.write("### Movies I’ve seen, sorted by IMDb rating")
+st.write("### IMDb Ratings > Movies I’ve seen, sorted by IMDb rating")
 min_rating = st.slider(
     "Show movies with IMDb rating at least:",
     0, 10, 7,
@@ -274,7 +274,7 @@ if selected_index2 is not None:
 
 # ================= Q3 =================
 st.write("---")
-st.write("**Q3.** Show your top 10 rated movies by difference from IMDb, descending.")
+st.write("**Q3.** Show top 10 personal rated movies by difference from IMDb, descending.")
 
 sql_options3 = [
     """SELECT pr.Title,
