@@ -453,25 +453,86 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-# Merge Personal_Ratings with IMDB_Ratings
-merged_ratings = pd.merge(
-    Personal_Ratings,
-    IMDB_Ratings[["Movie ID", "IMDb Rating"]],
-    on="Movie ID",
-    how="inner"
+# =====================
+# Machine Learning Predictions
+# =====================
+st.write("---")
+st.write("### Predicting My Ratings using Machine Learning")
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import numpy as np
+import pandas as pd
+
+# Load IMDb top 1000
+imdb_top = pd.read_csv("imdb_top_1000.csv")
+
+# Merge movies2 (personal ratings) with IMDb top 1000 by title
+merged_df = pd.merge(
+    movies2,  # <-- your personal ratings
+    imdb_top,
+    left_on="Title",
+    right_on="Series_Title",
+    how="left"
 )
 
-# Scatter plot: Personal vs IMDb
-import plotly.express as px
+# Keep only rows with ratings
+merged_df = merged_df.dropna(subset=["Your Rating"])
 
-fig = px.scatter(
-    merged_ratings,
-    x="IMDb Rating",
-    y="Personal Ratings",
-    hover_data=["Title", "Director", "Year"],  # <-- Capital 'D'
-    color="Year",
-    title="Personal Ratings vs IMDb Ratings",
-    labels={"IMDb Rating": "IMDb Rating", "Personal Ratings": "My Rating"}
+# Features and target
+features = ["IMDb_Rating", "Runtime", "Genre", "Year", "Director"]
+target = "Your Rating"
+
+# Clean numeric columns
+if "Runtime" in merged_df.columns:
+    merged_df["Runtime"] = merged_df["Runtime"].str.extract(r'(\d+)').astype(float)
+if "IMDb_Rating" in merged_df.columns:
+    merged_df["IMDb_Rating"] = merged_df["IMDb_Rating"].astype(float)
+if "Year" in merged_df.columns:
+    merged_df["Year"] = merged_df["Year"].astype(int)
+
+# Keep only available features
+available_features = [f for f in features if f in merged_df.columns]
+X = merged_df[available_features]
+y = merged_df[target]
+
+# Fill missing categorical values
+for col in ["Genre", "Director"]:
+    if col in X.columns:
+        X[col] = X[col].fillna("Unknown")
+
+# One-hot encode categorical variables
+categorical_features = [c for c in ["Genre", "Director"] if c in X.columns]
+numeric_features = [c for c in ["IMDb_Rating", "Runtime", "Year"] if c in X.columns]
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", "passthrough", numeric_features),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
+    ]
 )
 
-st.plotly_chart(fig, use_container_width=True)
+# Random Forest Regressor
+model = Pipeline([
+    ("preprocess", preprocessor),
+    ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
+])
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Show table
+pred_df = X_test.copy()
+pred_df["Actual Rating"] = y_test
+pred_df["Predicted Rating"] = np.round(y_pred, 2)
+
+st.write("#### Predicted vs Actual Ratings")
+st.dataframe(pred_df.sort_values("Predicted Rating", ascending=False), width="stretch", height=500)
