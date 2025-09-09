@@ -547,12 +547,14 @@ st.dataframe(
     width="stretch",
     height=400
 )
-
 # ============================
 # --- Content-Based Recommender (Genres Similarity) ---
 # ============================
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+# Reset index so iloc always matches
+others_combined = others_combined.reset_index(drop=True)
 
 # 1. Vectorize genres from combined data
 vectorizer = CountVectorizer(stop_words="english")
@@ -571,16 +573,26 @@ def get_recommendations(movie_id, top_n=10):
     idx = indices[movie_id]
     sim_scores = list(enumerate(cosine_sim[idx]))
 
-    # Ensure each sim_score is a float, not an array
-    sim_scores = [(i, float(score)) for i, score in sim_scores]
+    # Sort by similarity (convert to float just in case)
+    sim_scores = sorted(sim_scores, key=lambda x: float(x[1]), reverse=True)
 
-    # Sort by similarity
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-
-    # Pick top_n (excluding the movie itself at position 0)
+    # Pick top_n (excluding the movie itself)
     sim_scores = sim_scores[1:top_n+1]
 
     # Get indices of recommended movies
     movie_indices = [i for i, _ in sim_scores]
 
     return others_combined.iloc[movie_indices][["Title", "Genres", "IMDb Rating", "Year"]]
+
+# --- Streamlit: Pick a movie from My Ratings ---
+movie_choice = st.selectbox(
+    "Pick a movie from My Ratings to get recommendations:",
+    myratings["Title"].tolist()
+)
+
+# Get the Movie ID for the chosen title
+selected_id = myratings.loc[myratings["Title"] == movie_choice, "Movie ID"].values[0]
+
+# Show recommendations
+st.write(f"### Recommended Movies similar to '{movie_choice}'")
+st.dataframe(get_recommendations(selected_id, top_n=10))
