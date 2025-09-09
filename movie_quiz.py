@@ -453,42 +453,50 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
+
 # =====================
 # Machine Learning Predictions
 # =====================
 st.write("---")
 st.write("### Predicting My Ratings using Machine Learning")
 
+import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-import numpy as np
-import pandas as pd
+import plotly.express as px
 
-# Load IMDb top 1000
-imdb_top = pd.read_csv("imdb_top_1000.csv")
+# --- Load IMDb top 1000 safely ---
+imdb_top = pd.read_csv(
+    "imdb_top_1000.csv",
+    quotechar='"',          # handle commas inside text
+    skipinitialspace=True,
+    encoding="utf-8",
+    error_bad_lines=False   # skip malformed rows
+)
 
-# Merge movies2 (personal ratings) with IMDb top 1000 by title
+# --- Merge with movies2 (personal ratings) ---
 merged_df = pd.merge(
-    movies2,  # <-- your personal ratings
+    movies2,
     imdb_top,
     left_on="Title",
     right_on="Series_Title",
     how="left"
 )
 
-# Keep only rows with ratings
+# Keep only rows with personal ratings
 merged_df = merged_df.dropna(subset=["Your Rating"])
 
-# Features and target
+# --- Features and target ---
 features = ["IMDb_Rating", "Runtime", "Genre", "Year", "Director"]
 target = "Your Rating"
 
 # Clean numeric columns
 if "Runtime" in merged_df.columns:
-    merged_df["Runtime"] = merged_df["Runtime"].str.extract(r'(\d+)').astype(float)
+    merged_df["Runtime"] = merged_df["Runtime"].astype(str).str.extract(r'(\d+)').astype(float)
 if "IMDb_Rating" in merged_df.columns:
     merged_df["IMDb_Rating"] = merged_df["IMDb_Rating"].astype(float)
 if "Year" in merged_df.columns:
@@ -524,15 +532,29 @@ model = Pipeline([
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Train model
 model.fit(X_train, y_train)
 
-# Predictions
+# Make predictions
 y_pred = model.predict(X_test)
 
-# Show table
+# --- Display predictions in a table ---
 pred_df = X_test.copy()
 pred_df["Actual Rating"] = y_test
 pred_df["Predicted Rating"] = np.round(y_pred, 2)
 
 st.write("#### Predicted vs Actual Ratings")
 st.dataframe(pred_df.sort_values("Predicted Rating", ascending=False), width="stretch", height=500)
+
+# --- Scatter plot: Actual vs Predicted ---
+fig = px.scatter(
+    pred_df,
+    x="Actual Rating",
+    y="Predicted Rating",
+    hover_data=["Genre", "Director", "Year"],
+    color=np.round(pred_df["Predicted Rating"] - pred_df["Actual Rating"], 2),
+    color_continuous_scale="RdYlGn",
+    title="Actual vs Predicted Ratings",
+    labels={"color": "Prediction Error"}
+)
+st.plotly_chart(fig, use_container_width=True)
