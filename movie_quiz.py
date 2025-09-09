@@ -456,6 +456,9 @@ if selected_index5 is not None:
 # # =====================
 # Machine Learning Predictions
 # =====================
+# =====================
+# Machine Learning Predictions
+# =====================
 st.write("---")
 st.write("### Predicting My Ratings using Machine Learning")
 
@@ -474,7 +477,7 @@ movies2 = pd.read_csv(
     quotechar='"',
     skipinitialspace=True,
     encoding="utf-8",
-    on_bad_lines='skip'   # skip malformed rows
+    on_bad_lines='skip'
 )
 
 # --- Load IMDb top 1000 safely ---
@@ -486,7 +489,11 @@ imdb_top = pd.read_csv(
     on_bad_lines='skip'
 )
 
-# --- Merge on Title ---
+# --- Ensure merge columns are strings ---
+movies2["Title"] = movies2["Title"].astype(str).str.strip()
+imdb_top["Series_Title"] = imdb_top["Series_Title"].astype(str).str.strip()
+
+# --- Merge datasets ---
 merged_df = pd.merge(
     movies2,
     imdb_top,
@@ -495,7 +502,7 @@ merged_df = pd.merge(
     how="left"
 )
 
-# Keep only rows with personal ratings
+# Keep only rows with your ratings
 merged_df = merged_df.dropna(subset=["Your Rating"])
 
 # --- Features and target ---
