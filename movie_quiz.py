@@ -594,6 +594,11 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
         ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
     ]
 
+# --- Streamlit ---
+st.write("### 🎬 Hybrid Recommendations (Directors + Genres + IMDb)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000)
+st.dataframe(recs)
+
 
 import plotly.express as px
 import streamlit as st
