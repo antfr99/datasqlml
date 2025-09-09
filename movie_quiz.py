@@ -554,55 +554,33 @@ st.dataframe(
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.write("---")
-st.write("### 🎬 Recommended Movies (Based on Your Top-Rated Genres)")
+# 1. Vectorize genres from combined data
+vectorizer = CountVectorizer(stop_words="english")
+genre_matrix = vectorizer.fit_transform(others_combined["Genres"].fillna(""))
 
-# Only keep movies with genres filled
-my_high_rated = myratings[myratings["Personal Ratings"] >= 8].copy()
-others_for_reco = others_combined.copy()
+# 2. Compute cosine similarity
+cosine_sim = cosine_similarity(genre_matrix, genre_matrix)
 
-if not my_high_rated.empty and "Genres" in my_high_rated.columns and "Genres" in others_for_reco.columns:
-    # Vectorize genres (multi-hot encoding using bag-of-words)
-    vectorizer = CountVectorizer(tokenizer=lambda x: x.split(","))
-    
-    # Combine both tables for similarity
-    all_movies = pd.concat([my_high_rated, others_for_reco], ignore_index=True)
-    genre_matrix = vectorizer.fit_transform(all_movies["Genres"].fillna(""))
+# 3. Map Movie ID -> index
+indices = pd.Series(others_combined.index, index=others_combined["Movie ID"]).drop_duplicates()
 
-    # Compute cosine similarity
-    cosine_sim = cosine_similarity(genre_matrix, genre_matrix)
+def get_recommendations(movie_id, top_n=10):
+    if movie_id not in indices:
+        return pd.DataFrame()  # handle missing IDs gracefully
 
-    # Index mapping
-    indices = pd.Series(all_movies.index, index=all_movies["Movie ID"])
+    idx = indices[movie_id]
+    sim_scores = list(enumerate(cosine_sim[idx]))
 
-    # Get recommendations based on top-rated movies
-    reco_movies = pd.DataFrame()
+    # Ensure each sim_score is a float, not an array
+    sim_scores = [(i, float(score)) for i, score in sim_scores]
 
-    for movie_id in my_high_rated["Movie ID"].values:
-        if movie_id in indices:
-            idx = indices[movie_id]
-            sim_scores = list(enumerate(cosine_sim[idx]))
-            sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-            
-            # Take top 10 similar movies (excluding itself)
-            sim_indices = [i for i, score in sim_scores[1:11]]
-            recommended = all_movies.iloc[sim_indices]
-            reco_movies = pd.concat([reco_movies, recommended])
+    # Sort by similarity
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
 
-    # Remove movies you already rated
-    reco_movies = reco_movies[~reco_movies["Movie ID"].isin(my_high_rated["Movie ID"])]
+    # Pick top_n (excluding the movie itself at position 0)
+    sim_scores = sim_scores[1:top_n+1]
 
-    # Drop duplicates
-    reco_movies = reco_movies.drop_duplicates(subset=["Movie ID"])
+    # Get indices of recommended movies
+    movie_indices = [i for i, _ in sim_scores]
 
-    # Sort by IMDb Rating (stronger filter)
-    if "IMDb Rating" in reco_movies.columns:
-        reco_movies = reco_movies.sort_values("IMDb Rating", ascending=False)
-
-    st.dataframe(
-        reco_movies[["Title", "Genres", "IMDb Rating", "Year", "Director"]].head(15),
-        width="stretch",
-        height=400
-    )
-else:
-    st.write("⚠️ Not enough data to generate recommendations. Try rating more movies.")
+    return others_combined.iloc[movie_indices][["Title", "Genres", "IMDb Rating", "Year"]]
