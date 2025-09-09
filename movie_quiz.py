@@ -453,64 +453,57 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-
-# =====================
-# Machine Learning Predictions
-# =====================
 st.write("---")
 st.write("## Predicting Your Ratings using Machine Learning")
 
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-import pandas as pd
 
-# --- Merge your movies2 with imdb_top_1000 on Title (case-insensitive) ---
+# --- Load your movies2 CSV ---
+movies2 = pd.read_csv("movies2.csv")
+movies2.columns = movies2.columns.str.strip()
+
+# --- Load IMDb top 1000 ---
+imdb_top_1000 = pd.read_csv("imdb_top_1000.csv")
+imdb_top_1000.columns = imdb_top_1000.columns.str.strip()
+
+# --- Normalize titles for merging ---
 movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
-imdb_top = imdb_top_1000.copy()
-imdb_top["Title_norm"] = imdb_top["Series_Title"].str.lower().str.strip()
+imdb_top_1000["Title_norm"] = imdb_top_1000["Series_Title"].str.lower().str.strip()
 
+# --- Merge on normalized title ---
 merged_df = pd.merge(
     movies2, 
-    imdb_top, 
+    imdb_top_1000, 
     how="left", 
     left_on="Title_norm", 
     right_on="Title_norm"
 )
 
-# --- Select relevant columns ---
-merged_df = merged_df.rename(columns={
-    "IMDB_Rating": "IMDB_Rating",
-    "Runtime": "Runtime",
-    "Director": "Director",
-    "Genre": "Genre",
-    "Year_x": "Year"
-})
-
+# --- Select features and target ---
 features = ["IMDB_Rating", "Runtime", "Year", "Director", "Genre", "Title"]
 target = "Your Rating"
 
-# --- Drop rows with missing values ---
+# Keep only relevant columns and drop rows with missing values
 ml_df = merged_df[features + [target]].dropna()
 
-X = ml_df[features]
+# --- Encode categorical variables ---
+X = pd.get_dummies(ml_df[features], columns=["Director", "Genre", "Title"], drop_first=True)
 y = ml_df[target]
 
-# --- Encode categorical features ---
-X_encoded = pd.get_dummies(X, columns=["Director", "Genre", "Title"], drop_first=True)
-
-# --- Split data ---
-X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
+# --- Split into train/test (optional, here we train on all for predictions) ---
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # --- Train Random Forest ---
 model = RandomForestRegressor(n_estimators=200, random_state=42)
 model.fit(X_train, y_train)
 
-# --- Make predictions ---
-predictions = model.predict(X_encoded)
-ml_df["Predicted Rating"] = predictions
+# --- Make predictions on all data ---
+ml_df["Predicted Rating"] = model.predict(X)
 
-# --- Display results ---
-st.write("### Machine Learning Predictions")
+# --- Display table ---
+st.write("### Predicted vs Actual Ratings")
 st.dataframe(
     ml_df[["Title", "IMDB_Rating", "Runtime", "Genre", "Year", "Director", "Your Rating", "Predicted Rating"]].sort_values("Predicted Rating", ascending=False),
     width="stretch",
