@@ -450,7 +450,7 @@ if selected_index5 is not None:
     else:
         st.error("❌ Try again.")
 
-# ==========================# ============================
+# ============================
 # --- Load & Combine Other Ratings (IMDb Ratings) ---
 # ============================
 
@@ -467,18 +467,21 @@ for df in [others1, others2]:
 
 # Keep only desired columns
 desired_cols_others = [
-    "Movie ID", "IMDb Rating", "Date Rated", "Title", "URL",
+    "Movie ID", "IMDb Rating", "Title", "URL",
     "Title Type", "Runtime (mins)", "Year",
-    "Release Date", "Director", "Genre"
+    "Release Date", "Director", "Num Votes", "Genre"
 ]
 
 others_combined = pd.concat([others1, others2], ignore_index=True)
 others_combined = others_combined[[c for c in desired_cols_others if c in others_combined.columns]]
 others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
 
+# --- Filter out movies with Num Votes <= 50000 ---
+others_combined = others_combined[others_combined["Num Votes"] > 50000]
+
 # --- Display Combined Other Ratings ---
 st.write("---")
-st.write("### IMDB Ratings Table 2")
+st.write("### IMDB Ratings Table 2 (Popular Movies Only)")
 
 min_other_rating = st.slider(
     "Show movies with IMDb rating at least:",
