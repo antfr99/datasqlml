@@ -453,7 +453,6 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-
 # =====================
 # Machine Learning Predictions
 # =====================
@@ -475,7 +474,7 @@ imdb_top = pd.read_csv(
     quotechar='"',          # handle commas inside text
     skipinitialspace=True,
     encoding="utf-8",
-    error_bad_lines=False   # skip malformed rows
+    on_bad_lines='skip'     # skip malformed rows
 )
 
 # --- Merge with movies2 (personal ratings) ---
