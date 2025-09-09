@@ -580,14 +580,14 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     # 4. Define genre bonus mapping
     genre_bonus_map = {
         "Crime": 0.1, "Biography": 0.1, "Animation": 0.1,
-        "Comedy": 0.5, "Drama": 0.5,
+        "Comedy": 0.5, "Drama": 0.5, "Romance": 0.5,
         "Adventure": 0.2, "Horror": 0.2, "Action": 0.2
     }
 
     # 5. Score candidates
     def score_movie(row):
         director_bonus = 1.0 if row["Director"] in fav_directors else 0.0
-        genre_bonus = genre_bonus_map.get(row["Genres"], 0.0) if row["Genres"] in fav_genres else 0.3
+        genre_bonus = genre_bonus_map.get(row["Genres"], 0.0) if row["Genres"] in fav_genres else 0.25
         hybrid_score = row["IMDb Rating"] + director_bonus + genre_bonus
         return pd.Series({
             "Director Bonus": director_bonus,
