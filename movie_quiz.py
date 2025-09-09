@@ -624,5 +624,5 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
 
 # --- Streamlit ---
 st.write("### 🎬 Hybrid Recommendations")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=5, top_n=100)
+recs = hybrid_recommender(myratings, others_combined, min_imdb=5, top_n=10000)
 st.dataframe(recs)
