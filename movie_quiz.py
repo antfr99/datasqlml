@@ -458,121 +458,61 @@ if selected_index5 is not None:
 # Machine Learning Predictions
 # =====================
 st.write("---")
-st.write("### Predicting My Ratings on films not seen using Machine Learning")
+st.write("## Predicting Your Ratings using Machine Learning")
 
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-import plotly.express as px
+from sklearn.model_selection import train_test_split
+import pandas as pd
 
-# --- Load movies2 ---
-movies2 = pd.read_csv("movies2.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
+# --- Merge your movies2 with imdb_top_1000 on Title (case-insensitive) ---
+movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
+imdb_top = imdb_top_1000.copy()
+imdb_top["Title_norm"] = imdb_top["Series_Title"].str.lower().str.strip()
 
-# --- Load IMDb top 1000 ---
-imdb_top = pd.read_csv("imdb_top_1000.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
-
-# --- Clean numeric columns ---
-# IMDB Rating
-imdb_top["IMDB_Rating"] = pd.to_numeric(imdb_top["IMDB_Rating"], errors='coerce')
-
-# Runtime: "142 min" -> 142
-imdb_top["Runtime"] = imdb_top["Runtime"].astype(str).str.extract("(\d+)").astype(float)
-
-# Year
-imdb_top["Released_Year"] = pd.to_numeric(imdb_top["Released_Year"], errors='coerce')
-
-# --- Normalize Titles, Directors, and Genres ---
-def normalize_text(s):
-    return str(s).lower().replace('"', '').replace(":", "").replace("-", "").strip()
-
-movies2["Title_norm"] = movies2["Title"].astype(str).apply(normalize_text)
-movies2["Director_norm"] = movies2["Directors"].astype(str).apply(normalize_text)
-movies2["Genre_first"] = movies2["Genres"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]) if x else "unknown")
-
-imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].astype(str).apply(normalize_text)
-imdb_top["Director_norm_imdb"] = imdb_top["Director"].astype(str).apply(normalize_text)
-imdb_top["Genre_first_imdb"] = imdb_top["Genre"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]) if x else "unknown")
-
-# --- Merge on normalized title ---
 merged_df = pd.merge(
-    movies2,
-    imdb_top,
-    left_on="Title_norm",
-    right_on="Series_Title_norm",
-    how="left",
-    suffixes=('_my', '_imdb')
+    movies2, 
+    imdb_top, 
+    how="left", 
+    left_on="Title_norm", 
+    right_on="Title_norm"
 )
 
-# --- Fill missing director/genre from IMDb ---
-merged_df["Director_norm"] = merged_df["Director_norm"].fillna(merged_df["Director_norm_imdb"].fillna("unknown"))
-merged_df["Genre_first"] = merged_df["Genre_first"].fillna(merged_df["Genre_first_imdb"].fillna("unknown"))
+# --- Select relevant columns ---
+merged_df = merged_df.rename(columns={
+    "IMDB_Rating": "IMDB_Rating",
+    "Runtime": "Runtime",
+    "Director": "Director",
+    "Genre": "Genre",
+    "Year_x": "Year"
+})
 
-# --- Features and target ---
-features = ["IMDB_Rating", "Runtime", "Released_Year", "Director_norm", "Genre_first", "Title_norm"]
+features = ["IMDB_Rating", "Runtime", "Year", "Director", "Genre", "Title"]
 target = "Your Rating"
 
-# Use the cleaned numeric columns
-X = merged_df[features]
-y = merged_df[target]
+# --- Drop rows with missing values ---
+ml_df = merged_df[features + [target]].dropna()
 
-# Fill missing numeric values with median
-for col in ["IMDB_Rating", "Runtime", "Released_Year"]:
-    X[col] = X[col].fillna(X[col].median())
+X = ml_df[features]
+y = ml_df[target]
 
-# Fill missing categorical values
-for col in ["Director_norm", "Genre_first", "Title_norm"]:
-    X[col] = X[col].fillna("unknown")
+# --- Encode categorical features ---
+X_encoded = pd.get_dummies(X, columns=["Director", "Genre", "Title"], drop_first=True)
 
-# Define categorical and numeric features
-categorical_features = ["Director_norm", "Genre_first", "Title_norm"]
-numeric_features = ["IMDB_Rating", "Runtime", "Released_Year"]
+# --- Split data ---
+X_train, X_test, y_train, y_test = train_test_split(X_encoded, y, test_size=0.2, random_state=42)
 
-# Preprocessing pipeline
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("num", "passthrough", numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
-    ]
-)
-
-# Random Forest pipeline
-model = Pipeline([
-    ("preprocess", preprocessor),
-    ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
-])
-
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Train model
+# --- Train Random Forest ---
+model = RandomForestRegressor(n_estimators=200, random_state=42)
 model.fit(X_train, y_train)
 
-# Predictions
-y_pred = model.predict(X_test)
+# --- Make predictions ---
+predictions = model.predict(X_encoded)
+ml_df["Predicted Rating"] = predictions
 
-# --- Display table ---
-pred_df = X_test.copy()
-pred_df["Actual Rating"] = y_test
-pred_df["Predicted Rating"] = np.round(y_pred, 2)
-pred_df = pred_df.rename(columns={"Title_norm": "Title", "Director_norm": "Director", "Genre_first": "Genre", "Released_Year": "Year", "Runtime": "Runtime (mins)", "IMDB_Rating": "IMDB_Rating"})
-
-st.write("#### Predicted vs Actual Ratings")
-st.dataframe(pred_df.sort_values("Predicted Rating", ascending=False), width="stretch", height=500)
-
-# --- Scatter plot ---
-fig = px.scatter(
-    pred_df,
-    x="Actual Rating",
-    y="Predicted Rating",
-    hover_data=["Title", "Genre", "Director", "Year", "Runtime (mins)", "IMDB_Rating"],
-    color=np.round(pred_df["Predicted Rating"] - pred_df["Actual Rating"], 2),
-    color_continuous_scale="RdYlGn",
-    title="Actual vs Predicted Ratings",
-    labels={"color": "Prediction Error"}
+# --- Display results ---
+st.write("### Machine Learning Predictions")
+st.dataframe(
+    ml_df[["Title", "IMDB_Rating", "Runtime", "Genre", "Year", "Director", "Your Rating", "Predicted Rating"]].sort_values("Predicted Rating", ascending=False),
+    width="stretch",
+    height=500
 )
-st.plotly_chart(fig, use_container_width=True)
