@@ -613,6 +613,7 @@ st.plotly_chart(fig)
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import plotly.express as px 
 
 pivot = recs.pivot_table(index="Director", columns="Genres", values="Score", aggfunc="max").fillna(0)
 plt.figure(figsize=(12,8))
