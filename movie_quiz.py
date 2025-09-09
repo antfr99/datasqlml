@@ -595,6 +595,6 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10):
     ]
 
 # --- Streamlit ---
-st.write("### 🎬 Hybrid Recommendations (Directors + Genres + IMDb)")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10)
+st.write("### 🎬 Hybrid Recommendations of films I have not rated (Directors + Genres + IMDb)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000)
 st.dataframe(recs)
