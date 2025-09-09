@@ -453,12 +453,17 @@ if selected_index5 is not None:
 # =====================
 # 🎯 Recommendations from IMDb Top 1000 (new table)
 # =====================
+import csv
+
 st.write("---")
 st.header("🎥 Recommended Movies from IMDb Top 1000 (Unwatched)")
 
-# --- Load Top 1000 dataset from CSV ---
+# --- Load Top 1000 dataset from CSV robustly ---
 top_1000 = pd.read_csv(
-    r"C:\Users\antonio.friguglietti\OneDrive - MSC\Desktop\Python\imdb_top_1000.csv"
+    r"C:\Users\antonio.friguglietti\OneDrive - MSC\Desktop\Python\imdb_top_1000.csv",
+    engine="python",           # more flexible parser
+    quoting=csv.QUOTE_ALL,     # respect quotes around text fields
+    on_bad_lines='skip'        # skip malformed lines
 )
 
 # Standardize columns
