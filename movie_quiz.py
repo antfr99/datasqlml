@@ -453,18 +453,30 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
+
+import streamlit as st
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
 
-# -------------------------------
-# 1️⃣ Load CSVs and clean columns
-# -------------------------------
-movies2 = pd.read_csv("movies2.csv", quotechar='"', engine="python")
-imdb_top_1000 = pd.read_csv("imdb_top_1000.csv", quotechar='"', engine="python")
+# =======================
+# Load CSVs safely
+# =======================
+movies2 = pd.read_csv(
+    "movies2.csv",
+    quotechar='"',
+    engine="python",
+    skipinitialspace=True
+)
+imdb_top_1000 = pd.read_csv(
+    "imdb_top_1000.csv",
+    quotechar='"',
+    engine="python",
+    skipinitialspace=True
+)
 
 # Strip whitespace from column names
 movies2.columns = movies2.columns.str.strip()
@@ -474,77 +486,57 @@ imdb_top_1000.columns = imdb_top_1000.columns.str.strip()
 movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
 imdb_top_1000["Title_norm"] = imdb_top_1000["Title"].str.lower().str.strip()
 
-# -------------------------------
-# 2️⃣ Merge datasets on normalized title
-# -------------------------------
+# =======================
+# Merge on Title_norm
+# =======================
 merged_df = pd.merge(
     movies2,
     imdb_top_1000,
-    on="Title_norm",
     how="left",
+    on="Title_norm",
     suffixes=("_my", "_imdb")
 )
 
-# -------------------------------
-# 3️⃣ Keep only useful columns
-# -------------------------------
-merged_df = merged_df[[
-    "Title", "Your Rating", "IMDB_Rating", "Runtime (mins)", "Runtime", 
-    "Genres", "Genre", "Directors", "Director"
-]].copy()
+# Drop rows with missing critical data
+merged_df = merged_df.dropna(subset=["IMDb_Rating_imdb", "Runtime", "Genre", "Director"])
 
-# Fill missing values in numeric columns with NaN, then drop rows with any missing data
-merged_df["IMDB_Rating"] = pd.to_numeric(merged_df["IMDB_Rating"], errors='coerce')
-merged_df["Runtime (mins)"] = pd.to_numeric(merged_df["Runtime (mins)"], errors='coerce')
-merged_df["Runtime"] = pd.to_numeric(merged_df["Runtime"], errors='coerce')
-merged_df = merged_df.dropna(subset=["Your Rating", "IMDB_Rating", "Runtime (mins)", "Runtime", "Genres", "Genre", "Directors", "Director"])
-
-# Choose one Genre and Director column from each CSV
-merged_df["Genre_final"] = merged_df["Genres"].fillna(merged_df["Genre"])
-merged_df["Director_final"] = merged_df["Directors"].fillna(merged_df["Director"])
-
-# -------------------------------
-# 4️⃣ Prepare features and target
-# -------------------------------
-features = ["IMDB_Rating", "Runtime (mins)", "Genre_final", "Director_final"]
+# =======================
+# Feature selection
+# =======================
+features = ["IMDb_Rating_imdb", "Runtime", "Genre", "Director"]
 X = merged_df[features]
-y = merged_df["Your Rating"]
+y = merged_df["Your Rating"]  # target
 
-# -------------------------------
-# 5️⃣ Encode categorical features
-# -------------------------------
-categorical_features = ["Genre_final", "Director_final"]
-numeric_features = ["IMDB_Rating", "Runtime (mins)"]
+# Categorical columns
+categorical_features = ["Genre", "Director"]
+numeric_features = ["IMDb_Rating_imdb", "Runtime"]
 
+# Preprocessing
 preprocessor = ColumnTransformer(
     transformers=[
         ("num", "passthrough", numeric_features),
-        ("cat", OneHotEncoder(handle_unknown='ignore'), categorical_features)
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
     ]
 )
 
-# -------------------------------
-# 6️⃣ Build pipeline
-# -------------------------------
-model = Pipeline([
-    ("preprocessor", preprocessor),
-    ("regressor", RandomForestRegressor(n_estimators=200, random_state=42))
-])
+# Model pipeline
+model = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
+    ]
+)
 
-# -------------------------------
-# 7️⃣ Train model
-# -------------------------------
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Fit model
 model.fit(X_train, y_train)
 
-# -------------------------------
-# 8️⃣ Make predictions
-# -------------------------------
+# Predict ratings
 merged_df["Predicted Rating"] = model.predict(X)
 
-# -------------------------------
-# 9️⃣ Show table
-# -------------------------------
-result_df = merged_df[["Title", "Your Rating", "Predicted Rating", "IMDB_Rating", "Runtime (mins)", "Genre_final", "Director_final"]]
-result_df = result_df.rename(columns={"Your Rating": "Actual Rating"})
-print(result_df.head(20))
+# Select output columns
+output_cols = ["Title", "IMDb_Rating_imdb", "Runtime", "Genre", "Director", "Your Rating", "Predicted Rating"]
+st.write("### My Ratings Prediction")
+st.dataframe(merged_df[output_cols].sort_values("Predicted Rating", ascending=False))
