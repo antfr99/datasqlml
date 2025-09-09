@@ -454,81 +454,75 @@ if selected_index5 is not None:
 # Visualization
 # =====================
 
-import pandas as pd
 import streamlit as st
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-# --- Load your personal ratings ---
+# --- Load CSVs ---
 movies2 = pd.read_csv("movies2.csv")
-movies2.columns = movies2.columns.str.strip()
+imdb_top_1000 = pd.read_csv("imdb_top_1000.csv", usecols=[
+    "Series_Title", "Released_Year", "Runtime", "Genre", "IMDB_Rating", "Director"
+])
 
-# Keep only relevant columns
-movies2 = movies2[["Title", "Your Rating", "Year"]].dropna()
-
-# Normalize title for merging
+# --- Clean columns ---
+movies2["Title"] = movies2["Title"].astype(str)
 movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
 
-# --- Load cleaned IMDb Top 1000 ---
-imdb_top_1000 = pd.read_csv(
-    "imdb_top_1000.csv",
-    on_bad_lines='skip',
-    engine='python'
-)
-columns_to_keep = ["Series_Title", "Released_Year", "Runtime", "Genre", "IMDB_Rating", "Director"]
-imdb_top_1000 = imdb_top_1000[[c for c in columns_to_keep if c in imdb_top_1000.columns]]
-imdb_top_1000 = imdb_top_1000.rename(columns={
-    "Series_Title": "Title",
-    "Released_Year": "Year",
-    "IMDB_Rating": "IMDb_Rating"
-})
-imdb_top_1000["Title_norm"] = imdb_top_1000["Title"].str.lower().str.strip()
-imdb_top_1000["Runtime"] = pd.to_numeric(imdb_top_1000["Runtime"].astype(str).str.extract("(\d+)")[0], errors="coerce")
-imdb_top_1000 = imdb_top_1000.dropna(subset=["Title", "Year", "Runtime", "Genre", "IMDb_Rating", "Director"])
+imdb_top_1000["Series_Title"] = imdb_top_1000["Series_Title"].astype(str)
+imdb_top_1000["Title_norm"] = imdb_top_1000["Series_Title"].str.lower().str.strip()
 
-# --- Merge your ratings with IMDb features ---
+# --- Merge on normalized title ---
 merged_df = pd.merge(
     movies2,
     imdb_top_1000,
     on="Title_norm",
     how="left"
-).dropna(subset=["Runtime", "Genre", "Director", "IMDb_Rating"])
+)
 
-# Features and target
-features = ["Runtime", "Genre", "Director", "Year", "IMDb_Rating"]
+# --- Keep relevant columns ---
+merged_df = merged_df[[
+    "Title", "IMDB_Rating", "Runtime", "Genre", "Released_Year", "Director", "Your Rating"
+]]
+
+# --- Remove rows with missing data ---
+merged_df = merged_df.dropna()
+
+# --- Features & target ---
+features = ["IMDB_Rating", "Runtime", "Genre", "Director", "Released_Year"]
 X = merged_df[features]
 y = merged_df["Your Rating"]
 
-# --- Preprocessing for categorical features ---
+# --- Preprocessing pipeline ---
 categorical_features = ["Genre", "Director"]
-numeric_features = ["Runtime", "Year", "IMDb_Rating"]
+numeric_features = ["IMDB_Rating", "Runtime", "Released_Year"]
 
-preprocessor = ColumnTransformer(transformers=[
-    ('num', 'passthrough', numeric_features),
-    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
-])
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", "passthrough", numeric_features),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
+    ]
+)
 
-# --- Random Forest pipeline ---
 model = Pipeline([
-    ('preprocessor', preprocessor),
-    ('regressor', RandomForestRegressor(n_estimators=200, random_state=42))
+    ("preprocessor", preprocessor),
+    ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
 ])
 
 # --- Train-test split ---
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# --- Train the model ---
+# --- Fit model ---
 model.fit(X_train, y_train)
 
-# --- Predict ratings for all movies in IMDb Top 1000 ---
-imdb_top_1000_features = imdb_top_1000[features].dropna()
-predicted_ratings = model.predict(imdb_top_1000_features)
+# --- Predict ---
+merged_df["Predicted Rating"] = model.predict(X)
 
-# --- Add predictions to the dataframe ---
-imdb_top_1000_features = imdb_top_1000_features.copy()
-imdb_top_1000_features["Predicted Rating"] = predicted_ratings
-
-st.write("Top predicted ratings for you:", imdb_top_1000_features.sort_values("Predicted Rating", ascending=False).head(20))
+# --- Display table ---
+st.write("### Predicted Ratings")
+st.dataframe(merged_df[[
+    "Title", "IMDB_Rating", "Runtime", "Genre", "Director", "Released_Year", "Your Rating", "Predicted Rating"
+]])
