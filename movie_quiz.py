@@ -468,37 +468,45 @@ imdb_top_1000 = pd.read_csv("imdb_top_1000.csv", usecols=[
     "Series_Title", "Released_Year", "Runtime", "Genre", "IMDB_Rating", "Director"
 ])
 
-# --- Clean columns ---
+# --- Normalize Titles ---
 movies2["Title"] = movies2["Title"].astype(str)
 movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
 
 imdb_top_1000["Series_Title"] = imdb_top_1000["Series_Title"].astype(str)
 imdb_top_1000["Title_norm"] = imdb_top_1000["Series_Title"].str.lower().str.strip()
 
-# --- Merge on normalized title ---
+# --- Keep first genre only for simplicity ---
+movies2["Genre_first"] = movies2["Genres"].astype(str).str.split(",").str[0].str.strip()
+imdb_top_1000["Genre_first"] = imdb_top_1000["Genre"].astype(str).str.split(",").str[0].str.strip()
+
+# --- Rename columns to match for merge ---
+imdb_top_1000 = imdb_top_1000.rename(columns={
+    "Series_Title": "Title",
+    "Released_Year": "Year",
+    "IMDB_Rating": "IMDB_Rating",
+    "Runtime": "Runtime",
+    "Director": "Director"
+})
+
+# --- Merge datasets on normalized title ---
 merged_df = pd.merge(
     movies2,
-    imdb_top_1000,
+    imdb_top_1000[["Title_norm", "IMDB_Rating", "Runtime", "Genre_first", "Director"]],
     on="Title_norm",
     how="left"
 )
 
-# --- Keep relevant columns ---
-merged_df = merged_df[[
-    "Title", "IMDB_Rating", "Runtime", "Genre", "Released_Year", "Director", "Your Rating"
-]]
+# --- Drop rows with missing data ---
+merged_df = merged_df.dropna(subset=["IMDB_Rating", "Runtime", "Genre_first", "Director", "Your Rating"])
 
-# --- Remove rows with missing data ---
-merged_df = merged_df.dropna()
-
-# --- Features & target ---
-features = ["IMDB_Rating", "Runtime", "Genre", "Director", "Released_Year"]
+# --- Features and target ---
+features = ["IMDB_Rating", "Runtime", "Genre_first", "Director"]
 X = merged_df[features]
 y = merged_df["Your Rating"]
 
-# --- Preprocessing pipeline ---
-categorical_features = ["Genre", "Director"]
-numeric_features = ["IMDB_Rating", "Runtime", "Released_Year"]
+# --- Preprocessing for categorical columns ---
+categorical_features = ["Genre_first", "Director"]
+numeric_features = ["IMDB_Rating", "Runtime"]
 
 preprocessor = ColumnTransformer(
     transformers=[
@@ -507,22 +515,21 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-model = Pipeline([
+# --- ML Pipeline ---
+model = Pipeline(steps=[
     ("preprocessor", preprocessor),
     ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
 ])
 
-# --- Train-test split ---
+# --- Train/test split ---
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# --- Fit model ---
+# --- Train model ---
 model.fit(X_train, y_train)
 
 # --- Predict ---
 merged_df["Predicted Rating"] = model.predict(X)
 
-# --- Display table ---
-st.write("### Predicted Ratings")
-st.dataframe(merged_df[[
-    "Title", "IMDB_Rating", "Runtime", "Genre", "Director", "Released_Year", "Your Rating", "Predicted Rating"
-]])
+# --- Display results ---
+st.dataframe(merged_df[["Title", "Your Rating", "Predicted Rating", "IMDB_Rating", "Runtime", "Genre_first", "Director"]])
+
