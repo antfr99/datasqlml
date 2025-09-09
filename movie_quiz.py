@@ -450,8 +450,8 @@ if selected_index5 is not None:
     else:
         st.error("❌ Try again.")
 
-# ============================
-# --- Load & Combine Other Ratings ---
+# ==========================# ============================
+# --- Load & Combine Other Ratings (IMDb Ratings) ---
 # ============================
 
 others1 = pd.read_csv("othersratings1.csv")
@@ -460,20 +460,20 @@ others2 = pd.read_csv("othersratings2.csv")
 # Standardize columns
 for df in [others1, others2]:
     df.columns = df.columns.str.strip()
-    df.rename(columns={"Const": "Movie ID"}, inplace=True)
+    df.rename(columns={"Const": "Movie ID"}, inplace=True)  # keep IMDb Rating as is
     if "Directors" in df.columns:
         df["Director"] = df["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
         df.drop(columns=["Directors"], inplace=True)
 
 # Keep only desired columns
-desired_cols = [
+desired_cols_others = [
     "Movie ID", "IMDb Rating", "Date Rated", "Title", "URL",
     "Title Type", "Runtime (mins)", "Year",
     "Release Date", "Director", "Genre"
 ]
 
 others_combined = pd.concat([others1, others2], ignore_index=True)
-others_combined = others_combined[[c for c in desired_cols if c in others_combined.columns]]
+others_combined = others_combined[[c for c in desired_cols_others if c in others_combined.columns]]
 others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
 
 # --- Display Combined Other Ratings ---
@@ -481,13 +481,13 @@ st.write("---")
 st.write("### IMDB Ratings Table 2")
 
 min_other_rating = st.slider(
-    "Show movies with rating at least:",
+    "Show movies with IMDb rating at least:",
     0, 10, 7,
     key="other_slider"
 )
 
 filtered_others = others_combined[
-    others_combined["IMDb Ratings"] >= min_other_rating
+    others_combined["IMDb Rating"] >= min_other_rating
 ].sort_values("IMDb Rating", ascending=False)
 
 st.dataframe(
@@ -495,6 +495,7 @@ st.dataframe(
     width="stretch",
     height=400
 )
+
 
 # ============================
 # --- Load My Ratings CSV ---
