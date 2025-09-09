@@ -460,14 +460,14 @@ others2 = pd.read_csv("othersratings2.csv")
 # Standardize columns
 for df in [others1, others2]:
     df.columns = df.columns.str.strip()
-    df.rename(columns={"Const": "Movie ID", "Your Rating": "Personal Ratings"}, inplace=True)
+    df.rename(columns={"Const": "Movie ID"}, inplace=True)
     if "Directors" in df.columns:
         df["Director"] = df["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
         df.drop(columns=["Directors"], inplace=True)
 
 # Keep only desired columns
 desired_cols = [
-    "Movie ID", "Personal Ratings", "Date Rated", "Title", "URL",
+    "Movie ID", "IMDb Rating", "Date Rated", "Title", "URL",
     "Title Type", "Runtime (mins)", "Year",
     "Release Date", "Director", "Genre"
 ]
@@ -478,7 +478,7 @@ others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
 
 # --- Display Combined Other Ratings ---
 st.write("---")
-st.write("### Other Ratings (Combined from othersratings1 & othersratings2)")
+st.write("### IMDB Ratings Table 2")
 
 min_other_rating = st.slider(
     "Show movies with rating at least:",
@@ -487,8 +487,8 @@ min_other_rating = st.slider(
 )
 
 filtered_others = others_combined[
-    others_combined["Personal Ratings"] >= min_other_rating
-].sort_values("Personal Ratings", ascending=False)
+    others_combined["IMDb Ratings"] >= min_other_rating
+].sort_values("IMDb Rating", ascending=False)
 
 st.dataframe(
     filtered_others.drop(columns=["Genre"], errors="ignore"),
