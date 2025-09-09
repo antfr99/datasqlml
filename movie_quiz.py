@@ -450,3 +450,31 @@ if selected_index5 is not None:
     else:
         st.error("❌ Try again.")
 
+# =====================
+# Visualization
+# =====================
+st.write("---")
+st.write("### Visualization: Personal Ratings vs IMDb Ratings")
+
+import plotly.express as px
+
+# Merge Personal_Ratings with IMDB_Ratings
+merged_ratings = pd.merge(
+    Personal_Ratings,
+    IMDB_Ratings[["Movie ID", "IMDb Rating"]],
+    on="Movie ID",
+    how="inner"
+)
+
+# Scatter plot: Personal vs IMDb
+fig = px.scatter(
+    merged_ratings,
+    x="IMDb Rating",
+    y="Personal Ratings",
+    hover_data=["Title", "director", "Year"],
+    color="Year",
+    title="Personal Ratings vs IMDb Ratings",
+    labels={"IMDb Rating": "IMDb Rating", "Personal Ratings": "My Rating"}
+)
+
+st.plotly_chart(fig, use_container_width=True)
