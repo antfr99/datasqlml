@@ -454,89 +454,98 @@ if selected_index5 is not None:
 # Visualization
 # =====================
 
-import streamlit as st
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
 
-# =======================
-# Load CSVs safely
-# =======================
-movies2 = pd.read_csv(
-    "movies2.csv",
-    quotechar='"',
-    engine="python",
-    skipinitialspace=True
-)
-imdb_top_1000 = pd.read_csv(
-    "imdb_top_1000.csv",
-    quotechar='"',
-    engine="python",
-    skipinitialspace=True
-)
+# ========================
+# 1️⃣ Load CSV files safely
+# ========================
 
-# Strip whitespace from column names
-movies2.columns = movies2.columns.str.strip()
-imdb_top_1000.columns = imdb_top_1000.columns.str.strip()
+# Movies you rated
+movies2 = pd.read_csv("movies2.csv", engine="python", skipinitialspace=True)
+movies2.columns = movies2.columns.str.strip().str.replace('\ufeff', '')
 
-# Normalize titles for merging
-movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
-imdb_top_1000["Title_norm"] = imdb_top_1000["Title"].str.lower().str.strip()
+# IMDB top 1000
+imdb_top_1000 = pd.read_csv("imdb_top_1000.csv", engine="python", skipinitialspace=True)
+imdb_top_1000.columns = imdb_top_1000.columns.str.strip().str.replace('\ufeff', '')
 
-# =======================
-# Merge on Title_norm
-# =======================
+print("Movies2 columns:", movies2.columns.tolist())
+print("IMDB columns:", imdb_top_1000.columns.tolist())
+
+# ========================
+# 2️⃣ Normalize titles for merging
+# ========================
+
+movies2["Title_norm"] = movies2["Title"].astype(str).str.lower().str.strip()
+imdb_top_1000["Title_norm"] = imdb_top_1000["Title"].astype(str).str.lower().str.strip()
+
+# ========================
+# 3️⃣ Merge datasets on normalized title
+# ========================
+
 merged_df = pd.merge(
     movies2,
-    imdb_top_1000,
-    how="left",
-    on="Title_norm",
-    suffixes=("_my", "_imdb")
+    imdb_top_1000[['Title_norm', 'IMDB_Rating', 'Runtime', 'Director', 'Genre']],
+    on='Title_norm',
+    how='left'
 )
 
-# Drop rows with missing critical data
-merged_df = merged_df.dropna(subset=["IMDb_Rating_imdb", "Runtime", "Genre", "Director"])
+# ========================
+# 4️⃣ Drop rows with missing essential data
+# ========================
 
-# =======================
-# Feature selection
-# =======================
-features = ["IMDb_Rating_imdb", "Runtime", "Genre", "Director"]
-X = merged_df[features]
-y = merged_df["Your Rating"]  # target
+merged_df = merged_df.dropna(subset=['Your Rating', 'IMDB_Rating', 'Runtime', 'Genre', 'Director'])
 
-# Categorical columns
-categorical_features = ["Genre", "Director"]
-numeric_features = ["IMDb_Rating_imdb", "Runtime"]
+# ========================
+# 5️⃣ Prepare features and target
+# ========================
+
+# Features: numeric + categorical
+X = merged_df[['IMDB_Rating', 'Runtime', 'Genre', 'Director']]
+y = merged_df['Your Rating']
+
+# Identify categorical features
+categorical_features = ['Genre', 'Director']
+numeric_features = ['IMDB_Rating', 'Runtime']
 
 # Preprocessing
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", "passthrough", numeric_features),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
+        ('num', 'passthrough', numeric_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
     ]
 )
 
-# Model pipeline
-model = Pipeline(
-    steps=[
-        ("preprocessor", preprocessor),
-        ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
-    ]
-)
+# ========================
+# 6️⃣ Build pipeline
+# ========================
 
-# Train-test split
+model = Pipeline([
+    ('preprocessor', preprocessor),
+    ('regressor', RandomForestRegressor(n_estimators=100, random_state=42))
+])
+
+# ========================
+# 7️⃣ Split data and train
+# ========================
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Fit model
 model.fit(X_train, y_train)
 
-# Predict ratings
-merged_df["Predicted Rating"] = model.predict(X)
+# ========================
+# 8️⃣ Make predictions
+# ========================
 
-# Select output columns
-output_cols = ["Title", "IMDb_Rating_imdb", "Runtime", "Genre", "Director", "Your Rating", "Predicted Rating"]
-st.write("### My Ratings Prediction")
-st.dataframe(merged_df[output_cols].sort_values("Predicted Rating", ascending=False))
+merged_df['Predicted Rating'] = model.predict(X)
+
+# ========================
+# 9️⃣ Show results
+# ========================
+
+display_cols = ['Title', 'IMDB_Rating', 'Runtime', 'Genre', 'Director', 'Your Rating', 'Predicted Rating']
+st.dataframe(merged_df[display_cols].sort_values(by='Predicted Rating', ascending=False))
