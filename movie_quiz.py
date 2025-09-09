@@ -556,9 +556,9 @@ st.dataframe(
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
 
-def hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10):
+def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
     # 1. Get movies I rated highly
-    liked_movies = myratings[myratings["Personal Ratings"] >= 8]
+    liked_movies = myratings[myratings["Personal Ratings"] >= 7]
 
     if liked_movies.empty:
         st.warning("No highly-rated movies in your list.")
@@ -591,7 +591,7 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10):
 
     # 6. Return top_n
     return candidates.sort_values("Score", ascending=False).head(top_n)[
-        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
+        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Recommended Score"]
     ]
 
 # --- Streamlit ---
