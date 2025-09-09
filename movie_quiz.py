@@ -453,9 +453,6 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-# # =====================
-# Machine Learning Predictions
-# =====================
 # =====================
 # Machine Learning Predictions
 # =====================
@@ -469,6 +466,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 import plotly.express as px
 
 # --- Load movies2 (your ratings) ---
@@ -516,9 +514,9 @@ target = "Your Rating"
 if "Runtime" in merged_df.columns:
     merged_df["Runtime"] = merged_df["Runtime"].astype(str).str.extract(r'(\d+)').astype(float)
 if "IMDB_Rating" in merged_df.columns:
-    merged_df["IMDB_Rating"] = merged_df["IMDB_Rating"].astype(float)
+    merged_df["IMDB_Rating"] = pd.to_numeric(merged_df["IMDB_Rating"], errors='coerce')
 if "Year" in merged_df.columns:
-    merged_df["Year"] = merged_df["Year"].astype(int)
+    merged_df["Year"] = pd.to_numeric(merged_df["Year"], errors='coerce')
 
 # Keep only available features
 available_features = [f for f in features if f in merged_df.columns]
@@ -530,18 +528,19 @@ for col in ["Title", "Genre", "Director"]:
     if col in X.columns:
         X[col] = X[col].fillna("Unknown")
 
-# One-hot encode categorical variables
+# Define categorical and numeric features
 categorical_features = [c for c in ["Title", "Genre", "Director"] if c in X.columns]
 numeric_features = [c for c in ["IMDB_Rating", "Runtime", "Year"] if c in X.columns]
 
+# Column transformer with numeric imputer and categorical one-hot
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", "passthrough", numeric_features),
+        ("num", SimpleImputer(strategy="median"), numeric_features),
         ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
     ]
 )
 
-# Random Forest Regressor
+# Random Forest Regressor pipeline
 model = Pipeline([
     ("preprocess", preprocessor),
     ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
