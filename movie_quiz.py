@@ -461,7 +461,7 @@ st.header("🎥 Recommended Movies from IMDb Top 1000 (Unwatched)")
 # --- Load Top 1000 dataset from CSV robustly ---
 top_1000 = pd.read_csv(
     r"C:\Users\antonio.friguglietti\OneDrive - MSC\Desktop\Python\imdb_top_1000.csv",
-    engine="python",           # more flexible parser
+    engine="python",           # flexible parser
     quoting=csv.QUOTE_ALL,     # respect quotes around text fields
     on_bad_lines='skip'        # skip malformed lines
 )
@@ -473,6 +473,10 @@ top_1000 = top_1000.rename(columns={
     "Released_Year": "Year",
     "No_of_Votes": "No_of_votes"
 })
+
+# --- Ensure Title column is string ---
+top_1000["Title"] = top_1000["Title"].astype(str)
+Personal_Ratings["Title"] = Personal_Ratings["Title"].astype(str)
 
 # --- Exclude movies already rated by you ---
 watched_titles = set(Personal_Ratings["Title"].str.lower())
