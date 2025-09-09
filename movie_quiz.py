@@ -584,14 +584,14 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
         return score
 
     candidates = candidates.copy()
-    candidates["Recommended Score"] = candidates.apply(score_movie, axis=1)
+    candidates["Score"] = candidates.apply(score_movie, axis=1)
 
     # 5. Exclude movies I’ve already rated
     candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
 
     # 6. Return top_n
     return candidates.sort_values("Score", ascending=False).head(top_n)[
-        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Recommended Score"]
+        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
     ]
 
 # --- Streamlit ---
