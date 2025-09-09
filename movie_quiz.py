@@ -453,7 +453,7 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-# =====================
+# # =====================
 # Machine Learning Predictions
 # =====================
 st.write("---")
@@ -468,16 +468,25 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import plotly.express as px
 
+# --- Load movies2 (your ratings) ---
+movies2 = pd.read_csv(
+    "movies2.csv",
+    quotechar='"',
+    skipinitialspace=True,
+    encoding="utf-8",
+    on_bad_lines='skip'   # skip malformed rows
+)
+
 # --- Load IMDb top 1000 safely ---
 imdb_top = pd.read_csv(
     "imdb_top_1000.csv",
-    quotechar='"',          # handle commas inside text
+    quotechar='"',
     skipinitialspace=True,
     encoding="utf-8",
-    on_bad_lines='skip'     # skip malformed rows
+    on_bad_lines='skip'
 )
 
-# --- Merge with movies2 (personal ratings) ---
+# --- Merge on Title ---
 merged_df = pd.merge(
     movies2,
     imdb_top,
@@ -490,14 +499,14 @@ merged_df = pd.merge(
 merged_df = merged_df.dropna(subset=["Your Rating"])
 
 # --- Features and target ---
-features = ["IMDb_Rating", "Runtime", "Genre", "Year", "Director"]
+features = ["IMDB_Rating", "Runtime", "Genre", "Year", "Director"]
 target = "Your Rating"
 
 # Clean numeric columns
 if "Runtime" in merged_df.columns:
     merged_df["Runtime"] = merged_df["Runtime"].astype(str).str.extract(r'(\d+)').astype(float)
-if "IMDb_Rating" in merged_df.columns:
-    merged_df["IMDb_Rating"] = merged_df["IMDb_Rating"].astype(float)
+if "IMDB_Rating" in merged_df.columns:
+    merged_df["IMDB_Rating"] = merged_df["IMDB_Rating"].astype(float)
 if "Year" in merged_df.columns:
     merged_df["Year"] = merged_df["Year"].astype(int)
 
@@ -513,7 +522,7 @@ for col in ["Genre", "Director"]:
 
 # One-hot encode categorical variables
 categorical_features = [c for c in ["Genre", "Director"] if c in X.columns]
-numeric_features = [c for c in ["IMDb_Rating", "Runtime", "Year"] if c in X.columns]
+numeric_features = [c for c in ["IMDB_Rating", "Runtime", "Year"] if c in X.columns]
 
 preprocessor = ColumnTransformer(
     transformers=[
