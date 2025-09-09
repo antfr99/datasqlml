@@ -469,7 +469,7 @@ for df in [others1, others2]:
 desired_cols_others = [
     "Movie ID", "IMDb Rating", "Title", "URL",
     "Title Type", "Runtime (mins)", "Year",
-    "Release Date", "Director", "Num Votes", "Genre"
+    "Release Date", "Director", "Num Votes", "Genres"
 ]
 
 others_combined = pd.concat([others1, others2], ignore_index=True)
@@ -480,8 +480,8 @@ others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
 others_combined = others_combined[others_combined["Num Votes"] > 50000]
 
 # --- Clean Genre column (keep only first genre) ---
-if "Genre" in others_combined.columns:
-    others_combined["Genre"] = others_combined["Genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+if "Genres" in others_combined.columns:
+    others_combined["Genres"] = others_combined["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
 # --- Display Combined Other Ratings ---
 st.write("---")
@@ -519,14 +519,14 @@ if "Directors" in myratings.columns:
 desired_cols_myratings = [
     "Movie ID", "Personal Ratings", "Date Rated", "Title", "URL",
     "Title Type", "Runtime (mins)", "Year",
-    "Release Date", "Director", "Genre"
+    "Release Date", "Director", "Genres"
 ]
 myratings = myratings[[c for c in desired_cols_myratings if c in myratings.columns]]
 myratings = myratings.drop_duplicates(subset=["Movie ID"])
 
 # --- Clean Genre column (keep only first genre) ---
-if "Genre" in myratings.columns:
-    myratings["Genre"] = myratings["Genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+if "Genres" in myratings.columns:
+    myratings["Genres"] = myratings["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
 # --- Display My Ratings ---
 st.write("---")
@@ -543,7 +543,7 @@ filtered_myratings = myratings[
 ].sort_values("Personal Ratings", ascending=False)
 
 st.dataframe(
-    filtered_myratings,  # keep Genre column visible
+    filtered_myratings,  # keep Genres column visible
     width="stretch",
     height=400
 )
