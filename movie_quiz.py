@@ -551,53 +551,50 @@ st.dataframe(
 # --- Content-Based Recommender (Genres Similarity) ---
 # ============================
 # ============================
-# --- Content-Based Recommender (Genres Similarity) ---
+
 # ============================
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+# --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
+# ============================
 
-# Reset index for alignment
-others_combined = others_combined.reset_index(drop=True)
+def hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10):
+    # 1. Get movies I rated highly
+    liked_movies = myratings[myratings["Personal Ratings"] >= 8]
 
-# 1. Vectorize genres
-vectorizer = CountVectorizer(stop_words="english")
-genre_matrix = vectorizer.fit_transform(others_combined["Genres"].fillna(""))
-
-# 2. Compute cosine similarity
-cosine_sim = cosine_similarity(genre_matrix, genre_matrix)
-
-# 3. Map Movie ID -> row index
-indices = pd.Series(others_combined.index, index=others_combined["Movie ID"]).drop_duplicates()
-
-def get_recommendations(movie_id, top_n=10):
-    if movie_id not in indices:
-        st.warning(f"Movie ID {movie_id} not found in others_combined")
+    if liked_movies.empty:
+        st.warning("No highly-rated movies in your list.")
         return pd.DataFrame()
 
-    idx = indices[movie_id]
+    # 2. Collect favorite directors and genres
+    fav_directors = set(liked_movies["Director"].dropna().unique())
+    fav_genres = set(liked_movies["Genres"].dropna().unique())
 
-    # Similarity scores
-    sim_scores = list(enumerate(cosine_sim[idx]))
-    sim_scores = sorted(sim_scores, key=lambda x: float(x[1]), reverse=True)
+    # 3. Filter others_combined for popular + high-rated
+    candidates = others_combined[
+        (others_combined["IMDb Rating"] >= min_imdb) &
+        (others_combined["Num Votes"] > 50000)
+    ]
 
-    # Exclude the movie itself
-    sim_scores = sim_scores[1:top_n+1]
+    # 4. Score candidates
+    def score_movie(row):
+        score = row["IMDb Rating"]  # base = IMDb
+        if row["Director"] in fav_directors:
+            score += 1.0  # director match = strong bonus
+        if row["Genres"] in fav_genres:
+            score += 0.5  # genre match = weaker bonus
+        return score
 
-    # Get indices
-    movie_indices = [i for i, _ in sim_scores]
+    candidates = candidates.copy()
+    candidates["Score"] = candidates.apply(score_movie, axis=1)
 
-    return others_combined.iloc[movie_indices][["Movie ID", "Title", "Genres", "IMDb Rating", "Year"]]
+    # 5. Exclude movies I’ve already rated
+    candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
 
-# --- Streamlit: Pick a movie ---
-movie_choice = st.selectbox(
-    "Pick a movie from My Ratings to get recommendations:",
-    myratings["Title"].tolist()
-)
+    # 6. Return top_n
+    return candidates.sort_values("Score", ascending=False).head(top_n)[
+        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
+    ]
 
-# Get Movie ID for that title
-selected_id = myratings.loc[myratings["Title"] == movie_choice, "Movie ID"].values[0]
-
-# Show recommendations
-st.write(f"### Recommended Movies similar to '{movie_choice}'")
-recs = get_recommendations(selected_id, top_n=10)
+# --- Streamlit ---
+st.write("### 🎬 Hybrid Recommendations (Directors + Genres + IMDb)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10)
 st.dataframe(recs)
