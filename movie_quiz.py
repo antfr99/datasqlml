@@ -453,59 +453,82 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-st.write("---")
-st.write("## Predicting Your Ratings using Machine Learning")
 
 import pandas as pd
+import streamlit as st
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
-# --- Load your movies2 CSV ---
+# --- Load your personal ratings ---
 movies2 = pd.read_csv("movies2.csv")
 movies2.columns = movies2.columns.str.strip()
 
-# --- Load IMDb top 1000 ---
-imdb_top_1000 = pd.read_csv("imdb_top_1000.csv")
-imdb_top_1000.columns = imdb_top_1000.columns.str.strip()
+# Keep only relevant columns
+movies2 = movies2[["Title", "Your Rating", "Year"]].dropna()
 
-# --- Normalize titles for merging ---
+# Normalize title for merging
 movies2["Title_norm"] = movies2["Title"].str.lower().str.strip()
-imdb_top_1000["Title_norm"] = imdb_top_1000["Series_Title"].str.lower().str.strip()
 
-# --- Merge on normalized title ---
-merged_df = pd.merge(
-    movies2, 
-    imdb_top_1000, 
-    how="left", 
-    left_on="Title_norm", 
-    right_on="Title_norm"
+# --- Load cleaned IMDb Top 1000 ---
+imdb_top_1000 = pd.read_csv(
+    "imdb_top_1000.csv",
+    on_bad_lines='skip',
+    engine='python'
 )
+columns_to_keep = ["Series_Title", "Released_Year", "Runtime", "Genre", "IMDB_Rating", "Director"]
+imdb_top_1000 = imdb_top_1000[[c for c in columns_to_keep if c in imdb_top_1000.columns]]
+imdb_top_1000 = imdb_top_1000.rename(columns={
+    "Series_Title": "Title",
+    "Released_Year": "Year",
+    "IMDB_Rating": "IMDb_Rating"
+})
+imdb_top_1000["Title_norm"] = imdb_top_1000["Title"].str.lower().str.strip()
+imdb_top_1000["Runtime"] = pd.to_numeric(imdb_top_1000["Runtime"].astype(str).str.extract("(\d+)")[0], errors="coerce")
+imdb_top_1000 = imdb_top_1000.dropna(subset=["Title", "Year", "Runtime", "Genre", "IMDb_Rating", "Director"])
 
-# --- Select features and target ---
-features = ["IMDB_Rating", "Runtime", "Year", "Director", "Genre", "Title"]
-target = "Your Rating"
+# --- Merge your ratings with IMDb features ---
+merged_df = pd.merge(
+    movies2,
+    imdb_top_1000,
+    on="Title_norm",
+    how="left"
+).dropna(subset=["Runtime", "Genre", "Director", "IMDb_Rating"])
 
-# Keep only relevant columns and drop rows with missing values
-ml_df = merged_df[features + [target]].dropna()
+# Features and target
+features = ["Runtime", "Genre", "Director", "Year", "IMDb_Rating"]
+X = merged_df[features]
+y = merged_df["Your Rating"]
 
-# --- Encode categorical variables ---
-X = pd.get_dummies(ml_df[features], columns=["Director", "Genre", "Title"], drop_first=True)
-y = ml_df[target]
+# --- Preprocessing for categorical features ---
+categorical_features = ["Genre", "Director"]
+numeric_features = ["Runtime", "Year", "IMDb_Rating"]
 
-# --- Split into train/test (optional, here we train on all for predictions) ---
+preprocessor = ColumnTransformer(transformers=[
+    ('num', 'passthrough', numeric_features),
+    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+])
+
+# --- Random Forest pipeline ---
+model = Pipeline([
+    ('preprocessor', preprocessor),
+    ('regressor', RandomForestRegressor(n_estimators=200, random_state=42))
+])
+
+# --- Train-test split ---
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# --- Train Random Forest ---
-model = RandomForestRegressor(n_estimators=200, random_state=42)
+# --- Train the model ---
 model.fit(X_train, y_train)
 
-# --- Make predictions on all data ---
-ml_df["Predicted Rating"] = model.predict(X)
+# --- Predict ratings for all movies in IMDb Top 1000 ---
+imdb_top_1000_features = imdb_top_1000[features].dropna()
+predicted_ratings = model.predict(imdb_top_1000_features)
 
-# --- Display table ---
-st.write("### Predicted vs Actual Ratings")
-st.dataframe(
-    ml_df[["Title", "IMDB_Rating", "Runtime", "Genre", "Year", "Director", "Your Rating", "Predicted Rating"]].sort_values("Predicted Rating", ascending=False),
-    width="stretch",
-    height=500
-)
+# --- Add predictions to the dataframe ---
+imdb_top_1000_features = imdb_top_1000_features.copy()
+imdb_top_1000_features["Predicted Rating"] = predicted_ratings
+
+st.write("Top predicted ratings for you:", imdb_top_1000_features.sort_values("Predicted Rating", ascending=False).head(20))
