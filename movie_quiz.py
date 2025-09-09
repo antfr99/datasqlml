@@ -450,3 +450,82 @@ if selected_index5 is not None:
     else:
         st.error("❌ Try again.")
 
+# ============================
+# --- Load & Combine Other Ratings ---
+# ============================
+
+others1 = pd.read_csv("othersratings1.csv")
+others2 = pd.read_csv("othersratings2.csv")
+
+# Standardize columns
+for df in [others1, others2]:
+    df.columns = df.columns.str.strip()
+    df.rename(columns={"Const": "Movie ID", "Your Rating": "Personal Ratings"}, inplace=True)
+    if "Directors" in df.columns:
+        df["Director"] = df["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+        df.drop(columns=["Directors"], inplace=True)
+
+# Keep only desired columns
+desired_cols = [
+    "Movie ID", "Personal Ratings", "Date Rated", "Title", "URL",
+    "Title Type", "Runtime (mins)", "Year",
+    "Release Date", "Director", "Genre"
+]
+
+others_combined = pd.concat([others1, others2], ignore_index=True)
+others_combined = others_combined[[c for c in desired_cols if c in others_combined.columns]]
+others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
+
+# --- Display Combined Other Ratings ---
+st.write("---")
+st.write("### Other Ratings (Combined from othersratings1 & othersratings2)")
+
+min_other_rating = st.slider(
+    "Show movies with rating at least:",
+    0, 10, 7,
+    key="other_slider"
+)
+
+filtered_others = others_combined[
+    others_combined["Personal Ratings"] >= min_other_rating
+].sort_values("Personal Ratings", ascending=False)
+
+st.dataframe(
+    filtered_others.drop(columns=["Genre"], errors="ignore"),
+    width="stretch",
+    height=400
+)
+
+# ============================
+# --- Load My Ratings CSV ---
+# ============================
+
+myratings = pd.read_csv("myratings.csv")
+myratings.columns = myratings.columns.str.strip()
+myratings.rename(columns={"Const": "Movie ID", "Your Rating": "Personal Ratings"}, inplace=True)
+if "Directors" in myratings.columns:
+    myratings["Director"] = myratings["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    myratings.drop(columns=["Directors"], inplace=True)
+
+myratings = myratings[[c for c in desired_cols if c in myratings.columns]]
+myratings = myratings.drop_duplicates(subset=["Movie ID"])
+
+# --- Display My Ratings ---
+st.write("---")
+st.write("### My Ratings")
+
+min_my_rating = st.slider(
+    "Show movies with rating at least:",
+    0, 10, 7,
+    key="my_slider"
+)
+
+filtered_myratings = myratings[
+    myratings["Personal Ratings"] >= min_my_rating
+].sort_values("Personal Ratings", ascending=False)
+
+st.dataframe(
+    filtered_myratings.drop(columns=["Genre"], errors="ignore"),
+    width="stretch",
+    height=400
+)
