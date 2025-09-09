@@ -584,7 +584,7 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
         return score
 
     candidates = candidates.copy()
-    candidates["Score"] = candidates.apply(score_movie, axis=1)
+    candidates["Recommended Score"] = candidates.apply(score_movie, axis=1)
 
     # 5. Exclude movies I’ve already rated
     candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
@@ -598,3 +598,24 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
 st.write("### 🎬 Hybrid Recommendations of films I have not rated (Directors + Genres + IMDb)")
 recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000)
 st.dataframe(recs)
+
+fig = px.scatter(
+    recs,
+    x="IMDb Rating",
+    y="Score",
+    color="Genres",
+    hover_data=["Title", "Director", "Num Votes"],
+    size="Num Votes",  # bigger bubbles = more votes
+    title="Hybrid Recommendations: IMDb vs Score"
+)
+st.plotly_chart(fig)
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+pivot = recs.pivot_table(index="Director", columns="Genres", values="Score", aggfunc="max").fillna(0)
+plt.figure(figsize=(12,8))
+sns.heatmap(pivot, annot=True, fmt=".1f", cmap="YlGnBu")
+plt.title("Hybrid Recommendation Score by Director & Genre")
+st.pyplot(plt)
