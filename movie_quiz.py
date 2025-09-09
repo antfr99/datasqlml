@@ -453,13 +453,12 @@ if selected_index5 is not None:
 # =====================
 # Visualization
 # =====================
-# =====================
 
 # =====================
 # Machine Learning Predictions
 # =====================
 st.write("---")
-st.write("### Predicting My Ratings using Machine Learning")
+st.write("### Predicting My Ratings on films not seen using Machine Learning")
 
 import pandas as pd
 import numpy as np
@@ -471,28 +470,35 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 import plotly.express as px
 
-# --- Load movies2 (your ratings) ---
+# --- Load movies2 ---
 movies2 = pd.read_csv("movies2.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
 
-# --- Load IMDb top 1000 safely ---
+# --- Load IMDb top 1000 ---
 imdb_top = pd.read_csv("imdb_top_1000.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
 
-# --- Normalize titles, directors, and genres ---
+# --- Clean numeric columns ---
+# IMDB Rating
+imdb_top["IMDB_Rating"] = pd.to_numeric(imdb_top["IMDB_Rating"], errors='coerce')
+
+# Runtime: "142 min" -> 142
+imdb_top["Runtime"] = imdb_top["Runtime"].astype(str).str.extract("(\d+)").astype(float)
+
+# Year
+imdb_top["Released_Year"] = pd.to_numeric(imdb_top["Released_Year"], errors='coerce')
+
+# --- Normalize Titles, Directors, and Genres ---
 def normalize_text(s):
     return str(s).lower().replace('"', '').replace(":", "").replace("-", "").strip()
 
-movies2["Title_norm"] = movies2["Title"].apply(normalize_text)
-imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].apply(normalize_text)
-
-# Director
+movies2["Title_norm"] = movies2["Title"].astype(str).apply(normalize_text)
 movies2["Director_norm"] = movies2["Directors"].astype(str).apply(normalize_text)
-imdb_top["Director_norm"] = imdb_top["Director"].astype(str).apply(normalize_text)
+movies2["Genre_first"] = movies2["Genres"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]) if x else "unknown")
 
-# Genre: take first genre only
-movies2["Genre_first"] = movies2["Genres"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]))
-imdb_top["Genre_first"] = imdb_top["Genre"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]))
+imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].astype(str).apply(normalize_text)
+imdb_top["Director_norm_imdb"] = imdb_top["Director"].astype(str).apply(normalize_text)
+imdb_top["Genre_first_imdb"] = imdb_top["Genre"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]) if x else "unknown")
 
-# --- Merge datasets on normalized title ---
+# --- Merge on normalized title ---
 merged_df = pd.merge(
     movies2,
     imdb_top,
@@ -502,33 +508,34 @@ merged_df = pd.merge(
     suffixes=('_my', '_imdb')
 )
 
-# Keep only rows with your ratings
-merged_df = merged_df.dropna(subset=["Your Rating"])
+# --- Fill missing director/genre from IMDb ---
+merged_df["Director_norm"] = merged_df["Director_norm"].fillna(merged_df["Director_norm_imdb"].fillna("unknown"))
+merged_df["Genre_first"] = merged_df["Genre_first"].fillna(merged_df["Genre_first_imdb"].fillna("unknown"))
 
 # --- Features and target ---
-features = ["IMDB_Rating", "Runtime", "Year", "Director_norm", "Genre_first", "Title_norm"]
+features = ["IMDB_Rating", "Runtime", "Released_Year", "Director_norm", "Genre_first", "Title_norm"]
 target = "Your Rating"
 
-# Convert numeric columns
-for col in ["IMDB_Rating", "Runtime", "Year"]:
-    if col in merged_df.columns:
-        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce')
-
+# Use the cleaned numeric columns
 X = merged_df[features]
 y = merged_df[target]
+
+# Fill missing numeric values with median
+for col in ["IMDB_Rating", "Runtime", "Released_Year"]:
+    X[col] = X[col].fillna(X[col].median())
 
 # Fill missing categorical values
 for col in ["Director_norm", "Genre_first", "Title_norm"]:
     X[col] = X[col].fillna("unknown")
 
 # Define categorical and numeric features
-categorical_features = [c for c in ["Director_norm", "Genre_first", "Title_norm"] if c in X.columns]
-numeric_features = [c for c in ["IMDB_Rating", "Runtime", "Year"] if c in X.columns]
+categorical_features = ["Director_norm", "Genre_first", "Title_norm"]
+numeric_features = ["IMDB_Rating", "Runtime", "Released_Year"]
 
-# Column transformer with numeric imputer and categorical one-hot
+# Preprocessing pipeline
 preprocessor = ColumnTransformer(
     transformers=[
-        ("num", SimpleImputer(strategy="median"), numeric_features),
+        ("num", "passthrough", numeric_features),
         ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features)
     ]
 )
@@ -545,26 +552,24 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # Train model
 model.fit(X_train, y_train)
 
-# Make predictions
+# Predictions
 y_pred = model.predict(X_test)
 
-# --- Display predictions in a table ---
+# --- Display table ---
 pred_df = X_test.copy()
 pred_df["Actual Rating"] = y_test
 pred_df["Predicted Rating"] = np.round(y_pred, 2)
-
-# Replace normalized columns with original for display
-pred_df = pred_df.rename(columns={"Title_norm": "Title", "Director_norm": "Director", "Genre_first": "Genre"})
+pred_df = pred_df.rename(columns={"Title_norm": "Title", "Director_norm": "Director", "Genre_first": "Genre", "Released_Year": "Year", "Runtime": "Runtime (mins)", "IMDB_Rating": "IMDB_Rating"})
 
 st.write("#### Predicted vs Actual Ratings")
 st.dataframe(pred_df.sort_values("Predicted Rating", ascending=False), width="stretch", height=500)
 
-# --- Scatter plot: Actual vs Predicted ---
+# --- Scatter plot ---
 fig = px.scatter(
     pred_df,
     x="Actual Rating",
     y="Predicted Rating",
-    hover_data=["Title", "Genre", "Director", "Year"],
+    hover_data=["Title", "Genre", "Director", "Year", "Runtime (mins)", "IMDB_Rating"],
     color=np.round(pred_df["Predicted Rating"] - pred_df["Actual Rating"], 2),
     color_continuous_scale="RdYlGn",
     title="Actual vs Predicted Ratings",
