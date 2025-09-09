@@ -71,10 +71,10 @@ Personal_Ratings = Personal_Ratings.reset_index(drop=True)
 st.set_page_config(layout="wide")
 
 # --- Project Description ---
-st.title("Movie SQL Sandbox & SQL Quiz 🎬")
+st.title("IMDb Data Experiment - Movie SQL Sandbox & SQL Quiz & Hybrid Python Film Recommendations 🎬")
 st.write(
     """
-This is a small personal project combining **Python, SQL, IMDb, GitHub, and Streamlit** which provides a SQL Sandbox and also tests your SQL knowledge.
+This is a small personal project combining **Python Packages ( Streamlit, Pandas , PandasQL ), SQL, IMDb, GitHub, and Streamlit** which provides a SQL Sandbox , tests your SQL knowledge and provides some Hybrid Film Recommendations
 """
 )
 
@@ -485,7 +485,7 @@ if "Genres" in others_combined.columns:
 
 # --- Display Combined Other Ratings ---
 st.write("---")
-st.write("### IMDB Ratings Table 2 (Popular Movies Only)")
+st.write("### IMDB Ratings Table 2 ( For Hybrid Python Recommendations )")
 
 min_other_rating = st.slider(
     "Show movies with IMDb rating at least:",
@@ -530,7 +530,7 @@ if "Genres" in myratings.columns:
 
 # --- Display My Ratings ---
 st.write("---")
-st.write("### My Ratings")
+st.write("### My Ratings ( For Hybrid Python Recommendations )")
 
 min_my_rating = st.slider(
     "Show movies with rating at least:",
@@ -608,7 +608,7 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     ]
 
 # --- Streamlit ---
-st.write("### 🎬 Hybrid Recommendations (Adjusted Genre Bonuses)")
+st.write("### 🎬 Hybrid Python Recommendations")
 recs = hybrid_recommender(myratings, others_combined, min_imdb=5, top_n=10000)
 st.dataframe(recs)
 
