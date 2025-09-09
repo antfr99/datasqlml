@@ -547,3 +547,62 @@ st.dataframe(
     width="stretch",
     height=400
 )
+
+# ============================
+# --- Content-Based Recommender (Genres Similarity) ---
+# ============================
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+st.write("---")
+st.write("### 🎬 Recommended Movies (Based on Your Top-Rated Genres)")
+
+# Only keep movies with genres filled
+my_high_rated = myratings[myratings["Personal Ratings"] >= 8].copy()
+others_for_reco = others_combined.copy()
+
+if not my_high_rated.empty and "Genres" in my_high_rated.columns and "Genres" in others_for_reco.columns:
+    # Vectorize genres (multi-hot encoding using bag-of-words)
+    vectorizer = CountVectorizer(tokenizer=lambda x: x.split(","))
+    
+    # Combine both tables for similarity
+    all_movies = pd.concat([my_high_rated, others_for_reco], ignore_index=True)
+    genre_matrix = vectorizer.fit_transform(all_movies["Genres"].fillna(""))
+
+    # Compute cosine similarity
+    cosine_sim = cosine_similarity(genre_matrix, genre_matrix)
+
+    # Index mapping
+    indices = pd.Series(all_movies.index, index=all_movies["Movie ID"])
+
+    # Get recommendations based on top-rated movies
+    reco_movies = pd.DataFrame()
+
+    for movie_id in my_high_rated["Movie ID"].values:
+        if movie_id in indices:
+            idx = indices[movie_id]
+            sim_scores = list(enumerate(cosine_sim[idx]))
+            sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+            
+            # Take top 10 similar movies (excluding itself)
+            sim_indices = [i for i, score in sim_scores[1:11]]
+            recommended = all_movies.iloc[sim_indices]
+            reco_movies = pd.concat([reco_movies, recommended])
+
+    # Remove movies you already rated
+    reco_movies = reco_movies[~reco_movies["Movie ID"].isin(my_high_rated["Movie ID"])]
+
+    # Drop duplicates
+    reco_movies = reco_movies.drop_duplicates(subset=["Movie ID"])
+
+    # Sort by IMDb Rating (stronger filter)
+    if "IMDb Rating" in reco_movies.columns:
+        reco_movies = reco_movies.sort_values("IMDb Rating", ascending=False)
+
+    st.dataframe(
+        reco_movies[["Title", "Genres", "IMDb Rating", "Year", "Director"]].head(15),
+        width="stretch",
+        height=400
+    )
+else:
+    st.write("⚠️ Not enough data to generate recommendations. Try rating more movies.")
