@@ -551,12 +551,11 @@ st.dataframe(
 # --- Content-Based Recommender (Genres Similarity) ---
 # ============================
 # ============================
-
 # ============================
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
 
-def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
+def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     # 1. Get movies I rated highly
     liked_movies = myratings[myratings["Personal Ratings"] >= 7]
 
@@ -576,65 +575,30 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
 
     # 4. Score candidates
     def score_movie(row):
-        score = row["IMDb Rating"]  # base = IMDb
-        if row["Director"] in fav_directors:
-            score += 1.0  # director match = strong bonus
-        if row["Genres"] in fav_genres:
-            score += 0.5  # genre match = weaker bonus
-        return score
+        director_bonus = 1.0 if row["Director"] in fav_directors else 0.0
+        genre_bonus = 0.5 if row["Genres"] in fav_genres else 0.0
+        hybrid_score = row["IMDb Rating"] + director_bonus + genre_bonus
+        return pd.Series({
+            "Director Bonus": director_bonus,
+            "Genre Bonus": genre_bonus,
+            "Hybrid Score": hybrid_score
+        })
 
     candidates = candidates.copy()
-    candidates["Score"] = candidates.apply(score_movie, axis=1)
+    bonuses = candidates.apply(score_movie, axis=1)
+    candidates = pd.concat([candidates, bonuses], axis=1)
 
     # 5. Exclude movies I’ve already rated
     candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
 
-    # 6. Return top_n
-    return candidates.sort_values("Score", ascending=False).head(top_n)[
-        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
+    # 6. Return top_n with separated bonus scores
+    return candidates.sort_values("Hybrid Score", ascending=False).head(top_n)[
+        ["Title", "Director", "Genres", "IMDb Rating", "Director Bonus", "Genre Bonus", "Hybrid Score"]
     ]
 
 # --- Streamlit ---
-st.write("### 🎬 Hybrid Recommendations (Directors + Genres + IMDb)")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000)
+st.write("### 🎬 Hybrid Recommendations (Detailed Scores)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100)
 st.dataframe(recs)
 
 
-import plotly.express as px
-import streamlit as st
-
-# Assume `recs` is your hybrid recommendations DataFrame
-if not recs.empty:
-
-    # ------------------------
-    # 1️⃣ Bar chart: Top recommended movies by Score
-    # ------------------------
-    fig_bar = px.bar(
-        recs.head(20),  # show top 20 for readability
-        x="Score",
-        y="Title",
-        orientation="h",
-        color="IMDb Rating",
-        hover_data=["Director", "Genres", "Num Votes"],
-        title="Top 20 Hybrid Recommended Movies"
-    )
-    fig_bar.update_layout(yaxis=dict(autorange="reversed"))  # highest score on top
-    st.plotly_chart(fig_bar, use_container_width=True)
-
-    # ------------------------
-    # 2️⃣ Scatter plot: IMDb Rating vs Score
-    # ------------------------
-    fig_scatter = px.scatter(
-        recs,
-        x="IMDb Rating",
-        y="Score",
-        size="Num Votes",
-        color="Genres",
-        hover_data=["Title", "Director"],
-        title="Hybrid Recommendations: Score vs IMDb Rating",
-        labels={"Score": "Recommended Score"}
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
-
-else:
-    st.write("No recommendations available to visualize.")
