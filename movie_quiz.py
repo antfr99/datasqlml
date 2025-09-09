@@ -479,6 +479,10 @@ others_combined = others_combined.drop_duplicates(subset=["Movie ID"])
 # --- Filter out movies with Num Votes <= 50000 ---
 others_combined = others_combined[others_combined["Num Votes"] > 50000]
 
+# --- Clean Genre column (keep only first genre) ---
+if "Genre" in others_combined.columns:
+    others_combined["Genre"] = others_combined["Genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+
 # --- Display Combined Other Ratings ---
 st.write("---")
 st.write("### IMDB Ratings Table 2 (Popular Movies Only)")
@@ -494,7 +498,7 @@ filtered_others = others_combined[
 ].sort_values("IMDb Rating", ascending=False)
 
 st.dataframe(
-    filtered_others.drop(columns=["Genre"], errors="ignore"),
+    filtered_others,  # keep Genre column visible
     width="stretch",
     height=400
 )
@@ -511,8 +515,18 @@ if "Directors" in myratings.columns:
     myratings["Director"] = myratings["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
     myratings.drop(columns=["Directors"], inplace=True)
 
-myratings = myratings[[c for c in desired_cols if c in myratings.columns]]
+# Keep only desired columns
+desired_cols_myratings = [
+    "Movie ID", "Personal Ratings", "Date Rated", "Title", "URL",
+    "Title Type", "Runtime (mins)", "Year",
+    "Release Date", "Director", "Genre"
+]
+myratings = myratings[[c for c in desired_cols_myratings if c in myratings.columns]]
 myratings = myratings.drop_duplicates(subset=["Movie ID"])
+
+# --- Clean Genre column (keep only first genre) ---
+if "Genre" in myratings.columns:
+    myratings["Genre"] = myratings["Genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
 # --- Display My Ratings ---
 st.write("---")
@@ -529,7 +543,7 @@ filtered_myratings = myratings[
 ].sort_values("Personal Ratings", ascending=False)
 
 st.dataframe(
-    filtered_myratings.drop(columns=["Genre"], errors="ignore"),
+    filtered_myratings,  # keep Genre column visible
     width="stretch",
     height=400
 )
