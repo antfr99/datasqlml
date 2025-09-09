@@ -454,6 +454,8 @@ if selected_index5 is not None:
 # Visualization
 # =====================
 # =====================
+
+# =====================
 # Machine Learning Predictions
 # =====================
 st.write("---")
@@ -470,66 +472,57 @@ from sklearn.impute import SimpleImputer
 import plotly.express as px
 
 # --- Load movies2 (your ratings) ---
-movies2 = pd.read_csv(
-    "movies2.csv",
-    quotechar='"',
-    skipinitialspace=True,
-    encoding="utf-8",
-    on_bad_lines='skip'
-)
+movies2 = pd.read_csv("movies2.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
 
 # --- Load IMDb top 1000 safely ---
-imdb_top = pd.read_csv(
-    "imdb_top_1000.csv",
-    quotechar='"',
-    skipinitialspace=True,
-    encoding="utf-8",
-    on_bad_lines='skip'
-)
+imdb_top = pd.read_csv("imdb_top_1000.csv", quotechar='"', skipinitialspace=True, encoding="utf-8", on_bad_lines='skip')
 
-# --- Normalize titles to match ---
-def normalize_title(t):
-    return str(t).lower().replace('"', '').replace(":", "").replace("-", "").strip()
+# --- Normalize titles, directors, and genres ---
+def normalize_text(s):
+    return str(s).lower().replace('"', '').replace(":", "").replace("-", "").strip()
 
-movies2["Title_norm"] = movies2["Title"].apply(normalize_title)
-imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].apply(normalize_title)
+movies2["Title_norm"] = movies2["Title"].apply(normalize_text)
+imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].apply(normalize_text)
 
-# --- Merge datasets using normalized titles ---
+# Director
+movies2["Director_norm"] = movies2["Directors"].astype(str).apply(normalize_text)
+imdb_top["Director_norm"] = imdb_top["Director"].astype(str).apply(normalize_text)
+
+# Genre: take first genre only
+movies2["Genre_first"] = movies2["Genres"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]))
+imdb_top["Genre_first"] = imdb_top["Genre"].astype(str).apply(lambda x: normalize_text(x.split(",")[0]))
+
+# --- Merge datasets on normalized title ---
 merged_df = pd.merge(
     movies2,
     imdb_top,
     left_on="Title_norm",
     right_on="Series_Title_norm",
-    how="left"
+    how="left",
+    suffixes=('_my', '_imdb')
 )
 
-# Keep only rows with personal ratings
+# Keep only rows with your ratings
 merged_df = merged_df.dropna(subset=["Your Rating"])
 
 # --- Features and target ---
-features = ["Title", "IMDB_Rating", "Runtime", "Genre", "Year", "Director"]
+features = ["IMDB_Rating", "Runtime", "Year", "Director_norm", "Genre_first", "Title_norm"]
 target = "Your Rating"
 
-# Clean numeric columns
-if "Runtime" in merged_df.columns:
-    merged_df["Runtime"] = merged_df["Runtime"].astype(str).str.extract(r'(\d+)').astype(float)
-if "IMDB_Rating" in merged_df.columns:
-    merged_df["IMDB_Rating"] = pd.to_numeric(merged_df["IMDB_Rating"], errors='coerce')
-if "Year" in merged_df.columns:
-    merged_df["Year"] = pd.to_numeric(merged_df["Year"], errors='coerce')
+# Convert numeric columns
+for col in ["IMDB_Rating", "Runtime", "Year"]:
+    if col in merged_df.columns:
+        merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce')
 
-# Keep only available features
-available_features = [f for f in features if f in merged_df.columns]
-X = merged_df[available_features]
+X = merged_df[features]
 y = merged_df[target]
 
 # Fill missing categorical values
-for col in ["Title", "Genre", "Director"]:
-    if col in X.columns:
-        X[col] = X[col].fillna("Unknown")
+for col in ["Director_norm", "Genre_first", "Title_norm"]:
+    X[col] = X[col].fillna("unknown")
 
 # Define categorical and numeric features
-categorical_features = [c for c in ["Title", "Genre", "Director"] if c in X.columns]
+categorical_features = [c for c in ["Director_norm", "Genre_first", "Title_norm"] if c in X.columns]
 numeric_features = [c for c in ["IMDB_Rating", "Runtime", "Year"] if c in X.columns]
 
 # Column transformer with numeric imputer and categorical one-hot
@@ -540,7 +533,7 @@ preprocessor = ColumnTransformer(
     ]
 )
 
-# Random Forest Regressor pipeline
+# Random Forest pipeline
 model = Pipeline([
     ("preprocess", preprocessor),
     ("regressor", RandomForestRegressor(n_estimators=100, random_state=42))
@@ -559,6 +552,9 @@ y_pred = model.predict(X_test)
 pred_df = X_test.copy()
 pred_df["Actual Rating"] = y_test
 pred_df["Predicted Rating"] = np.round(y_pred, 2)
+
+# Replace normalized columns with original for display
+pred_df = pred_df.rename(columns={"Title_norm": "Title", "Director_norm": "Director", "Genre_first": "Genre"})
 
 st.write("#### Predicted vs Actual Ratings")
 st.dataframe(pred_df.sort_values("Predicted Rating", ascending=False), width="stretch", height=500)
