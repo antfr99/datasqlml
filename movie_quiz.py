@@ -594,29 +594,42 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000):
         ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
     ]
 
-# --- Streamlit ---
-st.write("### 🎬 Hybrid Recommendations of films I have not rated (Directors + Genres + IMDb)")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=1000)
-st.dataframe(recs)
 
-fig = px.scatter(
-    recs,
-    x="IMDb Rating",
-    y="Score",
-    color="Genres",
-    hover_data=["Title", "Director", "Num Votes"],
-    size="Num Votes",  # bigger bubbles = more votes
-    title="Hybrid Recommendations: IMDb vs Score"
-)
-st.plotly_chart(fig)
+import plotly.express as px
+import streamlit as st
 
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px 
+# Assume `recs` is your hybrid recommendations DataFrame
+if not recs.empty:
 
-pivot = recs.pivot_table(index="Director", columns="Genres", values="Score", aggfunc="max").fillna(0)
-plt.figure(figsize=(12,8))
-sns.heatmap(pivot, annot=True, fmt=".1f", cmap="YlGnBu")
-plt.title("Hybrid Recommendation Score by Director & Genre")
-st.pyplot(plt)
+    # ------------------------
+    # 1️⃣ Bar chart: Top recommended movies by Score
+    # ------------------------
+    fig_bar = px.bar(
+        recs.head(20),  # show top 20 for readability
+        x="Score",
+        y="Title",
+        orientation="h",
+        color="IMDb Rating",
+        hover_data=["Director", "Genres", "Num Votes"],
+        title="Top 20 Hybrid Recommended Movies"
+    )
+    fig_bar.update_layout(yaxis=dict(autorange="reversed"))  # highest score on top
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    # ------------------------
+    # 2️⃣ Scatter plot: IMDb Rating vs Score
+    # ------------------------
+    fig_scatter = px.scatter(
+        recs,
+        x="IMDb Rating",
+        y="Score",
+        size="Num Votes",
+        color="Genres",
+        hover_data=["Title", "Director"],
+        title="Hybrid Recommendations: Score vs IMDb Rating",
+        labels={"Score": "Recommended Score"}
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+else:
+    st.write("No recommendations available to visualize.")
