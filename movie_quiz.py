@@ -456,14 +456,18 @@ if selected_index5 is not None:
 st.write("---")
 st.header("🎥 Recommended Movies from IMDb Top 1000 (Unwatched)")
 
-# --- Load Top 1000 dataset ---
-top_1000 = pd.read_excel(
-    r"C:\Users\antonio.friguglietti\OneDrive - MSC\Desktop\Python\imdb_top_1000.xls"
+# --- Load Top 1000 dataset from CSV ---
+top_1000 = pd.read_csv(
+    r"C:\Users\antonio.friguglietti\OneDrive - MSC\Desktop\Python\imdb_top_1000.csv"
 )
 
 # Standardize columns
 top_1000.columns = top_1000.columns.str.strip()
-top_1000 = top_1000.rename(columns={"Series_Title": "Title", "Released_Year": "Year"})
+top_1000 = top_1000.rename(columns={
+    "Series_Title": "Title",
+    "Released_Year": "Year",
+    "No_of_Votes": "No_of_votes"
+})
 
 # --- Exclude movies already rated by you ---
 watched_titles = set(Personal_Ratings["Title"].str.lower())
