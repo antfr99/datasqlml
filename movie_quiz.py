@@ -489,24 +489,27 @@ imdb_top = pd.read_csv(
     on_bad_lines='skip'
 )
 
-# --- Ensure merge columns are strings ---
-movies2["Title"] = movies2["Title"].astype(str).str.strip()
-imdb_top["Series_Title"] = imdb_top["Series_Title"].astype(str).str.strip()
+# --- Normalize titles to match ---
+def normalize_title(t):
+    return str(t).lower().replace('"', '').replace(":", "").replace("-", "").strip()
 
-# --- Merge datasets ---
+movies2["Title_norm"] = movies2["Title"].apply(normalize_title)
+imdb_top["Series_Title_norm"] = imdb_top["Series_Title"].apply(normalize_title)
+
+# --- Merge datasets using normalized titles ---
 merged_df = pd.merge(
     movies2,
     imdb_top,
-    left_on="Title",
-    right_on="Series_Title",
+    left_on="Title_norm",
+    right_on="Series_Title_norm",
     how="left"
 )
 
-# Keep only rows with your ratings
+# Keep only rows with personal ratings
 merged_df = merged_df.dropna(subset=["Your Rating"])
 
 # --- Features and target ---
-features = ["IMDB_Rating", "Runtime", "Genre", "Year", "Director"]
+features = ["Title", "IMDB_Rating", "Runtime", "Genre", "Year", "Director"]
 target = "Your Rating"
 
 # Clean numeric columns
@@ -523,12 +526,12 @@ X = merged_df[available_features]
 y = merged_df[target]
 
 # Fill missing categorical values
-for col in ["Genre", "Director"]:
+for col in ["Title", "Genre", "Director"]:
     if col in X.columns:
         X[col] = X[col].fillna("Unknown")
 
 # One-hot encode categorical variables
-categorical_features = [c for c in ["Genre", "Director"] if c in X.columns]
+categorical_features = [c for c in ["Title", "Genre", "Director"] if c in X.columns]
 numeric_features = [c for c in ["IMDB_Rating", "Runtime", "Year"] if c in X.columns]
 
 preprocessor = ColumnTransformer(
@@ -566,7 +569,7 @@ fig = px.scatter(
     pred_df,
     x="Actual Rating",
     y="Predicted Rating",
-    hover_data=["Genre", "Director", "Year"],
+    hover_data=["Title", "Genre", "Director", "Year"],
     color=np.round(pred_df["Predicted Rating"] - pred_df["Actual Rating"], 2),
     color_continuous_scale="RdYlGn",
     title="Actual vs Predicted Ratings",
