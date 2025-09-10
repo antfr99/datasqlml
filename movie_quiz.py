@@ -1,41 +1,58 @@
 import streamlit as st
 import pandas as pd
 
-# ============================ 
-# --- Robust CSV Loader ---
+# ============================
+# --- Load CSV Robustly ---
 # ============================
 def load_csv(path):
-    """Load CSV handling quoted fields properly."""
+    """Load CSV with quote handling and stripping spaces."""
     return pd.read_csv(path, quotechar='"', skipinitialspace=True)
 
 # ============================
-# --- Load My Ratings & Other Ratings ---
+# --- Load My Ratings ---
 # ============================
 myratings = load_csv("myratings.csv")
+
+# Standardize columns
+myratings.columns = myratings.columns.str.strip()
+myratings.rename(columns={"Const": "Movie ID", "Your Rating": "Personal Ratings"}, inplace=True)
+
+# Keep only first director if exists
+if "Directors" in myratings.columns:
+    myratings["Director"] = myratings["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    myratings.drop(columns=["Directors"], inplace=True)
+
+# Keep only first genre if exists
+if "Genres" in myratings.columns:
+    myratings["Genres"] = myratings["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+
+# ============================
+# --- Load Other Ratings ---
+# ============================
 others = load_csv("othersratings1.csv")
 
-# --- Standardize column names ---
-for df in [myratings, others]:
-    df.columns = df.columns.str.strip()
-    if "Const" in df.columns:
-        df.rename(columns={"Const": "Movie ID"}, inplace=True)
+# Drop 'Position' column if exists
+if "Position" in others.columns:
+    others.drop(columns=["Position"], inplace=True)
 
-    # Keep only first director
-    if "Directors" in df.columns:
-        df["Director"] = df["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-        df.drop(columns=["Directors"], inplace=True)
+# Standardize columns
+others.columns = others.columns.str.strip()
+others.rename(columns={"Const": "Movie ID"}, inplace=True)
 
-    # Keep only first genre
-    if "Genres" in df.columns:
-        df["Genres"] = df["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+# Keep only first director if exists
+if "Directors" in others.columns:
+    others["Director"] = others["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    others.drop(columns=["Directors"], inplace=True)
 
-# --- Merge tables on Movie ID if needed (optional) ---
-# e.g., to get IMDb Rating aligned with your ratings
-merged_df = myratings.merge(
-    others[["Movie ID", "IMDb Rating"]],
-    on="Movie ID",
-    how="left"
-)
+# Keep only first genre if exists
+if "Genres" in others.columns:
+    others["Genres"] = others["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+
+# ============================
+# --- Ensure Movie ID is string ---
+# ============================
+myratings["Movie ID"] = myratings["Movie ID"].astype(str)
+others["Movie ID"] = others["Movie ID"].astype(str)
 
 # ============================
 # --- Streamlit Display ---
@@ -43,17 +60,11 @@ merged_df = myratings.merge(
 st.set_page_config(layout="wide")
 st.title("🎬 IMDb Data Explorer")
 
-# My Ratings Table
 st.write("### My Ratings")
 st.dataframe(myratings, width="stretch", height=400)
 
-# Other Ratings Table
 st.write("### Other Ratings (IMDb)")
 st.dataframe(others, width="stretch", height=400)
-
-# Merged Table (optional)
-st.write("### Merged Table (with IMDb Ratings)")
-st.dataframe(merged_df, width="stretch", height=400)
 
 # ============================
 # --- Hybrid Recommender ---
@@ -101,7 +112,9 @@ def hybrid_recommender(myratings, others, min_imdb=7, top_n=100):
         ["Title","Director","Genres","IMDb Rating","Director Bonus","Genre Bonus","Hybrid Score"]
     ]
 
-# Display Hybrid Recommendations
+# ============================
+# --- Display Hybrid Recommendations ---
+# ============================
 st.write("### 🎬 Hybrid Recommendations")
 recs = hybrid_recommender(myratings, others, min_imdb=5, top_n=100)
-st.dataframe(recs)
+st.dataframe(recs, width="stretch", height=400)
