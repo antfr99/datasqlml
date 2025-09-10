@@ -2,6 +2,17 @@ import streamlit as st
 import pandas as pd
 import pandasql as ps
 
+# --- Page Config ---
+st.set_page_config(layout="wide")
+
+# --- Project Description ---
+st.title("IMDb Data Experiment 🎬")
+st.write(
+    """
+This is a small personal project combining **Python Packages ( Streamlit, Pandas , PandasQL ), SQL, IMDb, GitHub, and Streamlit** which provides a SQL Sandbox , tests your SQL knowledge and provides Film Recommendations
+"""
+)
+
 
 # ============================
 # --- Load & Combine Other Ratings (IMDb Ratings) ---
@@ -38,7 +49,7 @@ if "Genres" in others_combined.columns:
 
 # --- Display Combined Other Ratings ---
 st.write("---")
-st.write("### IMDB Ratings Table 2 ( For Hybrid Recommendations )")
+st.write("### IMDB Ratings ")
 
 min_other_rating = st.slider(
     "Show movies with IMDb rating at least:",
@@ -83,7 +94,7 @@ if "Genres" in myratings.columns:
 
 # --- Display My Ratings ---
 st.write("---")
-st.write("### My Ratings ( For Hybrid Recommendations )")
+st.write("### My Ratings")
 
 min_my_rating = st.slider(
     "Show movies with rating at least:",
@@ -101,16 +112,6 @@ st.dataframe(
     height=400
 )
 
-# --- Page Config ---
-st.set_page_config(layout="wide")
-
-# --- Project Description ---
-st.title("IMDb Data Experiment 🎬")
-st.write(
-    """
-This is a small personal project combining **Python Packages ( Streamlit, Pandas , PandasQL ), SQL, IMDb, GitHub, and Streamlit** which provides a SQL Sandbox , tests your SQL knowledge and provides Film Recommendations
-"""
-)
 
 
 
