@@ -134,7 +134,7 @@ st.dataframe(
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
 
-def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=10000):
+def hybrid_recommender(myratings, others_combined, min_imdb=6, top_n=10000):
     # 1. Get movies I rated highly
     liked_movies = myratings[myratings["Personal Ratings"] >= 6]
 
@@ -194,5 +194,5 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=10000):
 
 # --- Streamlit ---
 st.write("### 🎬 Hybrid Recommendations (Detailed Scores)")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=6, top_n=10000)
+recs = hybrid_recommender(myratings, others_combined, min_imdb=6, top_n=50000)
 st.dataframe(recs)
