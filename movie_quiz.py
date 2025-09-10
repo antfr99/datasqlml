@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb Data Experiment 🎬")
 st.write(
     """
-This is a small personal project combining **Python Packages ( Streamlit, Pandas , PandasQL ), SQL, IMDb, GitHub, and Streamlit** which provides a SQL Sandbox , tests your SQL knowledge and provides Film Recommendations
+This is a small personal film data project using **Python Packages ( Streamlit, Pandas , PandasQL ), SQL, IMDb, GitHub, ChatGPT and Streamlit** 
 """
 )
 
@@ -134,9 +134,9 @@ st.dataframe(
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
 
-def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
+def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=10000):
     # 1. Get movies I rated highly
-    liked_movies = myratings[myratings["Personal Ratings"] >= 7]
+    liked_movies = myratings[myratings["Personal Ratings"] >= 6]
 
     if liked_movies.empty:
         st.warning("No highly-rated movies in your list.")
@@ -149,7 +149,7 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     # 3. Filter others_combined for popular + high-rated
     candidates = others_combined[
         (others_combined["IMDb Rating"] >= min_imdb) &
-        (others_combined["Num Votes"] > 50000)
+        (others_combined["Num Votes"] > 30000)
     ]
 
     # 4. Define genre bonus mapping
@@ -194,5 +194,5 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
 
 # --- Streamlit ---
 st.write("### 🎬 Hybrid Recommendations (Detailed Scores)")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100)
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=10000)
 st.dataframe(recs)
