@@ -91,28 +91,7 @@ Example 2: `SELECT Title, [Personal Ratings] FROM Personal_Ratings WHERE [Person
 )
 
 
-user_query = st.text_area(
-    "Enter SQL query for either table:",
-    """SELECT pr.Title,
-              pr.[Personal Ratings],
-              ir.[IMDb Rating],
-              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
-       FROM Personal_Ratings pr
-       JOIN IMDB_Ratings ir 
-           ON pr.[Movie ID] = ir.[Movie ID]
-       WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
-       ORDER BY Rating_Diff DESC
-       LIMIT 10;""",
-    key="sql_playground"
-)
 
-if st.button("Run SQL Query"):
-    try:
-        # Both tables are available in locals()
-        result = ps.sqldf(user_query, locals())
-        st.dataframe(result, width="stretch", height=400)
-    except Exception as e:
-        st.error(f"Error in SQL query: {e}")
 
 # --- Explore movies by IMDb rating ---        
 
@@ -153,3 +132,27 @@ st.dataframe(
     width="stretch",
     height=400
 )
+
+user_query = st.text_area(
+    "Enter SQL query for either table:",
+    """SELECT pr.Title,
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
+              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir 
+           ON pr.[Movie ID] = ir.[Movie ID]
+       WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
+       ORDER BY Rating_Diff DESC
+       LIMIT 10;""",
+    key="sql_playground",
+    height=500  # ⬅️ default is ~150, so 300 doubles it
+)
+
+if st.button("Run SQL Query"):
+    try:
+        # Both tables are available in locals()
+        result = ps.sqldf(user_query, locals())
+        st.dataframe(result, width="stretch", height=400)
+    except Exception as e:
+        st.error(f"Error in SQL query: {e}")
