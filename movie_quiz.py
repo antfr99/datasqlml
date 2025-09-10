@@ -78,18 +78,6 @@ This is a small imdb data project combining Python Packages ( Streamlit, Pandas 
 """
 )
 
-# --- Single SQL Playground for both tables ---
-st.write("---")
-st.header("Try SQL Queries on IMDB Ratings and my Personal Film Ratings")
-st.write(
-    """
-Type any SQL query against either `IMDB_Ratings` or `Personal_Ratings`.
-
-Example 1: `SELECT Title, [IMDb Rating] FROM IMDB_Ratings WHERE [IMDb Rating] > 8`  
-Example 2: `SELECT Title, [Personal Ratings] FROM Personal_Ratings WHERE [Personal Ratings] >= 7`
-"""
-)
-
 
 
 
@@ -133,6 +121,20 @@ st.dataframe(
     height=400
 )
 
+
+# --- Single SQL Playground for both tables ---
+st.write("---")
+st.header("Try SQL Queries on IMDB Ratings and my Personal Film Ratings")
+st.write(
+    """
+Type any SQL query against either `IMDB_Ratings` or `Personal_Ratings`.
+
+Example 1: `SELECT Title, [IMDb Rating] FROM IMDB_Ratings WHERE [IMDb Rating] > 8`  
+Example 2: `SELECT Title, [Personal Ratings] FROM Personal_Ratings WHERE [Personal Ratings] >= 7`
+"""
+)
+
+
 user_query = st.text_area(
     "Enter SQL query for either table:",
     """SELECT pr.Title,
@@ -156,3 +158,5 @@ if st.button("Run SQL Query"):
         st.dataframe(result, width="stretch", height=400)
     except Exception as e:
         st.error(f"Error in SQL query: {e}")
+
+
