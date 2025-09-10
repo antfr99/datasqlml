@@ -127,66 +127,45 @@ st.dataframe(
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
 
-# ============================
-# --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
-# ============================
-# ============================
-# --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
-# ============================
+def hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10):
+    # 1. Get movies I rated highly
+    liked_movies = myratings[myratings["Personal Ratings"] >= 8]
 
-def hybrid_recommender(myratings, others_combined, min_imdb=6, top_n=10000):
-    # Clean IDs
-    myratings["Movie ID"] = myratings["Movie ID"].astype(str).str.strip()
-    others_combined["Movie ID"] = others_combined["Movie ID"].astype(str).str.strip()
+    if liked_movies.empty:
+        st.warning("No highly-rated movies in your list.")
+        return pd.DataFrame()
 
-    # 1. Movies I rated highly
-    liked_movies = myratings[myratings["Personal Ratings"] >= 6]
-
-    # 2. Collect favorite directors and ALL genres
+    # 2. Collect favorite directors and genres
     fav_directors = set(liked_movies["Director"].dropna().unique())
-    fav_genres = set(g for g_list in liked_movies["Genres"].dropna()
-                        for g in g_list.split(","))
+    fav_genres = set(liked_movies["Genres"].dropna().unique())
 
-    # 3. Broader candidate filter
+    # 3. Filter others_combined for popular + high-rated
     candidates = others_combined[
         (others_combined["IMDb Rating"] >= min_imdb) &
-        (others_combined["Num Votes"] > 5000)   # relaxed from 50k
+        (others_combined["Num Votes"] > 50000)
     ]
 
-    # 4. Genre bonus map
-    genre_bonus_map = {
-        "Crime": 0.1,
-        "Biography": 0.1,
-        "Animation": 0.1,
-        "Comedy": 0.5,
-        "Drama": 0.5
-    }
-
+    # 4. Score candidates
     def score_movie(row):
-        director_bonus = 1.0 if row["Director"] in fav_directors else 0.0
-        # handle multiple genres
-        genres = [g.strip() for g in row["Genres"].split(",") if g]
-        genre_bonus = max(
-            (genre_bonus_map.get(g, 0.2) if g in fav_genres else 0.2)
-            for g in genres
-        ) if genres else 0.2
-
-        hybrid_score = row["IMDb Rating"] + director_bonus + genre_bonus
-        return pd.Series({
-            "Director Bonus": director_bonus,
-            "Genre Bonus": genre_bonus,
-            "Hybrid Score": hybrid_score
-        })
+        score = row["IMDb Rating"]  # base = IMDb
+        if row["Director"] in fav_directors:
+            score += 1.0  # director match = strong bonus
+        if row["Genres"] in fav_genres:
+            score += 0.5  # genre match = weaker bonus
+        return score
 
     candidates = candidates.copy()
-    bonuses = candidates.apply(score_movie, axis=1)
-    candidates = pd.concat([candidates, bonuses], axis=1)
+    candidates["Score"] = candidates.apply(score_movie, axis=1)
 
-    # 5. Drop movies I already rated
+    # 5. Exclude movies I’ve already rated
     candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
 
-    # 6. Return sorted list
-    return candidates.sort_values("Hybrid Score", ascending=False).head(top_n)[
-        ["Title", "Director", "Genres", "IMDb Rating",
-         "Director Bonus", "Genre Bonus", "Hybrid Score"]
+    # 6. Return top_n
+    return candidates.sort_values("Score", ascending=False).head(top_n)[
+        ["Title", "Director", "Genres", "IMDb Rating", "Num Votes", "Score"]
     ]
+
+# --- Streamlit ---
+st.write("### 🎬 Hybrid Recommendations (Directors + Genres + IMDb)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7.5, top_n=10)
+st.dataframe(recs)
