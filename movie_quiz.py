@@ -1,130 +1,162 @@
 import streamlit as st
 import pandas as pd
+import pandasql as ps
 
-# ============================
-# --- Load CSV Robustly ---
-# ============================
-def load_csv(path):
-    """Load CSV with quote handling and stripping spaces."""
-    df = pd.read_csv(path, quotechar='"', skipinitialspace=True)
+# --- Load Movies CSV ---
+movies_df = pd.read_csv("movies.csv")
+movies_df.columns = movies_df.columns.str.strip()
 
-    # Remove duplicate columns if any
-    if df.columns.duplicated().any():
-        df = df.loc[:, ~df.columns.duplicated()]
+# --- Clean IMDB_Ratings for quiz and IMDb filter ---
+IMDB_Ratings = movies_df.copy()
 
-    return df
+# 2️⃣ Rename 'Const' to 'Movie ID'
+if "Const" in IMDB_Ratings.columns:
+    IMDB_Ratings = IMDB_Ratings.rename(columns={"Const": "Movie ID"})
 
-# ============================
-# --- Load My Ratings ---
-# ============================
-myratings = load_csv("myratings.csv")
+# 3️⃣ Remove unnecessary columns
+cols_to_drop = ["Your Rating", "Date Rated", "Original Title", "URL"]
+IMDB_Ratings = IMDB_Ratings.drop(columns=[c for c in cols_to_drop if c in IMDB_Ratings.columns])
 
-# Standardize columns
-myratings.columns = myratings.columns.str.strip()
-myratings.rename(columns={"Const": "Movie ID", "Your Rating": "Personal Ratings"}, inplace=True)
+# 4️⃣ Keep only the first director per movie and rename to 'director'
+if "Directors" in IMDB_Ratings.columns:
+    IMDB_Ratings["director"] = IMDB_Ratings["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
+    IMDB_Ratings = IMDB_Ratings.drop(columns=["Directors"])
 
-# Keep only first director if exists
-if "Directors" in myratings.columns:
-    myratings["Director"] = myratings["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-    myratings.drop(columns=["Directors"], inplace=True)
+IMDB_Ratings = IMDB_Ratings.reset_index(drop=True)
 
-# Keep only first genre if exists
-if "Genres" in myratings.columns:
-    myratings["Genres"] = myratings["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+# 4️⃣ Keep only the first director per movie and rename to 'director'
+if "Directors" in IMDB_Ratings.columns:
+    IMDB_Ratings["director"] = IMDB_Ratings["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
+    IMDB_Ratings = IMDB_Ratings.drop(columns=["Directors"])
 
-# Drop duplicate Movie IDs
-myratings = myratings.drop_duplicates(subset=["Movie ID"])
+# ✅ Clean director column (remove blanks, placeholders, normalize)
+bad_tokens = {"", "nan", "none", "null", "n/a", "unknown"}
+IMDB_Ratings["director"] = (
+    IMDB_Ratings["director"]
+    .astype(str)
+    .str.strip()
+    .replace(bad_tokens, None)   # replace bad tokens with real None/NaN
+)
 
-# ============================
-# --- Load Other Ratings ---
-# ============================
-others = load_csv("othersratings1.csv")
+# --- Create Personal Ratings table ---
+Personal_Ratings = movies_df.copy()
 
-# Drop 'Position' column if exists
-if "Position" in others.columns:
-    others.drop(columns=["Position"], inplace=True)
+# Keep only the first director and rename column
+if "Directors" in Personal_Ratings.columns:
+    Personal_Ratings["Director"] = Personal_Ratings["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
 
-# Standardize columns
-others.columns = others.columns.str.strip()
-others.rename(columns={"Const": "Movie ID"}, inplace=True)
+# Rename columns
+rename_map = {
+    "Const": "Movie ID",
+    "Your Rating": "Personal Ratings"
+}
+Personal_Ratings = Personal_Ratings.rename(columns=rename_map)
 
-# Keep only first director if exists
-if "Directors" in others.columns:
-    others["Director"] = others["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-    others.drop(columns=["Directors"], inplace=True)
+# Keep only desired columns
+desired_cols = [
+    "Movie ID", "Personal Ratings", "Date Rated", "Title", "URL",
+    "Title Type", "Runtime (mins)", "Year",
+    "Release Date", "Director", "Genre"  # keep Genre for SQL
+]
+Personal_Ratings = Personal_Ratings[[c for c in desired_cols if c in Personal_Ratings.columns]]
+Personal_Ratings = Personal_Ratings.reset_index(drop=True)
 
-# Keep only first genre if exists
-if "Genres" in others.columns:
-    others["Genres"] = others["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-
-# Drop duplicate Movie IDs
-others = others.drop_duplicates(subset=["Movie ID"])
-
-# Ensure Movie ID is string in both
-myratings["Movie ID"] = myratings["Movie ID"].astype(str)
-others["Movie ID"] = others["Movie ID"].astype(str)
-
-# ============================
-# --- Streamlit Display ---
-# ============================
+# --- Page Config ---
 st.set_page_config(layout="wide")
-st.title("🎬 IMDb Data Explorer")
 
-st.write("### My Ratings")
-st.dataframe(myratings, width="stretch", height=400)
+# --- Project Description ---
+st.title("IMDb/SQL Data Project 🎬")
+st.write(
+    """
+This is a small imdb data project combining Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, GitHub, and Streamlit.
+"""
+)
 
-st.write("### Other Ratings (IMDb)")
-st.dataframe(others, width="stretch", height=400)
 
-# ============================
-# --- Hybrid Recommender ---
-# ============================
-def hybrid_recommender(myratings, others, min_imdb=7, top_n=100):
-    # 1. Highly rated movies
-    liked_movies = myratings[myratings["Personal Ratings"] >= 7]
-    if liked_movies.empty:
-        st.warning("No highly-rated movies in your list.")
-        return pd.DataFrame()
 
-    # 2. Favorite directors and genres
-    fav_directors = set(liked_movies["Director"].dropna().unique())
-    fav_genres = set(liked_movies["Genres"].dropna().unique())
 
-    # 3. Candidates from others
-    candidates = others[others["IMDb Rating"] >= min_imdb].copy()
+# --- Explore movies by IMDb rating ---        
 
-    # 4. Score function
-    genre_bonus_map = {"Crime":0.1,"Biography":0.1,"Animation":0.1,
-                       "Comedy":0.5,"Drama":0.5,"Romance":0.5,
-                       "Adventure":0.2,"Horror":0.2,"Action":0.2}
+st.write("---")
+st.write("### IMDb Ratings")
+min_rating = st.slider(
+    "Show movies with IMDb rating at least:",
+    0, 10, 7,
+    key="imdb_slider"
+)
+filtered_movies = IMDB_Ratings[IMDB_Ratings["IMDb Rating"] >= min_rating].sort_values("IMDb Rating", ascending=False)
 
-    def score_movie(row):
-        director_bonus = 1.0 if row["Director"] in fav_directors else 0.0
-        if pd.isna(row["Genres"]) or row["Genres"] == "":
-            genre_bonus = 0.2
-        elif row["Genres"] in fav_genres:
-            genre_bonus = genre_bonus_map.get(row["Genres"], 0.0)
-        else:
-            genre_bonus = 0.2
-        hybrid_score = row["IMDb Rating"] + director_bonus + genre_bonus
-        return pd.Series({"Director Bonus": director_bonus,
-                          "Genre Bonus": genre_bonus,
-                          "Hybrid Score": hybrid_score})
+# Drop Genre only for display
+st.dataframe(
+    filtered_movies.drop(columns=["Genres"], errors="ignore"),
+    width="stretch",
+    height=400
+)
 
-    bonuses = candidates.apply(score_movie, axis=1)
-    candidates = pd.concat([candidates, bonuses], axis=1)
+# --- Personal Ratings Table ---
+# --- Personal Ratings Table ---
+st.write("---")
+st.write("### Personal Ratings")
 
-    # 5. Exclude already rated movies
-    candidates = candidates[~candidates["Movie ID"].isin(myratings["Movie ID"])]
+# 🎛️ Add a slider filter for Personal Ratings
+min_personal_rating = st.slider(
+    "Show movies with Personal rating at least:",
+    0, 10, 7,
+    key="personal_slider"
+)
 
-    # 6. Return top_n
-    return candidates.sort_values("Hybrid Score", ascending=False).head(top_n)[
-        ["Title","Director","Genres","IMDb Rating","Director Bonus","Genre Bonus","Hybrid Score"]
-    ]
+filtered_personal = Personal_Ratings[
+    Personal_Ratings["Personal Ratings"] >= min_personal_rating
+].sort_values("Personal Ratings", ascending=False)
 
-# ============================
-# --- Display Hybrid Recommendations ---
-# ============================
-st.write("### 🎬 Hybrid Recommendations")
-recs = hybrid_recommender(myratings, others, min_imdb=5, top_n=100)
-st.dataframe(recs, width="stretch", height=400)
+st.dataframe(
+    filtered_personal.drop(columns=["Genre"], errors="ignore"),
+    width="stretch",
+    height=400
+)
+
+
+# --- Single SQL Playground for both tables ---
+st.write("---")
+st.header("Try SQL Queries on IMDB Ratings and my Personal Film Ratings")
+st.write(
+    """
+Type any SQL query against either `IMDB_Ratings` or `Personal_Ratings`.
+
+Example 1: `SELECT Title, [IMDb Rating] FROM IMDB_Ratings WHERE [IMDb Rating] > 8`  
+Example 2: `SELECT Title, [Personal Ratings] FROM Personal_Ratings WHERE [Personal Ratings] >= 7`
+"""
+)
+
+
+user_query = st.text_area(
+    "Enter SQL query for either table:",
+    """SELECT pr.Title,
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
+              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir 
+           ON pr.[Movie ID] = ir.[Movie ID]
+       WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
+       ORDER BY Rating_Diff DESC
+       LIMIT 10;""",
+    key="sql_playground",
+    height=300  # ⬅️ default is ~150, so 300 doubles it
+)
+
+if st.button("Run SQL Query"):
+    try:
+        # Both tables are available in locals()
+        result = ps.sqldf(user_query, locals())
+        st.dataframe(result, width="stretch", height=400)
+    except Exception as e:
+        st.error(f"Error in SQL query: {e}")
+
+
