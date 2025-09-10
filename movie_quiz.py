@@ -6,7 +6,13 @@ import pandas as pd
 # ============================
 def load_csv(path):
     """Load CSV with quote handling and stripping spaces."""
-    return pd.read_csv(path, quotechar='"', skipinitialspace=True)
+    df = pd.read_csv(path, quotechar='"', skipinitialspace=True)
+
+    # Remove duplicate columns if any
+    if df.columns.duplicated().any():
+        df = df.loc[:, ~df.columns.duplicated()]
+
+    return df
 
 # ============================
 # --- Load My Ratings ---
@@ -25,6 +31,9 @@ if "Directors" in myratings.columns:
 # Keep only first genre if exists
 if "Genres" in myratings.columns:
     myratings["Genres"] = myratings["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+
+# Drop duplicate Movie IDs
+myratings = myratings.drop_duplicates(subset=["Movie ID"])
 
 # ============================
 # --- Load Other Ratings ---
@@ -48,9 +57,10 @@ if "Directors" in others.columns:
 if "Genres" in others.columns:
     others["Genres"] = others["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
-# ============================
-# --- Ensure Movie ID is string ---
-# ============================
+# Drop duplicate Movie IDs
+others = others.drop_duplicates(subset=["Movie ID"])
+
+# Ensure Movie ID is string in both
 myratings["Movie ID"] = myratings["Movie ID"].astype(str)
 others["Movie ID"] = others["Movie ID"].astype(str)
 
