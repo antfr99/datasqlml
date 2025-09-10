@@ -2,34 +2,25 @@ import pandas as pd
 import csv
 import streamlit as st
 
-# --- Load CSV with quote handling ---
-def load_quoted_csv(path):
+def load_csv_proper(path):
     with open(path, newline='', encoding='utf-8') as f:
-        # Sniff the delimiter
-        sample = f.read(1024)
-        f.seek(0)
-        dialect = csv.Sniffer().sniff(sample)
-        f.seek(0)
-        reader = csv.reader(f, dialect)
+        # Use csv.reader with correct quotechar
+        reader = csv.reader(f, delimiter=',', quotechar='"')
         rows = list(reader)
-    
-    # Some rows may still be single string; split manually
-    clean_rows = []
-    for r in rows:
-        if len(r) == 1:
-            # Remove outer quotes and split on comma
-            r = r[0].strip('"').replace('""', '"').split(',')
-        clean_rows.append(r)
 
-    # Create DataFrame
-    df = pd.DataFrame(clean_rows[1:], columns=clean_rows[0])
+    # First row is header
+    header = rows[0]
+    data = rows[1:]
+
+    # Make DataFrame
+    df = pd.DataFrame(data, columns=header)
     return df
 
 # --- Load Files ---
-myratings = load_quoted_csv("myratings.csv")
-others = load_quoted_csv("othersratings1.csv")
+myratings = load_csv_proper("myratings.csv")
+others = load_csv_proper("othersratings1.csv")
 
-# --- Clean Columns (first director/genre etc.) ---
+# --- Clean Columns ---
 def clean_df(df):
     df.columns = df.columns.str.strip()
     if "Const" in df.columns:
