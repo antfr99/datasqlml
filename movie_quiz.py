@@ -1,9 +1,21 @@
 import streamlit as st
 import pandas as pd
 
+# --- Helper to auto-detect delimiter ---
+def load_csv_auto(path):
+    # Try common delimiters
+    for delim in [",", ";", "\t", "|"]:
+        try:
+            df = pd.read_csv(path, delimiter=delim)
+            if df.shape[1] > 1:  # valid split
+                return df
+        except Exception:
+            continue
+    return pd.read_csv(path)  # fallback
+
 # --- Load Files ---
-myratings = pd.read_csv("myratings.csv")
-others = pd.read_csv("othersratings1.csv")
+myratings = load_csv_auto("myratings.csv")
+others = load_csv_auto("othersratings1.csv")
 
 # --- Standardize column names ---
 myratings.columns = myratings.columns.str.strip()
@@ -28,7 +40,7 @@ for df in [myratings, others]:
             lambda x: x.split(",")[0].strip() if x else ""
         )
 
-# --- Reset index for both ---
+# --- Reset index ---
 myratings = myratings.reset_index(drop=True)
 others = others.reset_index(drop=True)
 
@@ -37,9 +49,9 @@ st.set_page_config(layout="wide")
 st.title("🎬 IMDb Data Explorer")
 
 # --- My Ratings Table ---
-st.write("### My Ratings (all columns)")
+st.write("### My Ratings")
 st.dataframe(myratings, width="stretch", height=400)
 
 # --- Others Ratings Table ---
-st.write("### Others Ratings (all columns)")
+st.write("### Others Ratings")
 st.dataframe(others, width="stretch", height=400)
