@@ -74,7 +74,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL Data Project 🎬")
 st.write(
     """
-This is a small personal project combining Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, IMDb, GitHub, and Streamlit
+This is a small imdb data project combining Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, GitHub, and Streamlit.
 """
 )
 
@@ -108,7 +108,7 @@ if st.button("Run SQL Query"):
 # --- Explore movies by IMDb rating ---        
 
 st.write("---")
-st.write("### IMDb Ratings > Movies I’ve seen, sorted by IMDb rating")
+st.write("### IMDb Ratings")
 min_rating = st.slider(
     "Show movies with IMDb rating at least:",
     0, 10, 7,
