@@ -146,7 +146,7 @@ user_query = st.text_area(
        ORDER BY Rating_Diff DESC
        LIMIT 10;""",
     key="sql_playground",
-    height=500  # ⬅️ default is ~150, so 300 doubles it
+    height=300  # ⬅️ default is ~150, so 300 doubles it
 )
 
 if st.button("Run SQL Query"):
