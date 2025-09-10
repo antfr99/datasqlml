@@ -130,6 +130,9 @@ st.dataframe(
 # ============================
 # --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
 # ============================
+# ============================
+# --- Hybrid Recommender (Director + Genre + IMDb Rating) ---
+# ============================
 
 def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     # 1. Get movies I rated highly
@@ -146,32 +149,31 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     # 3. Filter others_combined for popular + high-rated
     candidates = others_combined[
         (others_combined["IMDb Rating"] >= min_imdb) &
-        (others_combined["Num Votes"] > 10000)
+        (others_combined["Num Votes"] > 50000)
     ]
 
     # 4. Define genre bonus mapping
     genre_bonus_map = {
-        "Crime": 0.1, "Biography": 0.1, "Animation": 0.1,
-        "Comedy": 0.5, "Drama": 0.5, "Romance": 0.5,
-        "Adventure": 0.2, "Horror": 0.2, "Action": 0.2
+        "Crime": 0.1,
+        "Biography": 0.1,
+        "Animation": 0.1,
+        "Comedy": 0.5,
+        "Drama": 0.5
     }
 
     # 5. Score candidates
     def score_movie(row):
-        # Director bonus
         director_bonus = 1.0 if row["Director"] in fav_directors else 0.0
 
         # Genre bonus logic
         if pd.isna(row["Genres"]) or row["Genres"] == "":
-            genre_bonus = 0.2  # genre not defined
+            genre_bonus = 0.2  # fallback for missing genre
         elif row["Genres"] in fav_genres:
-            genre_bonus = genre_bonus_map.get(row["Genres"], 0.0)
+            genre_bonus = genre_bonus_map.get(row["Genres"], 0.2)  # 0.2 if not mapped
         else:
-            genre_bonus = 0.2  # genre defined but not a favorite
+            genre_bonus = 0.2  # genre exists but not a favorite
 
-        # Hybrid score
         hybrid_score = row["IMDb Rating"] + director_bonus + genre_bonus
-
         return pd.Series({
             "Director Bonus": director_bonus,
             "Genre Bonus": genre_bonus,
@@ -191,6 +193,6 @@ def hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100):
     ]
 
 # --- Streamlit ---
-st.write("### 🎬 Hybrid Recommendations")
-recs = hybrid_recommender(myratings, others_combined, min_imdb=5, top_n=10000)
+st.write("### 🎬 Hybrid Recommendations (Detailed Scores)")
+recs = hybrid_recommender(myratings, others_combined, min_imdb=7, top_n=100)
 st.dataframe(recs)
