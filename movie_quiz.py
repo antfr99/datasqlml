@@ -74,7 +74,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL Data Project 🎬")
 st.write(
     """
-This is a small personal project combining **Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, IMDb, GitHub, and Streamlit
+This is a small personal project combining Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, IMDb, GitHub, and Streamlit
 """
 )
 
