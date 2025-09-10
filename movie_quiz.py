@@ -1,48 +1,36 @@
 import streamlit as st
 import pandas as pd
 
-# --- Helper to auto-detect delimiter ---
-def load_csv_auto(path):
-    # Try common delimiters
-    for delim in [",", ";", "\t", "|"]:
-        try:
-            df = pd.read_csv(path, delimiter=delim)
-            if df.shape[1] > 1:  # valid split
-                return df
-        except Exception:
-            continue
-    return pd.read_csv(path)  # fallback
+# --- Load with delimiter detection ---
+def load_csv(path):
+    try:
+        # First try standard CSV (comma)
+        return pd.read_csv(path)
+    except Exception:
+        # If fails, try semicolon
+        return pd.read_csv(path, delimiter=";")
 
 # --- Load Files ---
-myratings = load_csv_auto("myratings.csv")
-others = load_csv_auto("othersratings1.csv")
+myratings = load_csv("myratings.csv")
+others = load_csv("othersratings1.csv")
 
 # --- Standardize column names ---
-myratings.columns = myratings.columns.str.strip()
-others.columns = others.columns.str.strip()
-
-# --- Rename "Const" to "Movie ID" ---
 for df in [myratings, others]:
+    df.columns = df.columns.str.strip()
     df.rename(columns={"Const": "Movie ID"}, inplace=True)
 
-# --- Clean Directors: keep only first director ---
-for df in [myratings, others]:
+    # Clean Directors: only first director
     if "Directors" in df.columns:
         df["Director"] = df["Directors"].fillna("").apply(
             lambda x: x.split(",")[0].strip() if x else ""
         )
         df.drop(columns=["Directors"], inplace=True)
 
-# --- Clean Genres: keep only first genre ---
-for df in [myratings, others]:
+    # Clean Genres: only first genre
     if "Genres" in df.columns:
         df["Genres"] = df["Genres"].fillna("").apply(
             lambda x: x.split(",")[0].strip() if x else ""
         )
-
-# --- Reset index ---
-myratings = myratings.reset_index(drop=True)
-others = others.reset_index(drop=True)
 
 # --- Streamlit Config ---
 st.set_page_config(layout="wide")
