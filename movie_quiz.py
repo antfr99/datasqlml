@@ -93,7 +93,16 @@ Example 2: `SELECT Title, [Personal Ratings] FROM Personal_Ratings WHERE [Person
 
 user_query = st.text_area(
     "Enter SQL query for either table:",
-    "SELECT * FROM IMDB_Ratings LIMIT 5",
+     "SELECT pr.Title,
+              pr.[Personal Ratings],
+              ir.[IMDb Rating],
+              ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
+       FROM Personal_Ratings pr
+       JOIN IMDB_Ratings ir 
+           ON pr.[Movie ID] = ir.[Movie ID]
+       WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
+       ORDER BY Rating_Diff DESC
+       LIMIT 10",
     key="sql_playground"
 )
 
