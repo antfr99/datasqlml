@@ -36,6 +36,28 @@ for df in [myratings, others]:
 st.set_page_config(layout="wide")
 st.title("🎬 IMDb Data Explorer")
 
+# Force proper CSV parsing
+others = pd.read_csv("othersratings1.csv", delimiter=",", quotechar='"')
+
+# Clean columns
+others.columns = others.columns.str.strip()
+others.rename(columns={"Const": "Movie ID"}, inplace=True)
+
+# Keep only first director
+if "Directors" in others.columns:
+    others["Director"] = others["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
+    others.drop(columns=["Directors"], inplace=True)
+
+# Keep only first genre
+if "Genres" in others.columns:
+    others["Genres"] = others["Genres"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else ""
+    )
+
+print(others.head())   # 👈 Debug to check columns are aligned
+
 # --- My Ratings Table ---
 st.write("### My Ratings")
 st.dataframe(myratings, width="stretch", height=400)
