@@ -1,3 +1,54 @@
+import streamlit as st
+import pandas as pd
+import pandasql as ps
+
+# --- Page Config ---
+st.set_page_config(layout="wide")
+st.title("IMDb/SQL Data Project 🎬")
+
+st.write("""
+This project combines Streamlit, Pandas, PandasQL, and SQL to explore IMDb and personal movie ratings data.
+""")
+
+# --- Load Excel files ---
+try:
+    IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
+    My_Ratings = pd.read_excel("myratings.xlsx")
+    Votes = pd.read_excel("votes.xlsx")  # New votes source
+except Exception as e:
+    st.error(f"Error loading Excel files: {e}")
+    IMDB_Ratings = pd.DataFrame()
+    My_Ratings = pd.DataFrame()
+    Votes = pd.DataFrame()
+
+# --- Remove empty/unnamed columns ---
+def clean_unnamed_columns(df):
+    return df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+IMDB_Ratings = clean_unnamed_columns(IMDB_Ratings)
+My_Ratings = clean_unnamed_columns(My_Ratings)
+Votes = clean_unnamed_columns(Votes)
+
+# --- Merge votes into IMDB_Ratings ---
+if not Votes.empty:
+    IMDB_Ratings = IMDB_Ratings.merge(Votes, on="Movie ID", how="left")
+
+# --- Show Tables ---
+st.write("---")
+st.write("### IMDb Ratings Table")
+if not IMDB_Ratings.empty:
+    st.dataframe(IMDB_Ratings, width="stretch", height=400)
+else:
+    st.warning("IMDb Ratings Excel file is empty or failed to load.")
+
+st.write("---")
+st.write("### My Ratings Table")
+if not My_Ratings.empty:
+    st.dataframe(My_Ratings, width="stretch", height=400)
+else:
+    st.warning("My Ratings Excel file is empty or failed to load.")
+
+# --- SQL Playground ---
 # --- Single SQL Playground for both tables ---
 st.write("---")
 st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
