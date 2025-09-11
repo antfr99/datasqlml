@@ -49,12 +49,12 @@ def load_ratings_csv(file_path, personal=False):
 
 
 # --- Load CSVs ---
-IMDB_Ratings = load_ratings_csv("imdbratings.csv", personal=False)
+imdbratingss = load_ratings_csv("imdbratings.csv", personal=False)
 Personal_Ratings = load_ratings_csv("myratings.csv", personal=True)
 
 
 # --- Debug: check column names ---
-st.write("IMDb_Ratings columns:", IMDB_Ratings.columns.tolist())
+st.write("imdbratingss columns:", imdbratingss.columns.tolist())
 st.write("Personal_Ratings columns:", Personal_Ratings.columns.tolist())
 
 
@@ -70,9 +70,9 @@ Use SQL queries to analyze the data.
 # --- IMDb Ratings Table ---
 st.write("---")
 st.write("### IMDb Ratings")
-if not IMDB_Ratings.empty:
+if not imdbratingss.empty:
     min_rating = st.slider("Minimum IMDb rating to display:", 0, 10, 7, key="imdb_slider")
-    filtered_imdb = IMDB_Ratings[IMDB_Ratings["imdb_rating"].astype(float) >= min_rating].sort_values("imdb_rating", ascending=False)
+    filtered_imdb = imdbratingss[imdbratingss["imdbratings"].astype(float) >= min_rating].sort_values("imdbratings", ascending=False)
     st.dataframe(filtered_imdb, width="stretch", height=400)
 else:
     st.warning("IMDb Ratings CSV is empty or failed to load.")
@@ -92,16 +92,16 @@ else:
 # --- SQL Playground ---
 st.write("---")
 st.header("SQL Playground")
-st.write("Run SQL queries on `imdb_ratings` or `personal_ratings` using normalized column names.")
+st.write("Run SQL queries on `imdbratingss` or `personal_ratings` using normalized column names.")
 
 default_query = """SELECT pr.title,
        pr.personal_ratings,
-       ir.imdb_rating,
-       ABS(pr.personal_ratings - ir.imdb_rating) AS rating_diff
+       ir.imdbratings,
+       ABS(pr.personal_ratings - ir.imdbratings) AS rating_diff
 FROM personal_ratings pr
-JOIN imdb_ratings ir
+JOIN imdbratingss ir
     ON pr.movie_id = ir.movie_id
-WHERE ABS(pr.personal_ratings - ir.imdb_rating) > 2
+WHERE ABS(pr.personal_ratings - ir.imdbratings) > 2
 ORDER BY rating_diff DESC
 LIMIT 10;"""
 
@@ -112,8 +112,8 @@ if st.button("Run SQL Query"):
         # Ensure numeric columns are floats for calculations
         if "personal_ratings" in Personal_Ratings.columns:
             Personal_Ratings["personal_ratings"] = Personal_Ratings["personal_ratings"].astype(float)
-        if "imdb_rating" in IMDB_Ratings.columns:
-            IMDB_Ratings["imdb_rating"] = IMDB_Ratings["imdb_rating"].astype(float)
+        if "imdbratings" in imdbratingss.columns:
+            imdbratingss["imdbratings"] = imdbratingss["imdbratings"].astype(float)
 
         result = ps.sqldf(user_query, locals())
         st.dataframe(result, width="stretch", height=400)
