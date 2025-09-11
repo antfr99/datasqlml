@@ -1,12 +1,12 @@
 import streamlit as st
 import pandas as pd
 
-# --- Load CSVs ---
+# --- Load .xlsxs ---
 try:
-    IMDB_Ratings = pd.read_csv("imdbratings.csv", encoding='utf-8-sig')
-    Personal_Ratings = pd.read_csv("myratings.csv", encoding='utf-8-sig')
+    IMDB_Ratings = pd.read_.xlsx("imdbratings.xlsx", encoding='utf-8-sig')
+    Personal_Ratings = pd.read_.xlsx("myratings.xlsx", encoding='utf-8-sig')
 except Exception as e:
-    st.error(f"Error loading CSV files: {e}")
+    st.error(f"Error loading xlsx files: {e}")
     IMDB_Ratings = pd.DataFrame()
     Personal_Ratings = pd.DataFrame()
 
@@ -21,7 +21,7 @@ if not IMDB_Ratings.empty:
     st.write("Columns:", IMDB_Ratings.columns.tolist())
     st.dataframe(IMDB_Ratings, width="stretch", height=400)
 else:
-    st.warning("IMDb Ratings CSV is empty or failed to load.")
+    st.warning("IMDb Ratings xlsx is empty or failed to load.")
 
 # --- Show Personal Ratings ---
 st.write("---")
@@ -30,4 +30,4 @@ if not Personal_Ratings.empty:
     st.write("Columns:", Personal_Ratings.columns.tolist())
     st.dataframe(Personal_Ratings, width="stretch", height=400)
 else:
-    st.warning("Personal Ratings CSV is empty or failed to load.")
+    st.warning("Personal Ratings xlsx is empty or failed to load.")
