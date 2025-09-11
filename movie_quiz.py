@@ -82,7 +82,7 @@ st.write("""
 Imagine you want to get recommendations for films you haven't rated yet.  
 - If you liked the director before → +1 point  
 - If the genre is Comedy or Drama → +0.5  
-- Otherwise → +0.2  
+- Otherwise Genre gets → +0.2  
 
 This helps you prioritize unseen movies you are likely to enjoy based on your past preferences.
 """)
