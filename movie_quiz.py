@@ -74,7 +74,7 @@ JOIN IMDB_Ratings ir
     ON pr.[Movie ID] = ir.[Movie ID]
 WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC
-LIMIT 10;"""
+LIMIT 1000;"""
 
 # --- Scenario 2 ---
 st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
@@ -90,6 +90,8 @@ This helps you prioritize unseen movies you are likely to enjoy based on your pa
 default_query_2 = """SELECT ir.Title,
        ir.Director,
        ir.Genre,
+       ir.[IMDb Rating],
+       ir.Year,
        CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END
        + CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Recommendation_Score
 FROM IMDB_Ratings ir
@@ -98,7 +100,8 @@ LEFT JOIN My_Ratings pr
 WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
-LIMIT 10;"""
+LIMIT 1000;"""
+
 
 # --- Scenario 3 ---
 st.markdown('<h3 style="color:green;">Scenario 3 (Top Rated Yet Unseen):</h3>', unsafe_allow_html=True)
@@ -116,7 +119,7 @@ LEFT JOIN My_Ratings pr
     ON ir.[Movie ID] = pr.[Movie ID]
 WHERE pr.[Your Rating] IS NULL
 ORDER BY ir.[IMDb Rating] DESC
-LIMIT 10;"""
+LIMIT 1000;"""
 
 # --- Select Scenario ---
 scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3"])
