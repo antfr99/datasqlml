@@ -92,14 +92,9 @@ FROM IMDB_Ratings ir
 LEFT JOIN My_Ratings pr
     ON ir.[Movie ID] = pr.[Movie ID]
 WHERE pr.[Your Rating] IS NULL
+  AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10;"""
-
-st.write("""
-**Scenario 3 (Top Rated Yet Unseen):**  
-This scenario shows the top 10 highest IMDb rated films you haven’t rated yet.  
-It’s a quick way to find highly-rated movies that are missing from your personal list.
-""")
 
 default_query_3 = """SELECT ir.Title,
        ir.[IMDb Rating],
