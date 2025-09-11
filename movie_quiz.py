@@ -4,7 +4,7 @@ import pandasql as ps
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
-st.title("IMDb/SQL Data Project 🎬")
+st.title("IMDb/SQL/Python Data Project 🎬")
 
 st.write("""
 This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), ChatGPT, SQL and GitHub.
