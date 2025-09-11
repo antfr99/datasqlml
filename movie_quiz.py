@@ -8,9 +8,9 @@ def load_ratings_csv(file_path, personal=False):
     Robust loader for ratings CSV files.
     Args:
         file_path (str): Path to the CSV file
-        personal (bool): If True, renames 'Your Rating' to 'Personal Ratings'
+        personal (bool): If True, renames 'Your Rating' to 'personal_ratings'
     Returns:
-        pd.DataFrame: Cleaned DataFrame
+        pd.DataFrame: Cleaned DataFrame with normalized column names
     """
     try:
         df = pd.read_csv(
@@ -20,29 +20,29 @@ def load_ratings_csv(file_path, personal=False):
             skip_blank_lines=True,
             on_bad_lines='skip'
         )
-        df.columns = df.columns.str.strip()
-        
-        # Rename columns
-        if personal and "Your Rating" in df.columns:
-            df = df.rename(columns={"Your Rating": "Personal Ratings"})
-        if "Const" in df.columns:
-            df = df.rename(columns={"Const": "Movie ID"})
-        
-        # Clean Director column
-        if "Director" in df.columns:
-            df["Director"] = df["Director"].fillna("").apply(
-                lambda x: x.split(",")[0].strip() if x else None
-            )
-        
-        # Clean Genre column
-        if "Genre" in df.columns:
-            df["Genre"] = df["Genre"].fillna("").apply(
-                lambda x: x.split(",")[0].strip() if x else None
-            )
-        
+
+        # Strip column names and normalize: lowercase + underscores
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+        # Rename 'your_rating' to 'personal_ratings' if needed
+        if personal and "your_rating" in df.columns:
+            df = df.rename(columns={"your_rating": "personal_ratings"})
+
+        # Standardize movie ID column
+        if "const" in df.columns:
+            df = df.rename(columns={"const": "movie_id"})
+
+        # Clean director column (first director only)
+        if "director" in df.columns:
+            df["director"] = df["director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+
+        # Clean genre column (first genre only)
+        if "genre" in df.columns:
+            df["genre"] = df["genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+
         df = df.reset_index(drop=True)
         return df
-    
+
     except Exception as e:
         st.error(f"Error loading {file_path}: {e}")
         return pd.DataFrame()
@@ -51,6 +51,11 @@ def load_ratings_csv(file_path, personal=False):
 # --- Load CSVs ---
 IMDB_Ratings = load_ratings_csv("imdbratings.csv", personal=False)
 Personal_Ratings = load_ratings_csv("myratings.csv", personal=True)
+
+
+# --- Debug: check column names ---
+st.write("IMDb_Ratings columns:", IMDB_Ratings.columns.tolist())
+st.write("Personal_Ratings columns:", Personal_Ratings.columns.tolist())
 
 
 # --- Streamlit Page Config ---
@@ -67,7 +72,7 @@ st.write("---")
 st.write("### IMDb Ratings")
 if not IMDB_Ratings.empty:
     min_rating = st.slider("Minimum IMDb rating to display:", 0, 10, 7, key="imdb_slider")
-    filtered_imdb = IMDB_Ratings[IMDB_Ratings["IMDb Rating"] >= min_rating].sort_values("IMDb Rating", ascending=False)
+    filtered_imdb = IMDB_Ratings[IMDB_Ratings["imdb_rating"].astype(float) >= min_rating].sort_values("imdb_rating", ascending=False)
     st.dataframe(filtered_imdb, width="stretch", height=400)
 else:
     st.warning("IMDb Ratings CSV is empty or failed to load.")
@@ -78,7 +83,7 @@ st.write("---")
 st.write("### Personal Ratings")
 if not Personal_Ratings.empty:
     min_personal_rating = st.slider("Minimum Personal rating to display:", 0, 10, 7, key="personal_slider")
-    filtered_personal = Personal_Ratings[Personal_Ratings["Personal Ratings"] >= min_personal_rating].sort_values("Personal Ratings", ascending=False)
+    filtered_personal = Personal_Ratings[Personal_Ratings["personal_ratings"].astype(float) >= min_personal_rating].sort_values("personal_ratings", ascending=False)
     st.dataframe(filtered_personal, width="stretch", height=400)
 else:
     st.warning("Personal Ratings CSV is empty or failed to load.")
@@ -87,23 +92,29 @@ else:
 # --- SQL Playground ---
 st.write("---")
 st.header("SQL Playground")
-st.write("Run SQL queries on `IMDB_Ratings` or `Personal_Ratings`.")
+st.write("Run SQL queries on `imdb_ratings` or `personal_ratings` using normalized column names.")
 
-default_query = """SELECT pr.Title,
-       pr.[Personal Ratings],
-       ir.[IMDb Rating],
-       ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) AS Rating_Diff
-FROM Personal_Ratings pr
-JOIN IMDB_Ratings ir
-    ON pr.[Movie ID] = ir.[Movie ID]
-WHERE ABS(pr.[Personal Ratings] - ir.[IMDb Rating]) > 2
-ORDER BY Rating_Diff DESC
+default_query = """SELECT pr.title,
+       pr.personal_ratings,
+       ir.imdb_rating,
+       ABS(pr.personal_ratings - ir.imdb_rating) AS rating_diff
+FROM personal_ratings pr
+JOIN imdb_ratings ir
+    ON pr.movie_id = ir.movie_id
+WHERE ABS(pr.personal_ratings - ir.imdb_rating) > 2
+ORDER BY rating_diff DESC
 LIMIT 10;"""
 
 user_query = st.text_area("Enter SQL query:", default_query, height=300, key="sql_area")
 
 if st.button("Run SQL Query"):
     try:
+        # Ensure numeric columns are floats for calculations
+        if "personal_ratings" in Personal_Ratings.columns:
+            Personal_Ratings["personal_ratings"] = Personal_Ratings["personal_ratings"].astype(float)
+        if "imdb_rating" in IMDB_Ratings.columns:
+            IMDB_Ratings["imdb_rating"] = IMDB_Ratings["imdb_rating"].astype(float)
+
         result = ps.sqldf(user_query, locals())
         st.dataframe(result, width="stretch", height=400)
     except Exception as e:
