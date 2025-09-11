@@ -3,34 +3,27 @@ import streamlit as st
 
 # --- Robust CSV loader ---
 def load_csv(file_path):
-    """Load CSV handling quotes and commas inside fields robustly."""
     df = pd.read_csv(
         file_path,
         encoding="utf-8",
-        quotechar='"',   # important to correctly parse fields with commas
-        sep=',',
-        dtype=str,
+        sep=",",
+        quotechar='"',     # ensures "Action, Adventure" stays in one cell
+        dtype=str,         # all as string first
         on_bad_lines='skip',
-        engine='python'  # safer for messy CSVs
+        engine='python'    # safer for messy CSVs
     )
     return df
 
 # --- Clean & Standardize ---
 def clean_movies(df):
     df.columns = df.columns.str.strip()
+    df.rename(columns={"Const":"Movie ID", "Your Rating":"Personal Ratings", "Directors":"Director"}, inplace=True)
 
-    # Map columns
-    df.rename(columns={
-        "Const": "Movie ID",
-        "Your Rating": "Personal Ratings",
-        "Directors": "Director"
-    }, inplace=True)
-
-    # Take first director
+    # First director
     if "Director" in df.columns:
         df["Director"] = df["Director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
-    # Take first genre
+    # First genre
     if "Genres" in df.columns:
         df["Genres"] = df["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
 
@@ -41,11 +34,10 @@ def clean_movies(df):
 
     return df
 
-# --- Load CSVs ---
-myratings = clean_movies(load_csv("myratings.csv"))
+# Load CSVs
 others = clean_movies(load_csv("othersratings1.csv"))
 
-# Ensure expected columns exist
+# Ensure expected columns
 expected_cols = ["Movie ID","Title","Original Title","URL","Title Type",
                  "IMDb Rating","Runtime (mins)","Year","Genres","Num Votes",
                  "Release Date","Director","Personal Ratings","Date Rated"]
@@ -53,6 +45,9 @@ for col in expected_cols:
     if col not in others.columns:
         others[col] = None
 others = others[expected_cols]
+
+st.write("### IMDb Ratings")
+st.dataframe(others.sort_values("IMDb Rating", ascending=False))
 
 # ============================
 # --- Display Other Ratings ---
