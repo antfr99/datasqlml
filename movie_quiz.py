@@ -33,29 +33,29 @@ st.dataframe(myratings, width="stretch", height=300)
 # ============================
 # --- Load Others Ratings 1 ---
 # ============================
-others1 = pd.read_csv("othersratings1.csv")
-others1.columns = others1.columns.str.strip()
-others1.rename(columns={"Const": "Movie ID"}, inplace=True)
+others1 = pd.read_csv(
+    "othersratings1.csv",
+    quotechar='"',          # handle text with commas inside quotes
+    on_bad_lines="skip"     # skip malformed rows just in case
+)
 
+# --- Clean Director (keep only first) ---
 if "Directors" in others1.columns:
-    others1["Director"] = others1["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    others1["Director"] = (
+        others1["Directors"]
+        .fillna("")
+        .apply(lambda x: x.split(",")[0].strip() if x else "")
+    )
     others1.drop(columns=["Directors"], inplace=True)
 
-desired_cols_others = [
-    "Movie ID", "IMDb Rating", "Title", "URL", "Title Type", "Runtime (mins)",
-    "Year", "Release Date", "Director", "Num Votes", "Genres"
-]
-others1 = others1[[c for c in desired_cols_others if c in others1.columns]]
-others1 = others1.drop_duplicates(subset=["Movie ID"])
-
+# --- Clean Genres (keep only first) ---
 if "Genres" in others1.columns:
-    others1["Genres"] = others1["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    others1["Genres"] = (
+        others1["Genres"]
+        .fillna("")
+        .apply(lambda x: x.split(",")[0].strip() if x else "")
+    )
 
-# Filter out low-vote movies
-others1 = others1[others1["Num Votes"] > 10000]
-
-st.write("### 🌍 IMDb Ratings (Others)")
-st.dataframe(others1, width="stretch", height=300)
 
 # ============================
 # --- Hybrid Recommender ---
