@@ -1,52 +1,60 @@
 import pandas as pd
 import streamlit as st
+import csv
+from io import StringIO
 
-# --- Robust CSV loader ---
-def load_csv(file_path):
-    df = pd.read_csv(
-        file_path,
-        encoding="utf-8",
-        sep=",",
-        quotechar='"',     # ensures "Action, Adventure" stays in one cell
-        dtype=str,         # all as string first
-        on_bad_lines='skip',
-        engine='python'    # safer for messy CSVs
-    )
-    return df
+# --- Robust CSV loader with column alignment ---
+def load_csv_fix(file_path, expected_cols):
+    """
+    Load a CSV robustly, fix rows with misaligned columns, and return a clean DataFrame.
+    """
+    clean_rows = []
 
-# --- Clean & Standardize ---
-def clean_movies(df):
-    df.columns = df.columns.str.strip()
-    df.rename(columns={"Const":"Movie ID", "Your Rating":"Personal Ratings", "Directors":"Director"}, inplace=True)
-
-    # First director
-    if "Director" in df.columns:
-        df["Director"] = df["Director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-
-    # First genre
-    if "Genres" in df.columns:
-        df["Genres"] = df["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-
-    # Convert numeric fields
+    with open(file_path, "r", encoding="utf-8") as f:
+        reader = csv.reader(f, quotechar='"', delimiter=',', skipinitialspace=True)
+        header = next(reader)
+        header = [h.strip() for h in header]
+        
+        for row in reader:
+            # If row too short, pad with empty strings
+            if len(row) < len(expected_cols):
+                row += [""] * (len(expected_cols) - len(row))
+            # If row too long, merge extra columns into the last field
+            elif len(row) > len(expected_cols):
+                row = row[:len(expected_cols)-1] + [",".join(row[len(expected_cols)-1:])]
+            clean_rows.append(row)
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(clean_rows, columns=expected_cols, dtype=str)
+    
+    # Strip whitespace
+    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+    
+    # Convert numeric columns
     for col in ["IMDb Rating", "Personal Ratings", "Num Votes", "Runtime (mins)"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
-
+    
+    # First director
+    if "Director" in df.columns:
+        df["Director"] = df["Director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    
+    # First genre
+    if "Genres" in df.columns:
+        df["Genres"] = df["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+    
     return df
 
-# Load CSVs
-others = clean_movies(load_csv("othersratings1.csv"))
+# --- Expected columns ---
+expected_cols = ["Position","Movie ID","Created","Modified","Description",
+                 "Title","Original Title","URL","Title Type","IMDb Rating",
+                 "Runtime (mins)","Year","Genres","Num Votes","Release Date",
+                 "Director","Personal Ratings","Date Rated"]
 
-# Ensure expected columns
-expected_cols = ["Movie ID","Title","Original Title","URL","Title Type",
-                 "IMDb Rating","Runtime (mins)","Year","Genres","Num Votes",
-                 "Release Date","Director","Personal Ratings","Date Rated"]
-for col in expected_cols:
-    if col not in others.columns:
-        others[col] = None
-others = others[expected_cols]
+# --- Load CSV ---
+others = load_csv_fix("othersratings1.csv", expected_cols)
 
-st.write("### IMDb Ratings")
+st.write("### IMDb Ratings (Cleaned)")
 st.dataframe(others.sort_values("IMDb Rating", ascending=False))
 
 # ============================
