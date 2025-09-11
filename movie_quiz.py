@@ -4,21 +4,22 @@ import pandasql as ps
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
-
-# --- Project Description ---
 st.title("IMDb/SQL Data Project 🎬")
+
 st.write("""
-This is a small IMDb data project combining Python Packages (Streamlit, Pandas, PandasQL), ChatGPT, SQL, GitHub, and Streamlit.
+This project combines Streamlit, Pandas, PandasQL, and SQL to explore IMDb and personal movie ratings data.
 """)
 
-# --- Load .xlsx files ---
+# --- Load Excel files ---
 try:
     IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
     My_Ratings = pd.read_excel("myratings.xlsx")
+    Votes = pd.read_excel("votes.xlsx")  # New votes source
 except Exception as e:
     st.error(f"Error loading Excel files: {e}")
     IMDB_Ratings = pd.DataFrame()
     My_Ratings = pd.DataFrame()
+    Votes = pd.DataFrame()
 
 # --- Remove empty/unnamed columns ---
 def clean_unnamed_columns(df):
@@ -26,26 +27,13 @@ def clean_unnamed_columns(df):
 
 IMDB_Ratings = clean_unnamed_columns(IMDB_Ratings)
 My_Ratings = clean_unnamed_columns(My_Ratings)
+Votes = clean_unnamed_columns(Votes)
 
-# --- Convert all columns to SQLite-safe types ---
-def make_sqlite_safe(df):
-    df_safe = df.copy()
-    for col in df_safe.columns:
-        # Numeric columns
-        if pd.api.types.is_numeric_dtype(df_safe[col]):
-            df_safe[col] = pd.to_numeric(df_safe[col], errors='coerce')
-        # Datetime/Timedelta columns → string
-        elif pd.api.types.is_datetime64_any_dtype(df_safe[col]) or pd.api.types.is_timedelta64_dtype(df_safe[col]):
-            df_safe[col] = df_safe[col].astype(str)
-        # All other objects → string
-        else:
-            df_safe[col] = df_safe[col].astype(str)
-    return df_safe
+# --- Merge votes into IMDB_Ratings ---
+if not Votes.empty:
+    IMDB_Ratings = IMDB_Ratings.merge(Votes, on="Movie ID", how="left")
 
-IMDB_safe = make_sqlite_safe(IMDB_Ratings)
-My_safe = make_sqlite_safe(My_Ratings)
-
-# --- Show IMDb Ratings ---
+# --- Show Tables ---
 st.write("---")
 st.write("### IMDb Ratings Table")
 if not IMDB_Ratings.empty:
@@ -53,7 +41,6 @@ if not IMDB_Ratings.empty:
 else:
     st.warning("IMDb Ratings Excel file is empty or failed to load.")
 
-# --- Show My Ratings ---
 st.write("---")
 st.write("### My Ratings Table")
 if not My_Ratings.empty:
@@ -61,20 +48,28 @@ if not My_Ratings.empty:
 else:
     st.warning("My Ratings Excel file is empty or failed to load.")
 
-# --- Single SQL Playground for both tables ---
+# --- SQL Playground ---
 st.write("---")
 st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
 st.write("""
 Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 
 **Scenario 1:**  
-Imagine you want to find movies where your personal rating is very different from the IMDb rating.  
-The following default query will show the top 10 movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
+Find movies where your personal rating is very different from the IMDb rating.  
+This query shows the top 10 movies where your rating differs from IMDb by more than 2 points:
 
-This helps you quickly spot movies you might have over- or underrated compared to IMDb.
+**Scenario 2 (Hybrid Recommendations):**  
+Recommend movies you haven’t rated yet:  
+- Add 1 point if you liked the director before  
+- Add 0.5 if genre is Comedy/Drama, otherwise 0.2  
+Only consider movies with at least 30,000 votes.
+
+**Scenario 3 (Top Rated Yet Unseen):**  
+Shows the top-rated movies on IMDb you haven’t seen yet, again only movies with at least 30,000 votes.
 """)
 
-default_query_1 = """SELECT pr.Title,
+# --- Default SQL Query for Scenario 1 ---
+default_query = """SELECT pr.Title,
        pr.[Your Rating],
        ir.[IMDb Rating],
        ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff
@@ -85,63 +80,27 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC
 LIMIT 10;"""
 
-st.write("""
-**Scenario 2 (Hybrid Recommendation):**  
-Imagine you want to get recommendations for films you haven't rated yet.  
-- If you liked the director before → +1 point  
-- If the genre is Comedy or Drama → +0.5  
-- Otherwise → +0.2  
-
-This helps you prioritize unseen movies you are likely to enjoy based on your past preferences.
-""")
-
-default_query_2 = """SELECT ir.Title,
-       ir.Director,
-       ir.Genre,
-       CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END
-       + CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Recommendation_Score
-FROM IMDB_Ratings ir
-LEFT JOIN My_Ratings pr
-    ON ir.[Movie ID] = pr.[Movie ID]
-WHERE pr.[Your Rating] IS NULL
-ORDER BY Recommendation_Score DESC
-LIMIT 10;"""
-
-st.write("""
-**Scenario 3 (Top Rated Yet Unseen):**  
-This scenario shows the top 10 highest IMDb rated films you haven’t rated yet.  
-It’s a quick way to find highly-rated movies that are missing from your personal list.
-""")
-
-default_query_3 = """SELECT ir.Title,
-       ir.[IMDb Rating],
-       ir.Genre,
-       ir.Director
-FROM IMDB_Ratings ir
-LEFT JOIN My_Ratings pr
-    ON ir.[Movie ID] = pr.[Movie ID]
-WHERE pr.[Your Rating] IS NULL
-ORDER BY ir.[IMDb Rating] DESC
-LIMIT 10;"""
-
-# --- Select Scenario ---
-scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3"])
-
-query_map = {
-    "Scenario 1": default_query_1,
-    "Scenario 2": default_query_2,
-    "Scenario 3": default_query_3
-}
-
 user_query = st.text_area(
-    "Enter SQL query for selected scenario:",
-    query_map[scenario],
+    "Enter SQL query for either table:",
+    default_query,
     height=300,
     key="sql_playground"
 )
 
 if st.button("Run SQL Query"):
     try:
+        # Ensure numeric columns are floats for calculations
+        if "Your Rating" in My_Ratings.columns:
+            My_Ratings["Your Rating"] = My_Ratings["Your Rating"].astype(float)
+        if "IMDb Rating" in IMDB_Ratings.columns:
+            IMDB_Ratings["IMDb Rating"] = IMDB_Ratings["IMDb Rating"].astype(float)
+        if "Num Votes" in IMDB_Ratings.columns:
+            IMDB_Ratings["Num Votes"] = IMDB_Ratings["Num Votes"].astype(float)
+
+        # Use safe copies for SQL queries
+        IMDB_safe = IMDB_Ratings.copy()
+        My_safe = My_Ratings.copy()
+
         result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_safe, "My_Ratings": My_safe})
         st.dataframe(result, width="stretch", height=400)
     except Exception as e:
