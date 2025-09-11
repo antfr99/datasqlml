@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL Data Project 🎬")
 
 st.write("""
-This project combines Streamlit, Pandas, PandasQL, and SQL to explore IMDb and personal movie ratings data.
+This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), ChatGPT, SQL and GitHub
 """)
 
 # --- Load Excel files ---
@@ -54,8 +54,11 @@ st.write("---")
 st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
 st.write("""
 Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
+""")
 
-**Scenario 1:**  
+# --- Scenario 1 ---
+st.markdown('<h3 style="color:green;">Scenario 1:</h3>', unsafe_allow_html=True)
+st.write("""
 Imagine you want to find movies where your personal rating is very different from the IMDb rating.  
 The following default query will show the top 10 movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
 
@@ -73,8 +76,9 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC
 LIMIT 10;"""
 
+# --- Scenario 2 ---
+st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
 st.write("""
-**Scenario 2 (Hybrid Recommendation):**  
 Imagine you want to get recommendations for films you haven't rated yet.  
 - If you liked the director before → +1 point  
 - If the genre is Comedy or Drama → +0.5  
@@ -95,6 +99,13 @@ WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10;"""
+
+# --- Scenario 3 ---
+st.markdown('<h3 style="color:green;">Scenario 3 (Top Rated Yet Unseen):</h3>', unsafe_allow_html=True)
+st.write("""
+This scenario shows the top 10 highest IMDb rated films you haven’t rated yet.  
+It’s a quick way to find highly-rated movies that are missing from your personal list.
+""")
 
 default_query_3 = """SELECT ir.Title,
        ir.[IMDb Rating],
