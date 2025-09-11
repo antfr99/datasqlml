@@ -144,6 +144,6 @@ user_query = st.text_area(
 if st.button("Run SQL Query"):
     try:
         result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
-        st.dataframe(result, width="stretch", height=500)
+        st.dataframe(result, width="stretch", height=700)
     except Exception as e:
         st.error(f"Error in SQL query: {e}")
