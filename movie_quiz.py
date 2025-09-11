@@ -19,14 +19,13 @@ Personal_Ratings = clean_unnamed_columns(Personal_Ratings)
 
 # --- Streamlit Page ---
 st.set_page_config(layout="wide")
-st.title("IMDb & Personal Ratings - Cleaned Raw Tables")
+st.title("IMDb & Personal Ratings - Raw Tables")
 
 # --- Show IMDb Ratings ---
 st.write("---")
 st.write("### IMDb Ratings Table")
 if not IMDB_Ratings.empty:
-    st.write("Columns:", IMDB_Ratings.columns.tolist())
-    st.dataframe(IMDB_Ratings, width="stretch", height=400)
+    st.dataframe(IMDB_Ratings, width="stretch", height=400)  # just show table
 else:
     st.warning("IMDb Ratings Excel file is empty or failed to load.")
 
@@ -34,7 +33,6 @@ else:
 st.write("---")
 st.write("### Personal Ratings Table")
 if not Personal_Ratings.empty:
-    st.write("Columns:", Personal_Ratings.columns.tolist())
-    st.dataframe(Personal_Ratings, width="stretch", height=400)
+    st.dataframe(Personal_Ratings, width="stretch", height=400)  # just show table
 else:
     st.warning("Personal Ratings Excel file is empty or failed to load.")
