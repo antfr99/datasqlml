@@ -3,7 +3,7 @@ import pandas as pd
 import pandasql as ps
 
 # --- Load CSVs ---
-IMDB_Ratings = pd.read_csv("imdb_ratings.csv")
+IMDB_Ratings = pd.read_csv("imdbratings.csv")
 Personal_Ratings = pd.read_csv("myratings.csv")
 
 # --- Ensure consistent column names ---
