@@ -5,12 +5,12 @@ import pandasql as ps
 # --- Robust CSV loader ---
 def load_ratings_csv(file_path, personal=False):
     """
-    Robust loader for ratings CSV files.
+    Load ratings CSV files, normalize column names, and clean director/genre columns.
     Args:
-        file_path (str): Path to the CSV file
+        file_path (str): CSV file path
         personal (bool): If True, renames 'Your Rating' to 'personal_ratings'
     Returns:
-        pd.DataFrame: Cleaned DataFrame with normalized column names
+        pd.DataFrame: cleaned DataFrame
     """
     try:
         df = pd.read_csv(
@@ -21,14 +21,14 @@ def load_ratings_csv(file_path, personal=False):
             on_bad_lines='skip'
         )
 
-        # Strip column names and normalize: lowercase + underscores
+        # Strip spaces and normalize column names
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
-        # Rename 'your_rating' to 'personal_ratings' if needed
+        # Rename 'your_rating' to 'personal_ratings'
         if personal and "your_rating" in df.columns:
             df = df.rename(columns={"your_rating": "personal_ratings"})
 
-        # Standardize movie ID column
+        # Standardize movie_id
         if "const" in df.columns:
             df = df.rename(columns={"const": "movie_id"})
 
@@ -49,30 +49,27 @@ def load_ratings_csv(file_path, personal=False):
 
 
 # --- Load CSVs ---
-imdbratingss = load_ratings_csv("imdbratings.csv", personal=False)
+IMDB_Ratings = load_ratings_csv("imdbratings.csv", personal=False)
 Personal_Ratings = load_ratings_csv("myratings.csv", personal=True)
 
 
-# --- Debug: check column names ---
-st.write("imdbratingss columns:", imdbratingss.columns.tolist())
+# --- Debug: show column names ---
+st.write("IMDB_Ratings columns:", IMDB_Ratings.columns.tolist())
 st.write("Personal_Ratings columns:", Personal_Ratings.columns.tolist())
 
 
 # --- Streamlit Page Config ---
 st.set_page_config(layout="wide")
 st.title("IMDb & Personal Ratings Project 🎬")
-st.write("""
-Explore your movies interactively and compare personal ratings vs IMDb ratings. 
-Use SQL queries to analyze the data.
-""")
+st.write("Compare your personal ratings with IMDb ratings and explore the data.")
 
 
 # --- IMDb Ratings Table ---
 st.write("---")
 st.write("### IMDb Ratings")
-if not imdbratingss.empty:
-    min_rating = st.slider("Minimum IMDb rating to display:", 0, 10, 7, key="imdb_slider")
-    filtered_imdb = imdbratingss[imdbratingss["imdbratings"].astype(float) >= min_rating].sort_values("imdbratings", ascending=False)
+if not IMDB_Ratings.empty:
+    min_rating = st.slider("Minimum IMDb rating:", 0, 10, 7, key="imdb_slider")
+    filtered_imdb = IMDB_Ratings[IMDB_Ratings["imdb_rating"].astype(float) >= min_rating].sort_values("imdb_rating", ascending=False)
     st.dataframe(filtered_imdb, width="stretch", height=400)
 else:
     st.warning("IMDb Ratings CSV is empty or failed to load.")
@@ -82,7 +79,7 @@ else:
 st.write("---")
 st.write("### Personal Ratings")
 if not Personal_Ratings.empty:
-    min_personal_rating = st.slider("Minimum Personal rating to display:", 0, 10, 7, key="personal_slider")
+    min_personal_rating = st.slider("Minimum Personal rating:", 0, 10, 7, key="personal_slider")
     filtered_personal = Personal_Ratings[Personal_Ratings["personal_ratings"].astype(float) >= min_personal_rating].sort_values("personal_ratings", ascending=False)
     st.dataframe(filtered_personal, width="stretch", height=400)
 else:
@@ -92,16 +89,16 @@ else:
 # --- SQL Playground ---
 st.write("---")
 st.header("SQL Playground")
-st.write("Run SQL queries on `imdbratingss` or `personal_ratings` using normalized column names.")
+st.write("Run SQL queries on `IMDB_Ratings` or `Personal_Ratings` using normalized column names.")
 
 default_query = """SELECT pr.title,
        pr.personal_ratings,
-       ir.imdbratings,
-       ABS(pr.personal_ratings - ir.imdbratings) AS rating_diff
-FROM personal_ratings pr
-JOIN imdbratingss ir
+       ir.imdb_rating,
+       ABS(pr.personal_ratings - ir.imdb_rating) AS rating_diff
+FROM Personal_Ratings pr
+JOIN IMDB_Ratings ir
     ON pr.movie_id = ir.movie_id
-WHERE ABS(pr.personal_ratings - ir.imdbratings) > 2
+WHERE ABS(pr.personal_ratings - ir.imdb_rating) > 2
 ORDER BY rating_diff DESC
 LIMIT 10;"""
 
@@ -109,11 +106,11 @@ user_query = st.text_area("Enter SQL query:", default_query, height=300, key="sq
 
 if st.button("Run SQL Query"):
     try:
-        # Ensure numeric columns are floats for calculations
+        # Convert ratings to float for calculations
         if "personal_ratings" in Personal_Ratings.columns:
             Personal_Ratings["personal_ratings"] = Personal_Ratings["personal_ratings"].astype(float)
-        if "imdbratings" in imdbratingss.columns:
-            imdbratingss["imdbratings"] = imdbratingss["imdbratings"].astype(float)
+        if "imdb_rating" in IMDB_Ratings.columns:
+            IMDB_Ratings["imdb_rating"] = IMDB_Ratings["imdb_rating"].astype(float)
 
         result = ps.sqldf(user_query, locals())
         st.dataframe(result, width="stretch", height=400)
