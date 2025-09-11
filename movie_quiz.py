@@ -60,7 +60,7 @@ Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 st.markdown('<h3 style="color:green;">Scenario 1:</h3>', unsafe_allow_html=True)
 st.write("""
 Imagine you want to find movies where your personal rating is very different from the IMDb rating.  
-The following default query will show the top 10 movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
+The following default query will show the top movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
 
 This helps you quickly spot movies you might have over- or underrated compared to IMDb.
 """)
