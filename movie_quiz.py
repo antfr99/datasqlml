@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL Data Project 🎬")
 
 st.write("""
-This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), ChatGPT, SQL and GitHub
+This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), ChatGPT, SQL and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -100,13 +100,13 @@ LEFT JOIN My_Ratings pr
 WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
-LIMIT 1000;"""
+LIMIT 10000;"""
 
 
 # --- Scenario 3 ---
 st.markdown('<h3 style="color:green;">Scenario 3 (Top Rated Yet Unseen):</h3>', unsafe_allow_html=True)
 st.write("""
-This scenario shows the top 10 highest IMDb rated films you haven’t rated yet.  
+This scenario shows the top 1000 highest IMDb rated films you haven’t rated yet.  
 It’s a quick way to find highly-rated movies that are missing from your personal list.
 """)
 
