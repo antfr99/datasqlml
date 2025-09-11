@@ -88,11 +88,14 @@ This helps you prioritize unseen movies you are likely to enjoy based on your pa
 """)
 
 default_query_2 = """SELECT ir.Title,
+       ir.[IMDb Rating],
        ir.Director,
        ir.Genre,
-       ir.[IMDb Rating],
        ir.Year,
-       CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END
+       CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END AS Director_Bonus,
+       CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Genre_Bonus,
+       ir.[IMDb Rating] 
+       + CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END
        + CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Recommendation_Score
 FROM IMDB_Ratings ir
 LEFT JOIN My_Ratings pr
@@ -101,6 +104,7 @@ WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
+
 
 
 # --- Scenario 3 ---
