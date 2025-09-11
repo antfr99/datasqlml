@@ -2,43 +2,43 @@ import streamlit as st
 import pandas as pd
 import pandasql as ps
 
-# --- Robust CSV loader ---
+# --- Robust CSV loader with guaranteed column normalization ---
 def load_ratings_csv(file_path, personal=False):
     """
-    Load ratings CSV files, normalize column names, and clean director/genre columns.
-    Args:
-        file_path (str): CSV file path
-        personal (bool): If True, renames 'Your Rating' to 'personal_ratings'
-    Returns:
-        pd.DataFrame: cleaned DataFrame
+    Load CSV and normalize columns:
+    - lowercase
+    - underscores instead of spaces
+    - renames 'Your Rating' to 'personal_ratings' if personal=True
+    - renames 'Const' to 'movie_id'
+    - cleans director and genre columns
     """
     try:
-        df = pd.read_csv(
-            file_path,
-            encoding='utf-8-sig',
-            quotechar='"',
-            skip_blank_lines=True,
-            on_bad_lines='skip'
-        )
+        df = pd.read_csv(file_path, encoding='utf-8-sig', quotechar='"', skip_blank_lines=True, on_bad_lines='skip')
 
-        # Strip spaces and normalize column names
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-        # Rename 'your_rating' to 'personal_ratings'
-        if personal and "your_rating" in df.columns:
-            df = df.rename(columns={"your_rating": "personal_ratings"})
+        # Strip spaces and normalize
+        df.columns = [c.strip() for c in df.columns]
 
         # Standardize movie_id
-        if "const" in df.columns:
-            df = df.rename(columns={"const": "movie_id"})
+        if "Const" in df.columns:
+            df = df.rename(columns={"Const": "movie_id"})
 
-        # Clean director column (first director only)
-        if "director" in df.columns:
-            df["director"] = df["director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+        # Rename Your Rating if personal
+        if personal and "Your Rating" in df.columns:
+            df = df.rename(columns={"Your Rating": "personal_ratings"})
 
-        # Clean genre column (first genre only)
-        if "genre" in df.columns:
-            df["genre"] = df["genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+        # Clean director (first director only)
+        if "Director" in df.columns:
+            df["director"] = df["Director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+            df = df.drop(columns=["Director"])
+
+        # Clean genre (first genre only)
+        if "Genre" in df.columns:
+            df["genre"] = df["Genre"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else None)
+            df = df.drop(columns=["Genre"])
+
+        # Ensure IMDb Rating column exists and normalize name
+        if "IMDb Rating" in df.columns:
+            df = df.rename(columns={"IMDb Rating": "imdb_rating"})
 
         df = df.reset_index(drop=True)
         return df
@@ -52,13 +52,11 @@ def load_ratings_csv(file_path, personal=False):
 IMDB_Ratings = load_ratings_csv("imdbratings.csv", personal=False)
 Personal_Ratings = load_ratings_csv("myratings.csv", personal=True)
 
-
-# --- Debug: show column names ---
+# --- Debug columns ---
 st.write("IMDB_Ratings columns:", IMDB_Ratings.columns.tolist())
 st.write("Personal_Ratings columns:", Personal_Ratings.columns.tolist())
 
-
-# --- Streamlit Page Config ---
+# --- Streamlit Page ---
 st.set_page_config(layout="wide")
 st.title("IMDb & Personal Ratings Project 🎬")
 st.write("Compare your personal ratings with IMDb ratings and explore the data.")
@@ -69,7 +67,8 @@ st.write("---")
 st.write("### IMDb Ratings")
 if not IMDB_Ratings.empty:
     min_rating = st.slider("Minimum IMDb rating:", 0, 10, 7, key="imdb_slider")
-    filtered_imdb = IMDB_Ratings[IMDB_Ratings["imdb_rating"].astype(float) >= min_rating].sort_values("imdb_rating", ascending=False)
+    IMDB_Ratings["imdb_rating"] = IMDB_Ratings["imdb_rating"].astype(float)
+    filtered_imdb = IMDB_Ratings[IMDB_Ratings["imdb_rating"] >= min_rating].sort_values("imdb_rating", ascending=False)
     st.dataframe(filtered_imdb, width="stretch", height=400)
 else:
     st.warning("IMDb Ratings CSV is empty or failed to load.")
@@ -80,7 +79,8 @@ st.write("---")
 st.write("### Personal Ratings")
 if not Personal_Ratings.empty:
     min_personal_rating = st.slider("Minimum Personal rating:", 0, 10, 7, key="personal_slider")
-    filtered_personal = Personal_Ratings[Personal_Ratings["personal_ratings"].astype(float) >= min_personal_rating].sort_values("personal_ratings", ascending=False)
+    Personal_Ratings["personal_ratings"] = Personal_Ratings["personal_ratings"].astype(float)
+    filtered_personal = Personal_Ratings[Personal_Ratings["personal_ratings"] >= min_personal_rating].sort_values("personal_ratings", ascending=False)
     st.dataframe(filtered_personal, width="stretch", height=400)
 else:
     st.warning("Personal Ratings CSV is empty or failed to load.")
@@ -106,7 +106,7 @@ user_query = st.text_area("Enter SQL query:", default_query, height=300, key="sq
 
 if st.button("Run SQL Query"):
     try:
-        # Convert ratings to float for calculations
+        # Ensure numeric types
         if "personal_ratings" in Personal_Ratings.columns:
             Personal_Ratings["personal_ratings"] = Personal_Ratings["personal_ratings"].astype(float)
         if "imdb_rating" in IMDB_Ratings.columns:
