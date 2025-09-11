@@ -1,4 +1,4 @@
-"streamlit>=1.37" 
-"pandas>=2.0" 
-"pandasql>=0.7" 
-"openpyxl" 
+streamlit
+pandas
+pandasql
+openpyxl
