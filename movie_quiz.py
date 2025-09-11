@@ -82,7 +82,7 @@ st.write("""
 Imagine you want to get recommendations for films you haven't rated yet.  
 - If you liked the director before → +1 point  
 - If the genre is Comedy or Drama → +0.5  
-- Otherwise Genre gets → +0.2  
+- Otherwise genre gets → +0.2  
 
 This helps you prioritize unseen movies you are likely to enjoy based on your past preferences.
 """)
@@ -140,6 +140,6 @@ user_query = st.text_area(
 if st.button("Run SQL Query"):
     try:
         result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
-        st.dataframe(result, width="stretch", height=400)
+        st.dataframe(result, width="stretch", height=500)
     except Exception as e:
         st.error(f"Error in SQL query: {e}")
