@@ -49,7 +49,7 @@ def load_ratings_csv(file_path, personal=False):
 
 
 # --- Load CSVs ---
-IMDB_Ratings = load_ratings_csv("imdb_ratings.csv", personal=False)
+IMDB_Ratings = load_ratings_csv("imdbratings.csv", personal=False)
 Personal_Ratings = load_ratings_csv("myratings.csv", personal=True)
 
 
