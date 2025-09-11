@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL Data Project 🎬")
 
 st.write("""
-This project combines Streamlit, Pandas, PandasQL, and SQL to explore IMDb and personal movie ratings data.
+This is a small imdb data project combining Python Packages ( Streamlit, Pandas , PandasQL ), ChatGPT, SQL, GitHub, and Streamlit.
 """)
 
 # --- Load Excel files ---
@@ -49,27 +49,9 @@ else:
     st.warning("My Ratings Excel file is empty or failed to load.")
 
 # --- SQL Playground ---
-st.write("---")
-st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
-st.write("""
-Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
-
-**Scenario 1:**  
-Find movies where your personal rating is very different from the IMDb rating.  
-This query shows the top 10 movies where your rating differs from IMDb by more than 2 points:
-
-**Scenario 2 (Hybrid Recommendations):**  
-Recommend movies you haven’t rated yet:  
-- Add 1 point if you liked the director before  
-- Add 0.5 if genre is Comedy/Drama, otherwise 0.2  
-Only consider movies with at least 30,000 votes.
-
-**Scenario 3 (Top Rated Yet Unseen):**  
-Shows the top-rated movies on IMDb you haven’t seen yet, again only movies with at least 30,000 votes.
-""")
-
-# --- Default SQL Query for Scenario 1 ---
-default_query = """SELECT pr.Title,
+# --- Scenario 1 ---
+st.header("Scenario 1: Rating Differences")
+scenario1_query = """SELECT pr.Title,
        pr.[Your Rating],
        ir.[IMDb Rating],
        ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff
@@ -80,28 +62,47 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC
 LIMIT 10;"""
 
-user_query = st.text_area(
-    "Enter SQL query for either table:",
-    default_query,
-    height=300,
-    key="sql_playground"
-)
-
-if st.button("Run SQL Query"):
+if st.button("Run Scenario 1 SQL"):
     try:
-        # Ensure numeric columns are floats for calculations
-        if "Your Rating" in My_Ratings.columns:
-            My_Ratings["Your Rating"] = My_Ratings["Your Rating"].astype(float)
-        if "IMDb Rating" in IMDB_Ratings.columns:
-            IMDB_Ratings["IMDb Rating"] = IMDB_Ratings["IMDb Rating"].astype(float)
-        if "Num Votes" in IMDB_Ratings.columns:
-            IMDB_Ratings["Num Votes"] = IMDB_Ratings["Num Votes"].astype(float)
-
-        # Use safe copies for SQL queries
-        IMDB_safe = IMDB_Ratings.copy()
-        My_safe = My_Ratings.copy()
-
-        result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_safe, "My_Ratings": My_safe})
-        st.dataframe(result, width="stretch", height=400)
+        result1 = ps.sqldf(scenario1_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+        st.dataframe(result1, width="stretch", height=400)
     except Exception as e:
-        st.error(f"Error in SQL query: {e}")
+        st.error(f"Error running Scenario 1 SQL: {e}")
+
+# --- Scenario 2 ---
+st.header("Scenario 2: Hybrid Recommendations")
+scenario2_query = """SELECT ir.Title,
+       1.0 * (CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Your Rating] >= 7) THEN 1 ELSE 0 END)
+       + (CASE WHEN ir.Genre IN ('Comedy', 'Drama') THEN 0.5 ELSE 0.2 END) AS Recommendation_Score
+FROM IMDB_Ratings ir
+LEFT JOIN My_Ratings mr
+    ON ir.[Movie ID] = mr.[Movie ID]
+WHERE mr.[Movie ID] IS NULL AND ir.[Num Votes] >= 30000
+ORDER BY Recommendation_Score DESC
+LIMIT 10;"""
+
+if st.button("Run Scenario 2 SQL"):
+    try:
+        result2 = ps.sqldf(scenario2_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+        st.dataframe(result2, width="stretch", height=400)
+    except Exception as e:
+        st.error(f"Error running Scenario 2 SQL: {e}")
+
+# --- Scenario 3 ---
+st.header("Scenario 3: Top Rated Yet Unseen")
+scenario3_query = """SELECT ir.Title,
+       ir.[IMDb Rating],
+       ir.[Num Votes]
+FROM IMDB_Ratings ir
+LEFT JOIN My_Ratings mr
+    ON ir.[Movie ID] = mr.[Movie ID]
+WHERE mr.[Movie ID] IS NULL AND ir.[Num Votes] >= 30000
+ORDER BY ir.[IMDb Rating] DESC
+LIMIT 10;"""
+
+if st.button("Run Scenario 3 SQL"):
+    try:
+        result3 = ps.sqldf(scenario3_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+        st.dataframe(result3, width="stretch", height=400)
+    except Exception as e:
+        st.error(f"Error running Scenario 3 SQL: {e}")
