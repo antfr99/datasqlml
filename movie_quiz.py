@@ -159,4 +159,41 @@ if st.button("Run SQL Query"):
     except Exception as e:
         st.error(f"Error in SQL query: {e}")
 
+# --- Load Others Ratings CSV ---
+others_df = pd.read_csv("othersratings1.csv")
+others_df.columns = others_df.columns.str.strip()
+
+# --- Keep only relevant columns ---
+cols_to_keep = [
+    "Const", "Title", "Directors", "Genres", "IMDb Rating", "Your Rating", "Date Rated"
+]
+others_df = others_df[[c for c in cols_to_keep if c in others_df.columns]]
+
+# --- Rename columns to match Personal_Ratings ---
+others_df = others_df.rename(columns={
+    "Const": "Movie ID",
+    "Your Rating": "Other Ratings"
+})
+
+# --- Extract first director ---
+if "Directors" in others_df.columns:
+    others_df["Director"] = others_df["Directors"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else None
+    )
+    others_df = others_df.drop(columns=["Directors"])
+
+# --- Extract first genre ---
+if "Genres" in others_df.columns:
+    others_df["Genre"] = others_df["Genres"].fillna("").apply(
+        lambda x: x.split(",")[0].strip() if x else None
+    )
+    others_df = others_df.drop(columns=["Genres"])
+
+# --- Reset index ---
+others_df = others_df.reset_index(drop=True)
+
+# --- Display in Streamlit ---
+st.write("---")
+st.write("### Other Ratings Table")
+st.dataframe(others_df, width="stretch", height=400)
 
