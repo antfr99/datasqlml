@@ -1,70 +1,62 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
-# --- Page Config ---
-st.set_page_config(layout="wide")
-st.title("IMDb Data Experiment 🎬")
-st.write("""
-This is a small personal film data project using **Streamlit, Pandas, IMDb data**.
-""")
-
-# ============================
-# --- Load CSVs Robustly ---
-# ============================
-
+# --- Robust CSV loader ---
 def load_csv(file_path):
-    """Load CSV handling quotes and commas inside fields."""
-    return pd.read_csv(
+    df = pd.read_csv(
         file_path,
         encoding="utf-8",
         quotechar='"',
-        dtype=str,  # read all as string to avoid parsing errors
-        on_bad_lines='skip'  # skip malformed lines
+        dtype=str,       # read all as string to avoid parsing errors
+        on_bad_lines='skip',  # skip malformed lines
     )
+    return df
 
-# Load my ratings
-myratings = load_csv("myratings.csv")
-
-# Load other ratings (only othersratings1.csv for simplicity)
-others = load_csv("othersratings1.csv")
-
-# ============================
-# --- Clean & Standardize Columns ---
-# ============================
-
+# --- Standardize columns ---
 def clean_movies(df):
     df.columns = df.columns.str.strip()
-    
-    # Movie ID
-    if "Const" in df.columns:
-        df.rename(columns={"Const": "Movie ID"}, inplace=True)
-    
-    # Personal Ratings
-    if "Your Rating" in df.columns:
-        df.rename(columns={"Your Rating": "Personal Ratings"}, inplace=True)
-    
-    # Director: keep first if multiple
-    if "Directors" in df.columns:
-        df["Director"] = df["Directors"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-        df.drop(columns=["Directors"], inplace=True)
-    
-    # Genres: keep first if multiple
+
+    # Mapping columns to standard names
+    rename_map = {
+        "Const": "Movie ID",
+        "Your Rating": "Personal Ratings",
+        "Directors": "Director"
+    }
+    df.rename(columns=rename_map, inplace=True)
+
+    # Take first director if multiple
+    if "Director" in df.columns:
+        df["Director"] = df["Director"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
+
+    # Take first genre if multiple
     if "Genres" in df.columns:
         df["Genres"] = df["Genres"].fillna("").apply(lambda x: x.split(",")[0].strip() if x else "")
-    
-    # Convert numeric columns
+
+    # Convert numeric columns safely
     for col in ["IMDb Rating", "Personal Ratings", "Num Votes", "Runtime (mins)"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
-    
+
     return df
 
-myratings = clean_movies(myratings)
-others = clean_movies(others)
+# Load CSVs
+myratings = clean_movies(load_csv("myratings.csv"))
+others = clean_movies(load_csv("othersratings1.csv"))
 
-# Drop duplicates
-myratings = myratings.drop_duplicates(subset=["Movie ID"])
-others = others.drop_duplicates(subset=["Movie ID"])
+# Ensure correct columns order for others
+expected_cols = ["Movie ID","Title","Original Title","URL","Title Type",
+                 "IMDb Rating","Runtime (mins)","Year","Genres","Num Votes",
+                 "Release Date","Director","Personal Ratings","Date Rated"]
+for col in expected_cols:
+    if col not in others.columns:
+        others[col] = None  # fill missing columns
+
+# Reorder columns
+others = others[expected_cols]
+
+st.write("### Others Ratings")
+st.dataframe(others.head(20))
+
 
 # ============================
 # --- Display My Ratings ---
@@ -83,7 +75,7 @@ st.dataframe(
 # ============================
 
 st.write("---")
-st.write("### Other IMDb Ratings")
+st.write("### IMDb Ratings")
 st.dataframe(
     others.sort_values("IMDb Rating", ascending=False),
     width="stretch",
