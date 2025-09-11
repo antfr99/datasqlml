@@ -67,8 +67,11 @@ st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
 st.write("""
 Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 
-Example 1: `SELECT Title, [IMDb Rating] FROM IMDB_Ratings WHERE [IMDb Rating] > 8`  
-Example 2: `SELECT Title, [Your Rating] FROM My_Ratings WHERE [Your Rating] >= 7`
+**Scenario Example:**  
+Imagine you want to find movies where your personal rating is very different from the IMDb rating.  
+The following default query will show the top 10 movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
+
+This helps you quickly spot movies you might have over- or underrated compared to IMDb.
 """)
 
 default_query = """SELECT pr.Title,
