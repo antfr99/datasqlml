@@ -221,7 +221,7 @@ predict_df
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
-    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 20, step=5)
+    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 50, step=5)
 
     if st.button("Run Python ML Code", key="run_ml"):
         try:
