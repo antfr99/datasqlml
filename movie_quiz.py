@@ -83,7 +83,7 @@ LIMIT 1000;"""
 # --- Scenario 2 ---
 st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
 st.write("""
-Add bonus points to films that you have not see yet with the following point system and create a recommendation score:   
+Add bonus points to films that I not see yet with the following point system and create a recommendation score:   
 - If you liked the director before → +1 point  
 - If the genre is Comedy or Drama → +0.5  
 - Otherwise genre gets → +0.2  
@@ -110,7 +110,7 @@ LIMIT 10000;"""
 # --- Scenario 3 ---
 st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
 st.write("""
-Shows the highest-rated unseen films, grouped by decade.  
+Shows my highest-rated unseen films, grouped by decade.  
 Removes duplicates and limits results to the top 20 per decade.
 """)
 
@@ -134,7 +134,7 @@ FROM (
     LEFT JOIN My_Ratings pr
         ON d.[Movie ID] = pr.[Movie ID]
     WHERE pr.[Your Rating] IS NULL
-      AND d.[Num Votes] > 40000
+      AND d.[Num Votes] > 50000
 ) ranked
 WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
