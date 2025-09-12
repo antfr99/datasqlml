@@ -5,23 +5,22 @@ import pandasql as ps
 # --- Page Config ---
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/Python Data Project 🎬")
-
 st.write("""
-This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), SQL and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
 try:
     IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
     My_Ratings = pd.read_excel("myratings.xlsx")
-    Votes = pd.read_excel("votes.xlsx")  # New votes source
+    Votes = pd.read_excel("votes.xlsx")  # Optional votes source
 except Exception as e:
     st.error(f"Error loading Excel files: {e}")
     IMDB_Ratings = pd.DataFrame()
     My_Ratings = pd.DataFrame()
     Votes = pd.DataFrame()
 
-# --- Remove empty/unnamed columns ---
+# --- Clean unnamed columns ---
 def clean_unnamed_columns(df):
     return df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
@@ -29,41 +28,23 @@ IMDB_Ratings = clean_unnamed_columns(IMDB_Ratings)
 My_Ratings = clean_unnamed_columns(My_Ratings)
 Votes = clean_unnamed_columns(Votes)
 
-# --- Merge votes into IMDB_Ratings ---
+# --- Merge votes ---
 if not Votes.empty:
     IMDB_Ratings = IMDB_Ratings.merge(Votes, on="Movie ID", how="left")
 
 # --- Show Tables ---
 st.write("---")
 st.write("### IMDb Ratings Table")
-if not IMDB_Ratings.empty:
-    st.dataframe(IMDB_Ratings, width="stretch", height=400)
-else:
-    st.warning("IMDb Ratings Excel file is empty or failed to load.")
+st.dataframe(IMDB_Ratings, width="stretch", height=400) if not IMDB_Ratings.empty else st.warning("IMDb Ratings empty")
 
 st.write("---")
 st.write("### My Ratings Table")
-if not My_Ratings.empty:
-    st.dataframe(My_Ratings, width="stretch", height=400)
-else:
-    st.warning("My Ratings Excel file is empty or failed to load.")
+st.dataframe(My_Ratings, width="stretch", height=400) if not My_Ratings.empty else st.warning("My Ratings empty")
 
+# --- Scenarios ---
+scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3", "Scenario 4"])
 
-# --- SQL Playground ---
-# --- Single SQL Playground for both tables ---
-st.write("---")
-st.header("Try SQL Queries on IMDb Ratings and My Film Ratings")
-st.write("""
-Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
-""")
-
-# --- Scenario 1 ---
-st.markdown('<h3 style="color:green;">Scenario 1 ( My Ratings vs IMDb ):</h3>', unsafe_allow_html=True)
-st.write("""
-Movies where my rating is different from the IMDb rating (more than 2 points).  
-
-""")
-
+# --- Scenario SQL queries ---
 default_query_1 = """SELECT 
        pr.Title,
        pr.[Your Rating],
@@ -79,15 +60,6 @@ JOIN IMDB_Ratings ir
 WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
-
-# --- Scenario 2 ---
-st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
-st.write("""
-Add bonus points to films that I not see yet with the following point system and create a recommendation score:   
-- If you liked the director before → +1 point  
-- If the genre is Comedy or Drama → +0.5  
-- Otherwise genre gets → +0.2  
-""")
 
 default_query_2 = """SELECT ir.Title,
        ir.[IMDb Rating],
@@ -106,13 +78,6 @@ WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
-
-# --- Scenario 3 ---
-st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
-st.write("""
-Shows my highest-rated unseen films, grouped by decade.  
-Removes duplicates and limits results to the top 20 per decade.
-""")
 
 default_query_3 = """
 WITH Deduped AS (
@@ -140,27 +105,87 @@ WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 """
 
-
-
-# --- Select Scenario ---
-scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3"])
-
 query_map = {
     "Scenario 1": default_query_1,
     "Scenario 2": default_query_2,
     "Scenario 3": default_query_3
 }
 
-user_query = st.text_area(
-    "Enter SQL query for selected scenario:",
-    query_map[scenario],
-    height=600,
-    key="sql_playground"
+# --- SQL scenarios ---
+if scenario in ["Scenario 1", "Scenario 2", "Scenario 3"]:
+    st.header(f"{scenario} SQL Playground")
+    st.write("Type SQL query below and click Run SQL Query:")
+    user_query = st.text_area("Enter SQL query:", query_map[scenario], height=500, key=f"sql_{scenario}")
+    
+    if st.button("Run SQL Query", key=f"run_sql_{scenario}"):
+        try:
+            result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+            st.dataframe(result, width="stretch", height=800)
+        except Exception as e:
+            st.error(f"Error in SQL query: {e}")
+
+# --- Scenario 4: ML ---
+if scenario == "Scenario 4":
+    st.header("Scenario 4 – Predict Your Rating (ML)")
+    st.write("Predict your rating for unseen movies using a machine learning model.")
+
+    # Show ML code in editable box
+    ml_code = '''
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+# Merge IMDb and My Ratings
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='left')
+train_df = df_ml[df_ml['Your Rating'].notna()]
+predict_df = df_ml[df_ml['Your Rating'].isna()]
+
+# Features
+categorical_features = ['Genre', 'Director']
+numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+
+# Preprocessing + Model
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+        ('num', 'passthrough', numerical_features)
+    ]
 )
 
-if st.button("Run SQL Query"):
-    try:
-        result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
-        st.dataframe(result, width="stretch", height=900)
-    except Exception as e:
-        st.error(f"Error in SQL query: {e}")
+model = Pipeline([
+    ('prep', preprocessor),
+    ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+])
+
+# Train & predict
+X_train = train_df[categorical_features + numerical_features]
+y_train = train_df['Your Rating']
+model.fit(X_train, y_train)
+X_pred = predict_df[categorical_features + numerical_features]
+predict_df['Predicted Rating'] = model.predict(X_pred)
+predict_df
+'''
+
+    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=400)
+
+    # Sidebar options for filtering & top N
+    st.sidebar.header("ML Options")
+    min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
+    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 20, step=5)
+
+    if st.button("Run Python ML Code", key="run_ml"):
+        try:
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
+            exec(user_ml_code, {}, local_vars)
+            predict_df = local_vars['predict_df']
+            # Apply minimum votes filter
+            predict_df = predict_df[predict_df['Num Votes'] >= min_votes]
+            st.dataframe(
+                predict_df[['Title', 'IMDb Rating', 'Genre', 'Director', 'Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .head(top_n)
+                .reset_index(drop=True)
+            )
+        except Exception as e:
+            st.error(f"Error running ML code: {e}")
