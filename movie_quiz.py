@@ -53,53 +53,12 @@ scenario = st.radio(
     ["Scenario 1- SQL  ", "Scenario 2- SQL", "Scenario 3- SQL", "Scenario 4-Python Machine Learning"]
 )
 
-# --- Scenario 1 Explanation ---
+# --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1- SQL  ":
     st.markdown('<h3 style="color:green;">Scenario 1 (My Ratings vs IMDb):</h3>', unsafe_allow_html=True)
-    st.write("""
-    Movies where my rating is different from the IMDb rating (more than 2 points).
-    """)
-
-# --- Scenario 2 Explanation ---
-if scenario == "Scenario 2- SQL":
-    st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
-    st.write("""
-    Recommend movies you haven't seen yet with a bonus point system:  
-    - Director you liked before → +1 point  
-    - Genre is Comedy or Drama → +0.5  
-    - Other genres → +0.2
-    """)
-
-# --- Scenario 3 Explanation ---
-if scenario == "Scenario 3- SQL":
-    st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
-    st.write("""
-    Shows your highest-rated unseen films grouped by decade.  
-    Removes duplicates and limits results to the top 20 per decade.
-    """)
-
-# --- Scenario 4 Explanation ---
-if scenario == "Scenario 4-Python Machine Learning":
-    st.markdown('<h3 style="color:green;">Scenario 4 (Predict Your Rating – ML):</h3>', unsafe_allow_html=True)
-    st.write("""
-    Predict your rating for unseen movies using a machine learning model.
-
-    **How it works:**
-    1. The model uses my existing ratings (`My_Ratings`) as training data.
-    2. Features used include:  
-       - IMDb Rating  
-       - Genre  
-       - Director  
-       - Year of release  
-       - Number of votes
-    3. A Random Forest Regressor (a type of ensemble decision tree model) learns patterns from the movies I've already rated.
-    4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`), based on these patterns.
-
-    **Note:** Running the prediction may take a few seconds. Please be patient while the model trains and predicts.
-    """)
-
-# --- Scenario SQL queries ---
-default_query_1 = """SELECT 
+    st.write("Movies where my rating is different from the IMDb rating (more than 2 points).")
+    
+    default_query_1 = """SELECT 
        pr.Title,
        pr.[Your Rating],
        ir.[IMDb Rating],
@@ -114,8 +73,26 @@ JOIN IMDB_Ratings ir
 WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
+    
+    user_query = st.text_area("Enter SQL query:", default_query_1, height=400, key="sql1")
+    if st.button("Run SQL Query", key="run_sql1"):
+        try:
+            result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+            st.dataframe(result, width="stretch", height=800)
+        except Exception as e:
+            st.error(f"Error in SQL query: {e}")
 
-default_query_2 = """SELECT ir.Title,
+# --- Scenario 2: SQL Playground ---
+if scenario == "Scenario 2- SQL":
+    st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
+    st.write("""
+    Recommend movies you haven't seen yet with a bonus point system:  
+    - Director you liked before → +1 point  
+    - Genre is Comedy or Drama → +0.5  
+    - Other genres → +0.2
+    """)
+    
+    default_query_2 = """SELECT ir.Title,
        ir.[IMDb Rating],
        ir.Director,
        ir.Genre,
@@ -132,8 +109,24 @@ WHERE pr.[Your Rating] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
+    
+    user_query = st.text_area("Enter SQL query:", default_query_2, height=400, key="sql2")
+    if st.button("Run SQL Query", key="run_sql2"):
+        try:
+            result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
+            st.dataframe(result, width="stretch", height=800)
+        except Exception as e:
+            st.error(f"Error in SQL query: {e}")
 
-default_query_3 = """
+# --- Scenario 3: SQL Playground ---
+if scenario == "Scenario 3- SQL":
+    st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
+    st.write("""
+    Shows your highest-rated unseen films grouped by decade.  
+    Removes duplicates and limits results to the top 20 per decade.
+    """)
+    
+    default_query_3 = """
 WITH Deduped AS (
     SELECT DISTINCT ir.[Movie ID], 
            ir.Title,
@@ -158,32 +151,35 @@ FROM (
 WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 """
-
-query_map = {
-    "Scenario 1": default_query_1,
-    "Scenario 2": default_query_2,
-    "Scenario 3": default_query_3
-}
-
-# --- Scenarios 1-3 SQL Playground ---
-if scenario in ["Scenario 1", "Scenario 2", "Scenario 3"]:
-    st.header(f"{scenario} SQL Playground")
-    st.write("Type SQL query below and click Run SQL Query:")
-    user_query = st.text_area("Enter SQL query:", query_map[scenario], height=500, key=f"sql_{scenario}")
     
-    if st.button("Run SQL Query", key=f"run_sql_{scenario}"):
+    user_query = st.text_area("Enter SQL query:", default_query_3, height=400, key="sql3")
+    if st.button("Run SQL Query", key="run_sql3"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
             st.dataframe(result, width="stretch", height=800)
         except Exception as e:
             st.error(f"Error in SQL query: {e}")
 
-# --- Scenario 4: ML ---
-if scenario == "Scenario 4":
-    st.header("Scenario 4 – Predict My Rating (ML)")
-    st.write("Predict my ratings for unseen movies using a machine learning model.")
+# --- Scenario 4: Python ML ---
+if scenario == "Scenario 4-Python Machine Learning":
+    st.markdown('<h3 style="color:green;">Scenario 4 (Predict Your Rating – ML):</h3>', unsafe_allow_html=True)
+    st.write("""
+    Predict my ratings for unseen movies using a machine learning model.
 
-    # Show ML code in editable box
+    **How it works:**
+    1. The model uses my existing ratings (`My_Ratings`) as training data.
+    2. Features used include:  
+       - IMDb Rating  
+       - Genre  
+       - Director  
+       - Year of release  
+       - Number of votes
+    3. A Random Forest Regressor learns patterns from the movies I've already rated.
+    4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`).
+
+    **Note:** Running the prediction may take a few seconds.Please be patient.
+    """)
+    
     ml_code = '''
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor
@@ -191,7 +187,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 # Merge IMDb and My Ratings
-df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='left')
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 predict_df = df_ml[df_ml['Your Rating'].isna()]
 
@@ -221,9 +217,8 @@ predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
 
-    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=400)
+    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=800)
 
-    # Sidebar options for filtering & top N
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
     top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 20, step=5)
@@ -233,10 +228,9 @@ predict_df
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_ml_code, {}, local_vars)
             predict_df = local_vars['predict_df']
-            # Apply minimum votes filter
             predict_df = predict_df[predict_df['Num Votes'] >= min_votes]
             st.dataframe(
-                predict_df[['Title', 'IMDb Rating', 'Genre', 'Director', 'Predicted Rating']]
+                predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
                 .head(top_n)
                 .reset_index(drop=True)
