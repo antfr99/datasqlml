@@ -74,7 +74,7 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
     
-    user_query = st.text_area("Enter SQL query:", default_query_1, height=400, key="sql1")
+    user_query = st.text_area("Enter SQL query:", default_query_1, height=600, key="sql1")
     if st.button("Run SQL Query", key="run_sql1"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -110,7 +110,7 @@ WHERE pr.[Your Rating] IS NULL
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
     
-    user_query = st.text_area("Enter SQL query:", default_query_2, height=400, key="sql2")
+    user_query = st.text_area("Enter SQL query:", default_query_2, height=600, key="sql2")
     if st.button("Run SQL Query", key="run_sql2"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -152,7 +152,7 @@ WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 """
     
-    user_query = st.text_area("Enter SQL query:", default_query_3, height=400, key="sql3")
+    user_query = st.text_area("Enter SQL query:", default_query_3, height=600, key="sql3")
     if st.button("Run SQL Query", key="run_sql3"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -217,7 +217,7 @@ predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
 
-    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=800)
+    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=1000)
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
