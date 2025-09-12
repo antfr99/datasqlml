@@ -58,21 +58,20 @@ Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 """)
 
 # --- Scenario 1 ---
-st.markdown('<h3 style="color:green;">Scenario 1 (Controversial Movies):</h3>', unsafe_allow_html=True)
+st.markdown('<h3 style="color:green;">Scenario 1 ( Differ vs IMDb ):</h3>', unsafe_allow_html=True)
 st.write("""
-Find movies where your personal rating is very different from the IMDb rating (more than 2 points).  
-Popularity (Num Votes) and whether you liked it more or less than IMDb is included
+Movies where my rating is very different from the IMDb rating (more than 2 points).  
+
 """)
 
 default_query_1 = """SELECT 
        pr.Title,
        pr.[Your Rating],
        ir.[IMDb Rating],
-       ir.[Num Votes],
        ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
        CASE 
-            WHEN pr.[Your Rating] > ir.[IMDb Rating] THEN 'You Liked More'
-            ELSE 'You Liked Less'
+            WHEN pr.[Your Rating] > ir.[IMDb Rating] THEN 'I Liked More'
+            ELSE 'I Liked Less'
        END AS Disagreement_Type
 FROM My_Ratings pr
 JOIN IMDB_Ratings ir
@@ -112,23 +111,35 @@ LIMIT 10000;"""
 st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
 st.write("""
 Shows the highest-rated unseen films, grouped by decade.  
+Removes duplicates and limits results to the top 20 per decade.
 """)
 
-default_query_3 = """SELECT 
-       ir.Title,
-       ir.[IMDb Rating],
-       ir.[Num Votes],
-       ir.Genre,
-       ir.Director,
-       ir.Year,
-       (ir.Year / 10) * 10 AS Decade
-FROM IMDB_Ratings ir
-LEFT JOIN My_Ratings pr
-    ON ir.[Movie ID] = pr.[Movie ID]
-WHERE pr.[Your Rating] IS NULL
-  AND ir.[Num Votes] > 10000   -- filter out obscure films
-ORDER BY Decade, ir.[IMDb Rating] DESC
-LIMIT 2000;"""
+default_query_3 = """
+WITH Deduped AS (
+    SELECT DISTINCT ir.[Movie ID], 
+           ir.Title,
+           ir.[IMDb Rating],
+           ir.[Num Votes],
+           ir.Genre,
+           ir.Director,
+           ir.Year,
+           (ir.Year / 10) * 10 AS Decade
+    FROM IMDB_Ratings ir
+)
+SELECT *
+FROM (
+    SELECT d.*,
+           ROW_NUMBER() OVER (PARTITION BY d.Decade ORDER BY d.[IMDb Rating] DESC, d.[Num Votes] DESC) AS RankInDecade
+    FROM Deduped d
+    LEFT JOIN My_Ratings pr
+        ON d.[Movie ID] = pr.[Movie ID]
+    WHERE pr.[Your Rating] IS NULL
+      AND d.[Num Votes] > 20000
+) ranked
+WHERE RankInDecade <= 20
+ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
+"""
+
 
 
 # --- Select Scenario ---
