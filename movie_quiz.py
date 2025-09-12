@@ -48,17 +48,20 @@ else:
     st.warning("My Ratings table is empty or failed to load.")
 
 # --- Scenarios ---
-scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3", "Scenario 4"])
+scenario = st.radio(
+    "Choose a scenario:",
+    ["Scenario 1- SQL  ", "Scenario 2- SQL", "Scenario 3- SQL", "Scenario 4-Python Machine Learning"]
+)
 
 # --- Scenario 1 Explanation ---
-if scenario == "Scenario 1":
+if scenario == "Scenario 1- SQL  ":
     st.markdown('<h3 style="color:green;">Scenario 1 (My Ratings vs IMDb):</h3>', unsafe_allow_html=True)
     st.write("""
     Movies where my rating is different from the IMDb rating (more than 2 points).
     """)
 
 # --- Scenario 2 Explanation ---
-if scenario == "Scenario 2":
+if scenario == "Scenario 2- SQL":
     st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
     st.write("""
     Recommend movies you haven't seen yet with a bonus point system:  
@@ -68,7 +71,7 @@ if scenario == "Scenario 2":
     """)
 
 # --- Scenario 3 Explanation ---
-if scenario == "Scenario 3":
+if scenario == "Scenario 3- SQL":
     st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
     st.write("""
     Shows your highest-rated unseen films grouped by decade.  
@@ -76,25 +79,24 @@ if scenario == "Scenario 3":
     """)
 
 # --- Scenario 4 Explanation ---
-if scenario == "Scenario 4":
+if scenario == "Scenario 4-Python Machine Learning":
     st.markdown('<h3 style="color:green;">Scenario 4 (Predict Your Rating – ML):</h3>', unsafe_allow_html=True)
     st.write("""
     Predict your rating for unseen movies using a machine learning model.
 
     **How it works:**
-    1. The model uses your existing ratings (`My_Ratings`) as training data.
+    1. The model uses my existing ratings (`My_Ratings`) as training data.
     2. Features used include:  
        - IMDb Rating  
        - Genre  
        - Director  
        - Year of release  
        - Number of votes
-    3. A Random Forest Regressor (a type of ensemble decision tree model) learns patterns from the movies you've already rated.
-    4. The model predicts how you might rate movies you haven't seen yet (`Predicted Rating`), based on these patterns.
+    3. A Random Forest Regressor (a type of ensemble decision tree model) learns patterns from the movies I've already rated.
+    4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`), based on these patterns.
 
-    **Note:** Running the prediction may take a few seconds, especially if your dataset is large. Please be patient while the model trains and predicts.
+    **Note:** Running the prediction may take a few seconds. Please be patient while the model trains and predicts.
     """)
-
 
 # --- Scenario SQL queries ---
 default_query_1 = """SELECT 
@@ -178,8 +180,8 @@ if scenario in ["Scenario 1", "Scenario 2", "Scenario 3"]:
 
 # --- Scenario 4: ML ---
 if scenario == "Scenario 4":
-    st.header("Scenario 4 – Predict Your Rating (ML)")
-    st.write("Predict your rating for unseen movies using a machine learning model.")
+    st.header("Scenario 4 – Predict My Rating (ML)")
+    st.write("Predict my ratings for unseen movies using a machine learning model.")
 
     # Show ML code in editable box
     ml_code = '''
