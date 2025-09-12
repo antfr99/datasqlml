@@ -58,9 +58,9 @@ Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 """)
 
 # --- Scenario 1 ---
-st.markdown('<h3 style="color:green;">Scenario 1 ( Differ vs IMDb ):</h3>', unsafe_allow_html=True)
+st.markdown('<h3 style="color:green;">Scenario 1 ( My Ratings vs IMDb ):</h3>', unsafe_allow_html=True)
 st.write("""
-Movies where my rating is very different from the IMDb rating (more than 2 points).  
+Movies where my rating is different from the IMDb rating (more than 2 points).  
 
 """)
 
