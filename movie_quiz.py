@@ -154,7 +154,7 @@ query_map = {
 user_query = st.text_area(
     "Enter SQL query for selected scenario:",
     query_map[scenario],
-    height=500,
+    height=600,
     key="sql_playground"
 )
 
