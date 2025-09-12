@@ -122,7 +122,7 @@ LIMIT 10000;"""
 if scenario == "Scenario 3- SQL":
     st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
     st.write("""
-    Shows your highest-rated unseen films grouped by decade.  
+    Shows highest-rated unseen films grouped by decade.  
     Removes duplicates and limits results to the top 20 per decade.
     """)
     
@@ -177,7 +177,7 @@ if scenario == "Scenario 4-Python Machine Learning":
     3. A Random Forest Regressor learns patterns from the movies I've already rated.
     4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`).
 
-    **Note:** Running the prediction may take a few seconds.Please be patient.
+    **Note:** Running the prediction may take over a 1 minute. Please be patient.
     """)
     
     ml_code = '''
