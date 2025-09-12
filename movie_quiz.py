@@ -86,8 +86,8 @@ LIMIT 1000;"""
 if scenario == "Scenario 2- SQL":
     st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
     st.write("""
-    Recommend movies you haven't seen yet with a bonus point system:  
-    - Director you liked before → +1 point  
+    Recommend movies I haven't seen yet with a bonus point system:  
+    - Director I liked before → +1 point  
     - Genre is Comedy or Drama → +0.5  
     - Other genres → +0.2
     """)
@@ -162,7 +162,7 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 # --- Scenario 4: Python ML ---
 if scenario == "Scenario 4-Python Machine Learning":
-    st.markdown('<h3 style="color:green;">Scenario 4 (Predict Your Rating – ML):</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="color:green;">Scenario 4 (Predict My Ratings – ML):</h3>', unsafe_allow_html=True)
     st.write("""
     Predict my ratings for unseen movies using a machine learning model.
 
@@ -221,7 +221,7 @@ predict_df
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
-    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 50, step=5)
+    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 20, step=5)
 
     if st.button("Run Python ML Code", key="run_ml"):
         try:
