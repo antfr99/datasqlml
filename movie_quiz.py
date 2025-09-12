@@ -74,7 +74,7 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
     
-    user_query = st.text_area("Enter SQL query:", default_query_1, height=600, key="sql1")
+    user_query = st.text_area("Enter SQL query:", default_query_1, height=500, key="sql1")
     if st.button("Run SQL Query", key="run_sql1"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -110,7 +110,7 @@ WHERE pr.[Your Rating] IS NULL
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
     
-    user_query = st.text_area("Enter SQL query:", default_query_2, height=600, key="sql2")
+    user_query = st.text_area("Enter SQL query:", default_query_2, height=500, key="sql2")
     if st.button("Run SQL Query", key="run_sql2"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -221,7 +221,7 @@ predict_df
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
-    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 20, step=5)
+    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 50, step=5)
 
     if st.button("Run Python ML Code", key="run_ml"):
         try:
