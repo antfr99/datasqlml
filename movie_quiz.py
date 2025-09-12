@@ -35,11 +35,17 @@ if not Votes.empty:
 # --- Show Tables ---
 st.write("---")
 st.write("### IMDb Ratings Table")
-st.dataframe(IMDB_Ratings, width="stretch", height=400) if not IMDB_Ratings.empty else st.warning("IMDb Ratings empty")
+if not IMDB_Ratings.empty:
+    st.dataframe(IMDB_Ratings, width="stretch", height=400)
+else:
+    st.warning("IMDb Ratings table is empty or failed to load.")
 
 st.write("---")
 st.write("### My Ratings Table")
-st.dataframe(My_Ratings, width="stretch", height=400) if not My_Ratings.empty else st.warning("My Ratings empty")
+if not My_Ratings.empty:
+    st.dataframe(My_Ratings, width="stretch", height=400)
+else:
+    st.warning("My Ratings table is empty or failed to load.")
 
 # --- Scenarios ---
 scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3", "Scenario 4"])
@@ -111,7 +117,7 @@ query_map = {
     "Scenario 3": default_query_3
 }
 
-# --- SQL scenarios ---
+# --- Scenarios 1-3 SQL Playground ---
 if scenario in ["Scenario 1", "Scenario 2", "Scenario 3"]:
     st.header(f"{scenario} SQL Playground")
     st.write("Type SQL query below and click Run SQL Query:")
