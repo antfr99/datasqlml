@@ -134,7 +134,7 @@ FROM (
     LEFT JOIN My_Ratings pr
         ON d.[Movie ID] = pr.[Movie ID]
     WHERE pr.[Your Rating] IS NULL
-      AND d.[Num Votes] > 20000
+      AND d.[Num Votes] > 40000
 ) ranked
 WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
