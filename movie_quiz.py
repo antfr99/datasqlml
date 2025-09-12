@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 st.title("IMDb/SQL/Python Data Project 🎬")
 
 st.write("""
-This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), ChatGPT, SQL and GitHub.
+This is a small imdb data project combining Python Packages ( Pandas , PandasQL and Streamlit ), SQL and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -48,6 +48,7 @@ if not My_Ratings.empty:
 else:
     st.warning("My Ratings Excel file is empty or failed to load.")
 
+
 # --- SQL Playground ---
 # --- Single SQL Playground for both tables ---
 st.write("---")
@@ -57,34 +58,36 @@ Type any SQL query against either `IMDB_Ratings` or `My_Ratings`.
 """)
 
 # --- Scenario 1 ---
-st.markdown('<h3 style="color:green;">Scenario 1:</h3>', unsafe_allow_html=True)
+st.markdown('<h3 style="color:green;">Scenario 1 (Controversial Movies):</h3>', unsafe_allow_html=True)
 st.write("""
-Imagine you want to find movies where your personal rating is very different from the IMDb rating.  
-The following default query will show the top movies where your rating and IMDb rating differ by more than 2 points, along with the absolute difference:
-
-This helps you quickly spot movies you might have over- or underrated compared to IMDb.
+Find movies where your personal rating is very different from the IMDb rating (more than 2 points).  
+Popularity (Num Votes) and whether you liked it more or less than IMDb is included
 """)
 
-default_query_1 = """SELECT pr.Title,
+default_query_1 = """SELECT 
+       pr.Title,
        pr.[Your Rating],
        ir.[IMDb Rating],
-       ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff
+       ir.[Num Votes],
+       ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
+       CASE 
+            WHEN pr.[Your Rating] > ir.[IMDb Rating] THEN 'You Liked More'
+            ELSE 'You Liked Less'
+       END AS Disagreement_Type
 FROM My_Ratings pr
 JOIN IMDB_Ratings ir
     ON pr.[Movie ID] = ir.[Movie ID]
 WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
-ORDER BY Rating_Diff DESC
+ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
 
 # --- Scenario 2 ---
 st.markdown('<h3 style="color:green;">Scenario 2 (Hybrid Recommendation):</h3>', unsafe_allow_html=True)
 st.write("""
-Imagine you want to get recommendations for films you haven't rated yet.  
+Add bonus points to films that you have not see yet with the following point system and create a recommendation score:   
 - If you liked the director before → +1 point  
 - If the genre is Comedy or Drama → +0.5  
 - Otherwise genre gets → +0.2  
-
-This helps you prioritize unseen movies you are likely to enjoy based on your past preferences.
 """)
 
 default_query_2 = """SELECT ir.Title,
@@ -105,25 +108,28 @@ WHERE pr.[Your Rating] IS NULL
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
 
-
-
 # --- Scenario 3 ---
-st.markdown('<h3 style="color:green;">Scenario 3 (Top Rated Yet Unseen):</h3>', unsafe_allow_html=True)
+st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films by Decade):</h3>', unsafe_allow_html=True)
 st.write("""
-This scenario shows the top 1000 highest IMDb rated films you haven’t rated yet.  
-It’s a quick way to find highly-rated movies that are missing from your personal list.
+Shows the highest-rated unseen films, grouped by decade.  
 """)
 
-default_query_3 = """SELECT ir.Title,
+default_query_3 = """SELECT 
+       ir.Title,
        ir.[IMDb Rating],
+       ir.[Num Votes],
        ir.Genre,
-       ir.Director
+       ir.Director,
+       ir.Year,
+       (ir.Year / 10) * 10 AS Decade
 FROM IMDB_Ratings ir
 LEFT JOIN My_Ratings pr
     ON ir.[Movie ID] = pr.[Movie ID]
 WHERE pr.[Your Rating] IS NULL
-ORDER BY ir.[IMDb Rating] DESC
-LIMIT 1000;"""
+  AND ir.[Num Votes] > 10000   -- filter out obscure films
+ORDER BY Decade, ir.[IMDb Rating] DESC
+LIMIT 2000;"""
+
 
 # --- Select Scenario ---
 scenario = st.radio("Choose a scenario:", ["Scenario 1", "Scenario 2", "Scenario 3"])
