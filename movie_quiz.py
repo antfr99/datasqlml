@@ -244,70 +244,57 @@ predict_df
             )
         except Exception as e:
             st.error(f"Error running ML code: {e}")
-# --- Scenario 5: Statistical Insights by Genre ---
-if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)":
-    st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – Wilcoxon signed-rank test)</h3>', unsafe_allow_html=True)
-    st.write("""
-    This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings per movie genre.
-    
-    - **Paired t-test**: assumes rating differences are normally distributed.  
-    - **Wilcoxon signed-rank test**: non-parametric alternative (does not assume normality).  
-    """)
-    
-    st.write("Click the button below to run the statistical analysis and generate the boxplot per genre.")
 
-    if st.button("Run Statistical Analysis", key="run_stats"):
-        # --- Clean column names (strip spaces) ---
-        IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
-        My_Ratings.columns = My_Ratings.columns.str.strip()
+if st.button("Run Statistical Analysis", key="run_stats"):
+    # --- Clean column names ---
+    IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+    My_Ratings.columns = My_Ratings.columns.str.strip()
 
-        # --- Standardize column names ---
-        if 'Rating' in IMDB_Ratings.columns and 'IMDb Rating' not in IMDB_Ratings.columns:
-            IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
-        if 'Your Rating' not in My_Ratings.columns:
-            st.error("My_Ratings must have a 'Your Rating' column.")
-        
-        # --- Merge tables ---
-        merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
+    # --- Standardize column names ---
+    if 'Rating' in IMDB_Ratings.columns and 'IMDb Rating' not in IMDB_Ratings.columns:
+        IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
+    if 'Your Rating' not in My_Ratings.columns:
+        st.error("My_Ratings must have a 'Your Rating' column.")
 
-        # --- Check for essential columns and fill defaults ---
-        for col in ['Title','Genre','IMDb Rating','Your Rating']:
-            if col not in merged.columns:
-                merged[col] = 'Unknown' if col in ['Title','Genre'] else 0
+    # --- Merge tables ---
+    merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
 
-        merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
+    # --- Check essential columns ---
+    for col in ['Title','Genre','IMDb Rating','Your Rating']:
+        if col not in merged.columns:
+            merged[col] = 'Unknown' if col in ['Title','Genre'] else 0
+    merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
 
-        if merged.empty:
-            st.warning("No overlapping movies with valid ratings.")
+    if merged.empty:
+        st.warning("No overlapping movies with valid ratings.")
+    else:
+        import scipy.stats as stats
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        # --- Global statistical tests ---
+        t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
+        try:
+            w_stat, w_p_value = stats.wilcoxon(merged['Your Rating'], merged['IMDb Rating'])
+        except ValueError:
+            w_stat, w_p_value = None, None
+
+        # --- Show results ---
+        st.write("### Overall Results")
+        st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
+        st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
+        st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
+        if w_stat is not None:
+            st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
         else:
-            import scipy.stats as stats
-            import matplotlib.pyplot as plt
-            import seaborn as sns
+            st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
 
-            # --- Global statistical tests ---
-            t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
-            try:
-                w_stat, w_p_value = stats.wilcoxon(merged['Your Rating'], merged['IMDb Rating'])
-            except ValueError:
-                w_stat, w_p_value = None, None
-
-# --- Show results ---
-st.write("### Overall Results")
-st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
-st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
-st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
-if w_stat is not None:
-    st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
-else:
-    st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
-    
-# --- Interpretation ---
-if p_value < 0.05:
-    st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
-else:
-    st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
-
-# --- Extra explanation ---
+        # --- Interpretation ---
+        if p_value < 0.05:
+            st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
+        else:
+            st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
+        # --- Extra explanation ---
 st.write("""
 **What this means:**  
 - The **mean ratings** tell you if you generally rate movies higher or lower than IMDb.  
@@ -316,4 +303,3 @@ st.write("""
 - The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
 - Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
 """)
-
