@@ -291,27 +291,29 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             except ValueError:
                 w_stat, w_p_value = None, None
 
-            # --- Show results ---
-            st.write("### Overall Results")
-            st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
-            st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
-            st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
-            if w_stat is not None:
-                st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
-            else:
-                st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
-            
-            if p_value < 0.05:
-                st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
-            else:
-                st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
+# --- Show results ---
+st.write("### Overall Results")
+st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
+st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
+st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
+if w_stat is not None:
+    st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
+else:
+    st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
+    
+# --- Interpretation ---
+if p_value < 0.05:
+    st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
+else:
+    st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
 
-            # --- Boxplot per Genre ---
-            st.write("### Ratings Distribution by Genre")
-            plt.figure(figsize=(12,6))
-            melted = merged.melt(id_vars=['Genre'], value_vars=['Your Rating','IMDb Rating'],
-                                 var_name='Source', value_name='Rating')
-            sns.boxplot(data=melted, x='Genre', y='Rating', hue='Source')
-            plt.xticks(rotation=45)
-            plt.title("My Ratings vs IMDb Ratings per Genre")
-            st.pyplot(plt)
+# --- Extra explanation ---
+st.write("""
+**What this means:**  
+- The **mean ratings** tell you if you generally rate movies higher or lower than IMDb.  
+- A **significant t-test** (p < 0.05) means that, on average, your ratings are systematically different from IMDb’s.  
+- The **Wilcoxon test** confirms this even if the differences aren’t perfectly normally distributed.  
+- The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
+- Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
+""")
+
