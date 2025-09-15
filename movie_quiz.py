@@ -303,3 +303,71 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
+
+# --- Scenario 6: Statistical Insights (t-test per Director) ---
+if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
+    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director):</h3>', unsafe_allow_html=True)
+    st.write("""
+    This analysis compares my ratings to IMDb ratings **for each director** using a **paired t-test**.  
+
+    **Hypotheses:**  
+    - Null Hypothesis (H₀): There is **no significant difference** between my ratings and IMDb ratings for a director's movies.  
+    - Alternative Hypothesis (H₁): My ratings differ significantly from IMDb ratings for that director's movies.  
+
+    **Output table includes:**  
+    - Director  
+    - Number of Movies  
+    - Mean IMDb Rating  
+    - Mean My Rating  
+    - t-statistic  
+    - p-value  
+    - Interpretation (Significant / Not Significant)
+    """)
+
+    ttest_code = '''
+from scipy.stats import ttest_rel
+import pandas as pd
+
+# Merge IMDb and My Ratings
+df_ttest = IMDB_Ratings.merge(
+    My_Ratings[['Movie ID','Your Rating']],
+    on='Movie ID', how='inner'
+)
+
+results = []
+
+# Loop over directors
+for director, group in df_ttest.groupby('Director'):
+    if len(group) > 1:  # need at least 2 movies for t-test
+        stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
+        interpretation = "Significant (p < 0.05)" if pval < 0.05 else "Not Significant"
+        results.append({
+            "Director": director,
+            "Num_Movies": len(group),
+            "Mean_IMDb": group['IMDb Rating'].mean().round(2),
+            "Mean_Mine": group['Your Rating'].mean().round(2),
+            "t_statistic": round(stat, 3),
+            "p_value": round(pval, 4),
+            "Interpretation": interpretation
+        })
+
+# Convert results to DataFrame
+df_results = pd.DataFrame(results).sort_values(by="p_value")
+df_results
+'''
+
+    # Editable code box
+    user_ttest_code = st.text_area("Python t-test Code (editable)", ttest_code, height=650)
+
+    if st.button("Run t-test Analysis", key="run_ttest6"):
+        try:
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
+            exec(user_ttest_code, {}, local_vars)
+
+            if "df_results" in local_vars:
+                st.dataframe(local_vars["df_results"], width="stretch", height=500)
+            else:
+                st.warning("No dataframe named 'df_results' was produced. Please check your code.")
+
+        except Exception as e:
+            st.error(f"Error running t-test analysis: {e}")
