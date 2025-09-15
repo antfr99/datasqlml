@@ -51,14 +51,13 @@ else:
 scenario = st.radio(
     "Choose a scenario:",
     [
-        "Scenario 1- SQL",
-        "Scenario 2- SQL",
-        "Scenario 3- SQL",
+        "Scenario 1- SQL  ", 
+        "Scenario 2- SQL", 
+        "Scenario 3- SQL", 
         "Scenario 4-Python Machine Learning",
-        "Scenario 5- Statistical Insights by Genre (t-test)"  
+        "Scenario 5- Statistical Insights by Genre (Agreement %)"
     ]
 )
-
 
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1- SQL  ":
@@ -245,95 +244,43 @@ predict_df
         except Exception as e:
             st.error(f"Error running ML code: {e}")
 
-# --- Scenario 5: Statistical Insights by Genre (t-test only) ---
-if scenario == "Scenario 5- Statistical Insights by Genre (t-test)":
-    st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – t-test)</h3>', unsafe_allow_html=True)
+            
+# --- Scenario 5: Statistical Insights ---
+if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
+    st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
-    This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings per movie genre.
-    - **Paired t-test**: assumes rating differences are normally distributed.
+    This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
+    The results are grouped by genre to highlight where my taste overlaps most (or least) with the general audience.
     """)
-    st.write("Click the button below to run the statistical analysis and generate the boxplot and outlier table per genre.")
 
-    if st.button("Run Statistical Analysis", key="run_stats"):
-        # --- Clean column names ---
-        IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
-        My_Ratings.columns = My_Ratings.columns.str.strip()
+    try:
+        # Merge IMDb and My Ratings
+        df_compare = IMDB_Ratings.merge(
+            My_Ratings[['Movie ID','Your Rating']],
+            on='Movie ID', how='inner'
+        )
 
-        # --- Standardize column names ---
-        if 'Rating' in IMDB_Ratings.columns and 'IMDb Rating' not in IMDB_Ratings.columns:
-            IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
-        if 'Your Rating' not in My_Ratings.columns:
-            st.error("My_Ratings must have a 'Your Rating' column.")
+        # Calculate agreement (±1 tolerance)
+        df_compare['Agreement'] = (
+            (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
+        )
 
-        # --- Merge tables ---
-        merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
-
-        # --- Check essential columns ---
-        for col in ['Title','Genre','IMDb Rating','Your Rating']:
-            if col not in merged.columns:
-                merged[col] = 'Unknown' if col in ['Title','Genre'] else 0
-        merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
-
-        if merged.empty:
-            st.warning("No overlapping movies with valid ratings.")
-        else:
-            import scipy.stats as stats
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-
-            # --- Global statistical test (paired t-test only) ---
-            t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
-
-            # --- Show results ---
-            st.write("### Overall Results")
-            st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
-            st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
-            st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
-
-            # --- Interpretation ---
-            if p_value < 0.05:
-                st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
-            else:
-                st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
-
-            # --- Boxplot per genre ---
-            plt.figure(figsize=(12,6))
-            sns.boxplot(
-                data=merged.melt(id_vars=['Genre'], value_vars=['Your Rating', 'IMDb Rating']),
-                x='Genre',
-                y='value',
-                hue='variable'
+        # Aggregate per genre
+        genre_agreement = (
+            df_compare.groupby('Genre')
+            .agg(
+                Total_Movies=('Movie ID','count'),
+                Agreements=('Agreement','sum')
             )
-            plt.xticks(rotation=45, ha='right')
-            plt.ylabel('Rating')
-            plt.title('Comparison of My Ratings vs IMDb Ratings by Genre')
-            plt.legend(title='Rating Type')
-            plt.tight_layout()
-            st.pyplot(plt.gcf())
+            .reset_index()
+        )
+        genre_agreement['Agreement_%'] = (
+            genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
+        ).round(2)
 
-            # --- Outlier detection per genre ---
-            outlier_list = []
-            for genre in merged['Genre'].unique():
-                genre_data = merged[merged['Genre'] == genre]
-                for col in ['Your Rating', 'IMDb Rating']:
-                    Q1 = genre_data[col].quantile(0.25)
-                    Q3 = genre_data[col].quantile(0.75)
-                    IQR = Q3 - Q1
-                    lower = Q1 - 1.5 * IQR
-                    upper = Q3 + 1.5 * IQR
-                    outliers = genre_data[(genre_data[col] < lower) | (genre_data[col] > upper)]
-                    for _, row in outliers.iterrows():
-                        outlier_list.append({
-                            'Genre': genre,
-                            'Movie': row['Title'],
-                            'Rating Type': col,
-                            'Rating': row[col]
-                        })
+        # Show table
+        st.write("### Agreement % per Genre (±1 Tolerance)")
+        st.dataframe(genre_agreement.sort_values(by='Agreement_%', ascending=False))
 
-            # --- Display outliers table ---
-            if outlier_list:
-                outlier_df = pd.DataFrame(outlier_list).sort_values(['Genre','Rating Type','Rating'], ascending=[True, True, False])
-                st.write("### Outlier Movies per Genre (beyond 1.5×IQR)")
-                st.dataframe(outlier_df.reset_index(drop=True))
-            else:
-                st.write("No outlier movies detected.")
+    except Exception as e:
+        st.error(f"Error calculating agreement stats: {e}")
