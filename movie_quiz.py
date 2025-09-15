@@ -47,6 +47,7 @@ if not My_Ratings.empty:
 else:
     st.warning("My Ratings table is empty or failed to load.")
 
+# --- Scenarios ---
 scenario = st.radio(
     "Choose a scenario:",
     [
@@ -57,6 +58,7 @@ scenario = st.radio(
         "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)"
     ]
 )
+
 
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1- SQL  ":
@@ -243,43 +245,52 @@ predict_df
         except Exception as e:
             st.error(f"Error running ML code: {e}")
 
-
-
 # --- Scenario 5: Statistical Insights by Genre ---
 if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – Wilcoxon signed-rank test)</h3>', unsafe_allow_html=True)
-
     st.write("""
-    This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings.
+    This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings per movie genre.
     
     - **Paired t-test**: assumes rating differences are normally distributed.  
     - **Wilcoxon signed-rank test**: non-parametric alternative (does not assume normality).  
     """)
 
-    # Merge tables
-    merged = IMDB_Ratings.merge(My_Ratings, on="Movie ID", how="inner")
+    # --- Clean column names (strip spaces) ---
+    IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+    My_Ratings.columns = My_Ratings.columns.str.strip()
+
+    # --- Standardize column names ---
+    if 'Rating' in IMDB_Ratings.columns and 'IMDb Rating' not in IMDB_Ratings.columns:
+        IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
+    if 'Your Rating' not in My_Ratings.columns:
+        st.error("My_Ratings must have a 'Your Rating' column.")
+    
+    # --- Merge tables ---
+    merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
+
+    # --- Check for essential columns ---
+    for col in ['Title','Genre','IMDb Rating','Your Rating']:
+        if col not in merged.columns:
+            merged[col] = 'Unknown' if col in ['Title','Genre'] else 0
+
+    merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
 
     if merged.empty:
-        st.warning("No overlapping movies between My Ratings and IMDb Ratings.")
+        st.warning("No overlapping movies with valid ratings.")
     else:
         import scipy.stats as stats
         import matplotlib.pyplot as plt
         import seaborn as sns
 
-        # Drop rows with missing values
-        merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
-
-        # Run paired t-test
+        # --- Global statistical tests ---
         t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
-
-        # Run Wilcoxon test
         try:
             w_stat, w_p_value = stats.wilcoxon(merged['Your Rating'], merged['IMDb Rating'])
         except ValueError:
             w_stat, w_p_value = None, None
 
         # --- Show results ---
-        st.write("### Results")
+        st.write("### Overall Results")
         st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
         st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
         st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
@@ -287,12 +298,11 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
         else:
             st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
-
-        # Interpretation
+        
         if p_value < 0.05:
-            st.success("✅ The difference is statistically significant (t-test, p < 0.05).")
+            st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
         else:
-            st.info("ℹ️ No significant difference detected (t-test, p ≥ 0.05).")
+            st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
 
         # --- Boxplot per Genre ---
         st.write("### Ratings Distribution by Genre")
@@ -303,6 +313,3 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
         plt.xticks(rotation=45)
         plt.title("My Ratings vs IMDb Ratings per Genre")
         st.pyplot(plt)
-
-
-
