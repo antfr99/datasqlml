@@ -311,29 +311,33 @@ if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
 
     st.write("""
-This analysis examines how your ratings compare with IMDb ratings for each director using a **paired t-test**.  
+This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
 The paired t-test is a statistical method used to determine whether the mean difference between two related sets of observations is significantly different from zero.  
 
-- Each pair consists of your rating and the IMDb rating for the same movie.  
-- We group the movies by **director** to see whether, on average, your ratings for a particular director differ from IMDb ratings.  
-- Directors with **fewer than 5 movies** are ignored by default because statistical tests are unreliable with very small samples.  
+- Each pair consists of my rating and the IMDb rating for the same movie.  
+- Movies are grouped by **director**, so we can see whether my average rating for a particular director systematically differs from IMDb ratings.  
+- Directors with fewer than the minimum number of movies (default 5) are ignored because statistical tests are unreliable with very small samples.  
 
 **Columns in the output table:**
 - **Director**: Name of the director.  
-- **Num_Movies**: Number of movies rated by you for that director.  
+- **Num_Movies**: Number of movies rated by me for that director.  
 - **Mean_IMDb**: Average IMDb rating for that director's movies.  
-- **Mean_Mine**: Average of your ratings for that director's movies.  
-- **t_statistic**: t-test statistic.  
+- **Mean_Mine**: Average of my ratings for that director's movies.  
+- **t_statistic**: t-test statistic, indicating the magnitude of the difference relative to variation.  
 - **p_value**: Probability value from the t-test.  
-  - p < 0.05 → the difference is statistically significant.  
-  - p ≥ 0.05 → no significant difference detected.  
-- **Interpretation**: "Significant (p < 0.05)" or "Not Significant".  
+  - p < 0.05 → difference is statistically significant.  
+  - p ≥ 0.05 → difference is not significant.  
+- **Interpretation**: "Significant (p < 0.05)" or "Not Significant", summarizing the statistical conclusion.  
 
-This helps understand my personal rating tendencies versus general IMDb trends by directors, highlighting where your preferences align or diverge from the wider audience.
+**Example interpretation:**
+- Peter Jackson (Num_Movies = 7, Mean IMDb = 8.13, Mean Mine = 7.14, t = -3.308, p = 0.0162):  
+  Significant difference → I systematically rate Peter Jackson movies lower than IMDb.  
+- Woody Allen (Num_Movies = 16, Mean IMDb = 7.43, Mean Mine = 7.25, t = -1.025, p = 0.3214):  
+  Not Significant → My ratings roughly align with IMDb.
 """)
 
     # Sidebar slider for minimum movies per director
-    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
+    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 6)
 
     # Default editable code
     ttest_code_director = f'''
