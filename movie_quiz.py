@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit , sklearn , scipy ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -249,8 +249,7 @@ predict_df
 
 
 # --- Scenario 5: Statistical Insights ---
-
-if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement %)":
+if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
     This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
@@ -287,27 +286,25 @@ genre_agreement['Agreement_%'] = (
     genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
 ).round(2)
 
-# Ensure sorted assignment
-genre_agreement = genre_agreement.sort_values(by='Agreement_%', ascending=False)
+# Final result
+genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
     # Editable code box
     user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
 
-    # --- Run automatically once when scenario is selected ---
-    try:
-        local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
-        exec(stats_code, {}, local_vars)
-        st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
-    except Exception as e:
-        st.error(f"Error running Statistical Analysis code: {e}")
-
-    # --- Optional: run editable code manually ---
     if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
+            # Run the code entered in the text area
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_stats_code, {}, local_vars)
-            st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
+
+            # Retrieve dataframe if created
+            if "genre_agreement" in local_vars:
+                st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
+            else:
+                st.warning("No output dataframe named 'genre_agreement' was produced. Please check your code.")
+
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
 
