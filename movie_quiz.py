@@ -265,6 +265,7 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
         if 'Your Rating' not in My_Ratings.columns:
             st.error("My_Ratings must have a 'Your Rating' column.")
+            st.stop()
 
         # --- Merge tables ---
         merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
@@ -314,3 +315,20 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             - The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
             - Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
             """)
+
+            # --- Boxplot per genre ---
+            plt.figure(figsize=(12,6))
+            sns.boxplot(
+                data=merged.melt(id_vars=['Genre'], value_vars=['Your Rating', 'IMDb Rating']),
+                x='Genre',
+                y='value',
+                hue='variable'
+            )
+            plt.xticks(rotation=45, ha='right')
+            plt.ylabel('Rating')
+            plt.title('Comparison of My Ratings vs IMDb Ratings by Genre')
+            plt.legend(title='Rating Type')
+            plt.tight_layout()
+
+            # Display in Streamlit
+            st.pyplot(plt.gcf())
