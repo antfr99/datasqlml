@@ -4,7 +4,7 @@ import pandasql as ps
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
-st.title("IMDb/SQL/Machine Learning Python Data Project 🎬")
+st.title("IMDb/SQL/ML/STATISTICS Data Project 🎬")
 st.write("""
 This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit), SQL, and GitHub.
 """)
@@ -291,18 +291,23 @@ genre_agreement['Agreement_%'] = (
 genre_agreement = genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
+    # Editable code box
     user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
 
+    # --- Run automatically once when scenario is selected ---
+    try:
+        local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
+        exec(stats_code, {}, local_vars)
+        st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
+    except Exception as e:
+        st.error(f"Error running Statistical Analysis code: {e}")
+
+    # --- Optional: run editable code manually ---
     if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_stats_code, {}, local_vars)
-
-            if "genre_agreement" in local_vars:
-                st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
-            else:
-                st.warning("No output dataframe named 'genre_agreement' was produced. Please check your code.")
-
+            st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
 
