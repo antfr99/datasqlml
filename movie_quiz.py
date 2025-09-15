@@ -52,13 +52,14 @@ scenario = st.radio(
     "Choose a scenario:",
     [
         "Scenario 1- SQL  ", 
-        "Scenario 2- SQL", 
-        "Scenario 3- SQL", 
+        "Scenario 2- SQL",
+        "Scenario 3- SQL",
         "Scenario 4-Python Machine Learning",
         "Scenario 5- Statistical Insights by Genre (Agreement %)",
-        "Scenario 6- Statistical Insights by Director (t-test)"
+        "Scenario 6- Statistical Insights by Genre (t-test)"
     ]
 )
+
 
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1- SQL  ":
@@ -305,27 +306,29 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
 
-# --- Scenario 6: Statistical Insights (t-test per Director) ---
-if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
-    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director):</h3>', unsafe_allow_html=True)
+# --- Scenario 6: Statistical Insights (t-test per Genre) ---
+if scenario == "Scenario 6- Statistical Insights by Genre (t-test)":
+    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Genre)</h3>', unsafe_allow_html=True)
+
     st.write("""
-    This analysis compares my ratings to IMDb ratings **for each director** using a **paired t-test**.  
+    This analysis compares **your ratings** with **IMDb ratings** for each genre using a **paired t-test**.
 
-    **Hypotheses:**  
-    - Null Hypothesis (H₀): There is **no significant difference** between my ratings and IMDb ratings for a director's movies.  
-    - Alternative Hypothesis (H₁): My ratings differ significantly from IMDb ratings for that director's movies.  
-
-    **Output table includes:**  
-    - Director  
-    - Number of Movies  
-    - Mean IMDb Rating  
-    - Mean My Rating  
-    - t-statistic  
-    - p-value  
-    - Interpretation (Significant / Not Significant)
+    **Columns explained:**
+    - **Genre**: Movie genre.
+    - **Num_Movies**: Number of movies rated by you and IMDb for that genre.
+    - **Mean_IMDb**: Average IMDb rating for that genre.
+    - **Mean_Mine**: Average of your ratings for that genre.
+    - **t_statistic**: t-test statistic for the paired comparison.
+    - **p_value**: Probability value from the t-test.  
+      - If p < 0.05, the difference is statistically significant.
+    - **Interpretation**: "Significant (p < 0.05)" or "Not Significant".
     """)
 
-    ttest_code = '''
+    # Sidebar slider for minimum number of movies per genre
+    min_movies = st.sidebar.slider("Minimum movies per genre for t-test", 2, 10, 2)
+
+    # Default code (editable)
+    ttest_code_genre = f'''
 from scipy.stats import ttest_rel
 import pandas as pd
 
@@ -337,33 +340,37 @@ df_ttest = IMDB_Ratings.merge(
 
 results = []
 
-# Loop over directors
-for director, group in df_ttest.groupby('Director'):
-    if len(group) > 1:  # need at least 2 movies for t-test
+# Loop over genres
+for genre, group in df_ttest.groupby('Genre'):
+    if len(group) >= {min_movies}:  # apply minimum movie threshold
         stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
         interpretation = "Significant (p < 0.05)" if pval < 0.05 else "Not Significant"
-        results.append({
-            "Director": director,
+        results.append({{
+            "Genre": genre,
             "Num_Movies": len(group),
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
             "Mean_Mine": group['Your Rating'].mean().round(2),
             "t_statistic": round(stat, 3),
             "p_value": round(pval, 4),
             "Interpretation": interpretation
-        })
+        }})
 
 # Convert results to DataFrame
-df_results = pd.DataFrame(results).sort_values(by="p_value")
+df_results = pd.DataFrame(results)
+
+# Sort ascending by p-value (most significant first)
+df_results = df_results.sort_values(by="p_value")
 df_results
 '''
 
     # Editable code box
-    user_ttest_code = st.text_area("Python t-test Code (editable)", ttest_code, height=650)
+    user_ttest_code_genre = st.text_area("Python t-test per Genre Code (editable)", ttest_code_genre, height=650)
 
-    if st.button("Run t-test Analysis", key="run_ttest6"):
+    # Run button
+    if st.button("Run t-test Analysis", key="run_ttest_genre6"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
-            exec(user_ttest_code, {}, local_vars)
+            exec(user_ttest_code_genre, {}, local_vars)
 
             if "df_results" in local_vars:
                 st.dataframe(local_vars["df_results"], width="stretch", height=500)
