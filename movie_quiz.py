@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit , sklearn , scipy ), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit , Sklearn , Scipy ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -249,7 +249,7 @@ predict_df
 
 
 # --- Scenario 5: Statistical Insights ---
-if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
+if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement %)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
     This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
