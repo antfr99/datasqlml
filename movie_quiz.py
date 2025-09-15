@@ -47,10 +47,15 @@ if not My_Ratings.empty:
 else:
     st.warning("My Ratings table is empty or failed to load.")
 
-# --- Scenarios ---
 scenario = st.radio(
     "Choose a scenario:",
-    ["Scenario 1- SQL  ", "Scenario 2- SQL", "Scenario 3- SQL", "Scenario 4-Python Machine Learning"]
+    [
+        "Scenario 1- SQL  ", 
+        "Scenario 2- SQL", 
+        "Scenario 3- SQL", 
+        "Scenario 4-Python Machine Learning",
+        "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)"
+    ]
 )
 
 # --- Scenario 1: SQL Playground ---
@@ -237,3 +242,67 @@ predict_df
             )
         except Exception as e:
             st.error(f"Error running ML code: {e}")
+
+
+
+# --- Scenario 5: Statistical Insights by Genre ---
+if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)":
+    st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – Wilcoxon signed-rank test)</h3>', unsafe_allow_html=True)
+
+    st.write("""
+    This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings.
+    
+    - **Paired t-test**: assumes rating differences are normally distributed.  
+    - **Wilcoxon signed-rank test**: non-parametric alternative (does not assume normality).  
+    """)
+
+    # Merge tables
+    merged = IMDB_Ratings.merge(My_Ratings, on="Movie ID", how="inner")
+
+    if merged.empty:
+        st.warning("No overlapping movies between My Ratings and IMDb Ratings.")
+    else:
+        import scipy.stats as stats
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        # Drop rows with missing values
+        merged = merged[['Title','Genre','Your Rating','IMDb Rating']].dropna()
+
+        # Run paired t-test
+        t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
+
+        # Run Wilcoxon test
+        try:
+            w_stat, w_p_value = stats.wilcoxon(merged['Your Rating'], merged['IMDb Rating'])
+        except ValueError:
+            w_stat, w_p_value = None, None
+
+        # --- Show results ---
+        st.write("### Results")
+        st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
+        st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
+        st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
+        if w_stat is not None:
+            st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
+        else:
+            st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
+
+        # Interpretation
+        if p_value < 0.05:
+            st.success("✅ The difference is statistically significant (t-test, p < 0.05).")
+        else:
+            st.info("ℹ️ No significant difference detected (t-test, p ≥ 0.05).")
+
+        # --- Boxplot per Genre ---
+        st.write("### Ratings Distribution by Genre")
+        plt.figure(figsize=(12,6))
+        melted = merged.melt(id_vars=['Genre'], value_vars=['Your Rating','IMDb Rating'],
+                             var_name='Source', value_name='Rating')
+        sns.boxplot(data=melted, x='Genre', y='Rating', hue='Source')
+        plt.xticks(rotation=45)
+        plt.title("My Ratings vs IMDb Ratings per Genre")
+        st.pyplot(plt)
+
+
+
