@@ -56,7 +56,7 @@ scenario = st.radio(
         "Scenario 3 – Top Unseen Films by Decade (SQL)",
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
-        "Scenario 6- Statistical Insights by Director (t-test)"
+        "Scenario 6 - Statistical Insights by Director (t-test)"
     ]
 )
 
@@ -313,7 +313,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
 
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
-if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
+if scenario == "Scenario 6 - Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
     st.write("""
 This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
