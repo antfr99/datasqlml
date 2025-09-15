@@ -251,8 +251,6 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
     st.write("""
     This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings per movie genre.
     
-    - **Paired t-test**: assumes rating differences are normally distributed.  
-    - **Wilcoxon signed-rank test**: non-parametric alternative (does not assume normality).  
     """)
 
     # --- Clean column names (strip spaces) ---
