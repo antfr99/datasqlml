@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Streamlit , Sklearn , Scipy ), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -312,6 +312,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
 
+# --- Scenario 6: Statistical Insights (t-test per Director) ---
 if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
     st.write("""
@@ -319,12 +320,16 @@ This analysis examines how my ratings compare with IMDb ratings for each directo
 Directors with too few movies are ignored.
 """)
 
+    # Sidebar slider for minimum movies per director
     min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
 
+    # Editable t-test code
     ttest_code_director = f'''
 from scipy.stats import ttest_rel
+import numpy as np
 import pandas as pd
 
+# Merge IMDb and My Ratings
 df_ttest = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
@@ -335,24 +340,33 @@ results = []
 for director, group in df_ttest.groupby('Director'):
     n = len(group)
     if n >= {min_movies}:
-        stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
-        if pval < 0.05:
-            if n <= 2*{min_movies}:
-                interpretation = "Significant (p < 0.05) — small sample, interpret cautiously"
-            else:
-                interpretation = "Significant (p < 0.05)"
+        differences = group['Your Rating'] - group['IMDb Rating']
+
+        # Handle zero variance (all differences identical)
+        if differences.std() == 0:
+            stat, pval = np.nan, np.nan
+            interpretation = "All differences identical — t-test undefined"
         else:
-            interpretation = "Not Significant"
+            stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
+            if pval < 0.05:
+                if n <= 2*{min_movies}:
+                    interpretation = "Significant (p < 0.05) — small sample, interpret cautiously"
+                else:
+                    interpretation = "Significant (p < 0.05)"
+            else:
+                interpretation = "Not Significant"
+
         results.append({{
             "Director": director,
             "Num_Movies": n,
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
             "Mean_Mine": group['Your Rating'].mean().round(2),
-            "t_statistic": round(stat, 3),
-            "p_value": round(pval, 4),
+            "t_statistic": round(stat, 3) if not np.isnan(stat) else np.nan,
+            "p_value": round(pval, 4) if not np.isnan(pval) else np.nan,
             "Interpretation": interpretation
         }})
 
+# Convert results to DataFrame
 df_results = pd.DataFrame(results)
 df_results = df_results.sort_values(by="p_value")
 '''
