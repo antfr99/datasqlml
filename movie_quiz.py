@@ -52,11 +52,11 @@ scenario = st.radio(
     "Choose a scenario:",
     [
         "Scenario 1- SQL  ", 
-        "Scenario 2- SQL",
-        "Scenario 3- SQL",
+        "Scenario 2- SQL", 
+        "Scenario 3- SQL", 
         "Scenario 4-Python Machine Learning",
         "Scenario 5- Statistical Insights by Genre (Agreement %)",
-        "Scenario 6- Statistical Insights by Director (t-test)"
+        "Scenario 6- Statistical Insights by Decade (t-test)"
     ]
 )
 
@@ -305,49 +305,50 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
-
-# --- Scenario 6: Statistical Insights (t-test per Director) ---
-if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
-    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
+            
+# --- Scenario 6: Statistical Insights (t-test per Decade) ---
+if scenario == "Scenario 6- Statistical Insights by Decade (t-test)":
+    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Decade)</h3>', unsafe_allow_html=True)
 
     st.write("""
-This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
+This analysis examines how my ratings compare with IMDb ratings for movies grouped by **decade** using a **paired t-test**.  
 The paired t-test determines whether the mean difference between my ratings and IMDb ratings is statistically significant.  
 
 - Each pair consists of my rating and the IMDb rating for the same movie.  
-- Movies are grouped by **director**.  
-- Directors with fewer than the minimum number of movies (default 5) are ignored because tests are unreliable.  
+- Movies are grouped by **decade** to see if I have a bias for older or newer films.  
+- Decades with fewer than the minimum number of movies are ignored because tests are unreliable.  
 
 **Columns in the output table:**
-- **Director**: Name of the director.  
-- **Num_Movies**: Number of movies rated by me for that director.  
-- **Mean_IMDb**: Average IMDb rating for that director's movies.  
-- **Mean_Mine**: Average of my ratings for that director's movies.  
+- **Decade**: The decade of the movies (e.g., 1980s, 1990s).  
+- **Num_Movies**: Number of movies rated by me in that decade.  
+- **Mean_IMDb**: Average IMDb rating for movies in that decade.  
+- **Mean_Mine**: Average of my ratings for movies in that decade.  
 - **t_statistic**: t-test statistic.  
 - **p_value**: Probability from the t-test.  
 - **Interpretation**: Indicates significance and warns if the sample is small.  
 
-This helps understand my rating tendencies versus IMDb trends by directors, highlighting where my preferences align or diverge from the wider audience.
+This helps understand whether my rating tendencies differ from IMDb trends depending on the decade of release.
 """)
 
-    # Sidebar slider for minimum movies per director
-    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
+    # Sidebar slider for minimum movies per decade
+    min_movies = st.sidebar.slider("Minimum movies per decade for t-test", 2, 10, 5)
 
     # Default editable code
-    ttest_code_director = f'''
+    ttest_code_decade = f'''
 from scipy.stats import ttest_rel
 import pandas as pd
 
-# Merge IMDb and My Ratings
+# Ensure decade column exists
 df_ttest = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
 )
+df_ttest['Decade'] = (df_ttest['Year'] // 10) * 10
 
 results = []
 
-# Loop over directors
-for director, group in df_ttest.groupby('Director'):
+# Loop over decades
+for decade, group in df_ttest.groupby('Decade'):
     n = len(group)
     if n >= {min_movies}:  # apply minimum movie threshold
         stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
@@ -359,7 +360,7 @@ for director, group in df_ttest.groupby('Director'):
         else:
             interpretation = "Not Significant"
         results.append({{
-            "Director": director,
+            "Decade": decade,
             "Num_Movies": n,
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
             "Mean_Mine": group['Your Rating'].mean().round(2),
@@ -377,16 +378,28 @@ df_results
 '''
 
     # Editable grey code box
-    user_ttest_code_director = st.text_area("Python t-test per Director Code (editable)", ttest_code_director, height=650)
+    user_ttest_code_decade = st.text_area("Python t-test per Decade Code (editable)", ttest_code_decade, height=750)
 
     # Run button
-    if st.button("Run t-test Analysis", key="run_ttest_director6"):
+    if st.button("Run t-test Analysis", key="run_ttest_decade6"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
-            exec(user_ttest_code_director, {}, local_vars)
+            exec(user_ttest_code_decade, {}, local_vars)
 
             if "df_results" in local_vars:
-                st.dataframe(local_vars["df_results"], width="stretch", height=500)
+                df_results = local_vars["df_results"]
+                st.dataframe(df_results, width="stretch", height=500)
+
+                # --- Dynamic interpretation per decade ---
+                st.write("### Decade-wise Interpretations")
+                for idx, row in df_results.iterrows():
+                    diff = row['Mean_Mine'] - row['Mean_IMDb']
+                    direction = "higher" if diff > 0 else "lower" if diff < 0 else "about the same"
+                    caution = " This is a small sample; interpret cautiously." if "small sample" in row['Interpretation'] else ""
+                    st.write(f"**{int(row['Decade'])}s ({row['Num_Movies']} movies):** "
+                             f"My average rating is {direction} than IMDb ({row['Mean_Mine']} vs {row['Mean_IMDb']}). "
+                             f"{row['Interpretation']}.{caution}")
+
             else:
                 st.warning("No dataframe named 'df_results' was produced. Please check your code.")
 
