@@ -291,7 +291,8 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
 
         except Exception as e:
             st.error(f"Error calculating agreement stats: {e}")
-            
+
+
 # --- Scenario 5: Statistical Insights ---
 if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
@@ -300,7 +301,7 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     Results are grouped by genre, showing agreements, disagreements, and overall percentages.
     """)
 
-    if st.button("Run Statistical Analysis", key="run_stats"):
+    if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
             # Merge IMDb and My Ratings
             df_compare = IMDB_Ratings.merge(
