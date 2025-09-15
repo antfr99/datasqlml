@@ -55,7 +55,8 @@ scenario = st.radio(
         "Scenario 2- SQL", 
         "Scenario 3- SQL", 
         "Scenario 4-Python Machine Learning",
-        "Scenario 5- Statistical Insights by Genre (Agreement %)"
+        "Scenario 5- Statistical Insights by Genre (Agreement %)",
+        "Scenario 6- Statistical Insights by Director (t-test)"
     ]
 )
 
