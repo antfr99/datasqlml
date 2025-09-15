@@ -244,43 +244,98 @@ predict_df
         except Exception as e:
             st.error(f"Error running ML code: {e}")
 
+ # --- Scenario 5: Statistical Insights ---
+if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
+    st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
+    st.write("""
+    This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
+    Results are grouped by genre, showing agreements, disagreements, and overall percentages.
+    """)
+
+    if st.button("Run Statistical Analysis", key="run_stats"):
+        try:
+            # Merge IMDb and My Ratings
+            df_compare = IMDB_Ratings.merge(
+                My_Ratings[['Movie ID','Your Rating']],
+                on='Movie ID', how='inner'
+            )
+
+            # Calculate agreement (±1 tolerance)
+            df_compare['Agreement'] = (
+                (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
+            )
+
+            # Aggregate per genre
+            genre_agreement = (
+                df_compare.groupby('Genre')
+                .agg(
+                    Total_Movies=('Movie ID','count'),
+                    Agreements=('Agreement','sum')
+                )
+                .reset_index()
+            )
+            genre_agreement['Disagreements'] = (
+                genre_agreement['Total_Movies'] - genre_agreement['Agreements']
+            )
+            genre_agreement['Agreement_%'] = (
+                genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
+            ).round(2)
+
+            # Show table
+            st.write("### Agreement % per Genre (±1 Tolerance)")
+            st.dataframe(
+                genre_agreement.sort_values(by='Agreement_%', ascending=False),
+                width="stretch",
+                height=500
+            )
+
+        except Exception as e:
+            st.error(f"Error calculating agreement stats: {e}")
             
 # --- Scenario 5: Statistical Insights ---
 if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
     This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
-    The results are grouped by genre to highlight where my taste overlaps most (or least) with the general audience.
+    Results are grouped by genre, showing agreements, disagreements, and overall percentages.
     """)
 
-    try:
-        # Merge IMDb and My Ratings
-        df_compare = IMDB_Ratings.merge(
-            My_Ratings[['Movie ID','Your Rating']],
-            on='Movie ID', how='inner'
-        )
-
-        # Calculate agreement (±1 tolerance)
-        df_compare['Agreement'] = (
-            (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
-        )
-
-        # Aggregate per genre
-        genre_agreement = (
-            df_compare.groupby('Genre')
-            .agg(
-                Total_Movies=('Movie ID','count'),
-                Agreements=('Agreement','sum')
+    if st.button("Run Statistical Analysis", key="run_stats"):
+        try:
+            # Merge IMDb and My Ratings
+            df_compare = IMDB_Ratings.merge(
+                My_Ratings[['Movie ID','Your Rating']],
+                on='Movie ID', how='inner'
             )
-            .reset_index()
-        )
-        genre_agreement['Agreement_%'] = (
-            genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
-        ).round(2)
 
-        # Show table
-        st.write("### Agreement % per Genre (±1 Tolerance)")
-        st.dataframe(genre_agreement.sort_values(by='Agreement_%', ascending=False))
+            # Calculate agreement (±1 tolerance)
+            df_compare['Agreement'] = (
+                (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
+            )
 
-    except Exception as e:
-        st.error(f"Error calculating agreement stats: {e}")
+            # Aggregate per genre
+            genre_agreement = (
+                df_compare.groupby('Genre')
+                .agg(
+                    Total_Movies=('Movie ID','count'),
+                    Agreements=('Agreement','sum')
+                )
+                .reset_index()
+            )
+            genre_agreement['Disagreements'] = (
+                genre_agreement['Total_Movies'] - genre_agreement['Agreements']
+            )
+            genre_agreement['Agreement_%'] = (
+                genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
+            ).round(2)
+
+            # Show table
+            st.write("### Agreement % per Genre (±1 Tolerance)")
+            st.dataframe(
+                genre_agreement.sort_values(by='Agreement_%', ascending=False),
+                width="stretch",
+                height=500
+            )
+
+        except Exception as e:
+            st.error(f"Error calculating agreement stats: {e}")
