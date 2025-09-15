@@ -51,11 +51,11 @@ else:
 scenario = st.radio(
     "Choose a scenario:",
     [
-        "Scenario 1- SQL  ", 
-        "Scenario 2- SQL", 
-        "Scenario 3- SQL", 
+        "Scenario 1- SQL",
+        "Scenario 2- SQL",
+        "Scenario 3- SQL",
         "Scenario 4-Python Machine Learning",
-        "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)"
+        "Scenario 5- Statistical Insights by Genre (t-test)"  
     ]
 )
 
@@ -245,15 +245,14 @@ predict_df
         except Exception as e:
             st.error(f"Error running ML code: {e}")
 
-# --- Scenario 5: Statistical Insights by Genre ---
-if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank test)":
-    st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – Wilcoxon signed-rank test)</h3>', unsafe_allow_html=True)
+# --- Scenario 5: Statistical Insights by Genre (t-test only) ---
+if scenario == "Scenario 5- Statistical Insights by Genre (t-test)":
+    st.markdown('<h3 style="color:green;">Scenario 5 (Statistical Insights by Genre – t-test)</h3>', unsafe_allow_html=True)
     st.write("""
     This scenario tests whether my ratings are systematically higher or lower than IMDb's ratings per movie genre.
     - **Paired t-test**: assumes rating differences are normally distributed.
-    - **Wilcoxon signed-rank test**: non-parametric alternative (does not assume normality).
     """)
-    st.write("Click the button below to run the statistical analysis and generate the boxplot per genre.")
+    st.write("Click the button below to run the statistical analysis and generate the boxplot and outlier table per genre.")
 
     if st.button("Run Statistical Analysis", key="run_stats"):
         # --- Clean column names ---
@@ -265,7 +264,6 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             IMDB_Ratings.rename(columns={'Rating':'IMDb Rating'}, inplace=True)
         if 'Your Rating' not in My_Ratings.columns:
             st.error("My_Ratings must have a 'Your Rating' column.")
-            st.stop()
 
         # --- Merge tables ---
         merged = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='inner')
@@ -283,38 +281,20 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             import matplotlib.pyplot as plt
             import seaborn as sns
 
-            # --- Global statistical tests ---
+            # --- Global statistical test (paired t-test only) ---
             t_stat, p_value = stats.ttest_rel(merged['Your Rating'], merged['IMDb Rating'])
-            try:
-                w_stat, w_p_value = stats.wilcoxon(merged['Your Rating'], merged['IMDb Rating'])
-            except ValueError:
-                w_stat, w_p_value = None, None
 
             # --- Show results ---
             st.write("### Overall Results")
             st.write(f"**Mean of My Ratings:** {merged['Your Rating'].mean():.2f}")
             st.write(f"**Mean of IMDb Ratings:** {merged['IMDb Rating'].mean():.2f}")
             st.write(f"**Paired t-test:** T = {t_stat:.3f}, p = {p_value:.4f}")
-            if w_stat is not None:
-                st.write(f"**Wilcoxon signed-rank test:** W = {w_stat:.3f}, p = {w_p_value:.4f}")
-            else:
-                st.write("Wilcoxon test could not be computed (possibly identical ratings for all movies).")
 
             # --- Interpretation ---
             if p_value < 0.05:
                 st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
             else:
                 st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
-
-            # --- Extra explanation ---
-            st.write("""
-            **What this means:**  
-            - The **mean ratings** tell you if you generally rate movies higher or lower than IMDb.  
-            - A **significant t-test** (p < 0.05) means that, on average, your ratings are systematically different from IMDb’s.  
-            - The **Wilcoxon test** confirms this even if the differences aren’t perfectly normally distributed.  
-            - The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
-            - Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
-            """)
 
             # --- Boxplot per genre ---
             plt.figure(figsize=(12,6))
@@ -329,6 +309,31 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Wilcoxon signed-rank 
             plt.title('Comparison of My Ratings vs IMDb Ratings by Genre')
             plt.legend(title='Rating Type')
             plt.tight_layout()
-
-            # Display in Streamlit
             st.pyplot(plt.gcf())
+
+            # --- Outlier detection per genre ---
+            outlier_list = []
+            for genre in merged['Genre'].unique():
+                genre_data = merged[merged['Genre'] == genre]
+                for col in ['Your Rating', 'IMDb Rating']:
+                    Q1 = genre_data[col].quantile(0.25)
+                    Q3 = genre_data[col].quantile(0.75)
+                    IQR = Q3 - Q1
+                    lower = Q1 - 1.5 * IQR
+                    upper = Q3 + 1.5 * IQR
+                    outliers = genre_data[(genre_data[col] < lower) | (genre_data[col] > upper)]
+                    for _, row in outliers.iterrows():
+                        outlier_list.append({
+                            'Genre': genre,
+                            'Movie': row['Title'],
+                            'Rating Type': col,
+                            'Rating': row[col]
+                        })
+
+            # --- Display outliers table ---
+            if outlier_list:
+                outlier_df = pd.DataFrame(outlier_list).sort_values(['Genre','Rating Type','Rating'], ascending=[True, True, False])
+                st.write("### Outlier Movies per Genre (beyond 1.5×IQR)")
+                st.dataframe(outlier_df.reset_index(drop=True))
+            else:
+                st.write("No outlier movies detected.")
