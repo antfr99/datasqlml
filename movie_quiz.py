@@ -252,42 +252,54 @@ if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     Results are grouped by genre, showing agreements, disagreements, and overall percentages.
     """)
 
+    stats_code = '''
+# Merge IMDb and My Ratings
+df_compare = IMDB_Ratings.merge(
+    My_Ratings[['Movie ID','Your Rating']],
+    on='Movie ID', how='inner'
+)
+
+# Calculate agreement (±1 tolerance)
+df_compare['Agreement'] = (
+    (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
+)
+
+# Aggregate per genre
+genre_agreement = (
+    df_compare.groupby('Genre')
+    .agg(
+        Total_Movies=('Movie ID','count'),
+        Agreements=('Agreement','sum')
+    )
+    .reset_index()
+)
+
+# Add disagreements and percentages
+genre_agreement['Disagreements'] = (
+    genre_agreement['Total_Movies'] - genre_agreement['Agreements']
+)
+genre_agreement['Agreement_%'] = (
+    genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
+).round(2)
+
+# Final result
+genre_agreement.sort_values(by='Agreement_%', ascending=False)
+'''
+
+    # Editable code box
+    user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
+
     if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
-            # Merge IMDb and My Ratings
-            df_compare = IMDB_Ratings.merge(
-                My_Ratings[['Movie ID','Your Rating']],
-                on='Movie ID', how='inner'
-            )
+            # Run the code entered in the text area
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
+            exec(user_stats_code, {}, local_vars)
 
-            # Calculate agreement (±1 tolerance)
-            df_compare['Agreement'] = (
-                (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
-            )
-
-            # Aggregate per genre
-            genre_agreement = (
-                df_compare.groupby('Genre')
-                .agg(
-                    Total_Movies=('Movie ID','count'),
-                    Agreements=('Agreement','sum')
-                )
-                .reset_index()
-            )
-            genre_agreement['Disagreements'] = (
-                genre_agreement['Total_Movies'] - genre_agreement['Agreements']
-            )
-            genre_agreement['Agreement_%'] = (
-                genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
-            ).round(2)
-
-            # Show table
-            st.write("### Agreement % per Genre (±1 Tolerance)")
-            st.dataframe(
-                genre_agreement.sort_values(by='Agreement_%', ascending=False),
-                width="stretch",
-                height=500
-            )
+            # Retrieve dataframe if created
+            if "genre_agreement" in local_vars:
+                st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
+            else:
+                st.warning("No output dataframe named 'genre_agreement' was produced. Please check your code.")
 
         except Exception as e:
-            st.error(f"Error calculating agreement stats: {e}")
+            st.error(f"Error running Statistical Analysis code: {e}")
