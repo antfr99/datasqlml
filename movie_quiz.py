@@ -315,8 +315,7 @@ This analysis examines how my ratings compare with IMDb ratings for movies group
 The paired t-test determines whether the mean difference between my ratings and IMDb ratings is statistically significant.  
 
 - Each pair consists of my rating and the IMDb rating for the same movie.  
-- Movies are grouped by **decade** to see if I have a bias for older or newer films.  
-- Decades with fewer than the minimum number of movies are ignored because tests are unreliable.  
+- Movies are grouped by **decade** to see if I have a bias for older or newer films.   
 
 **Columns in the output table:**
 - **Decade**: The decade of the movies (e.g., 1980s, 1990s).  
@@ -329,6 +328,9 @@ The paired t-test determines whether the mean difference between my ratings and 
 
 This helps understand whether my rating tendencies differ from IMDb trends depending on the decade of release.
 """)
+
+    # Sidebar slider for minimum movies per decade
+    min_movies = st.sidebar.slider("Minimum movies per decade for t-test", 2, 100, 50)
 
     # Default editable code
     ttest_code_decade = f'''
