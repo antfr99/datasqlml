@@ -305,7 +305,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
-            
+
 # --- Scenario 6: Statistical Insights (t-test per Decade) ---
 if scenario == "Scenario 6- Statistical Insights by Decade (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Decade)</h3>', unsafe_allow_html=True)
@@ -329,9 +329,6 @@ The paired t-test determines whether the mean difference between my ratings and 
 
 This helps understand whether my rating tendencies differ from IMDb trends depending on the decade of release.
 """)
-
-    # Sidebar slider for minimum movies per decade
-    min_movies = st.sidebar.slider("Minimum movies per decade for t-test", 2, 10, 5)
 
     # Default editable code
     ttest_code_decade = f'''
