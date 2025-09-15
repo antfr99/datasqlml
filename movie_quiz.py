@@ -56,7 +56,7 @@ scenario = st.radio(
         "Scenario 3- SQL",
         "Scenario 4-Python Machine Learning",
         "Scenario 5- Statistical Insights by Genre (Agreement %)",
-        "Scenario 6- Statistical Insights by Genre (t-test)"
+        "Scenario 6- Statistical Insights by Director (t-test)"
     ]
 )
 
@@ -306,29 +306,37 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
 
-# --- Scenario 6: Statistical Insights (t-test per Genre) ---
-if scenario == "Scenario 6- Statistical Insights by Genre (t-test)":
-    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Genre)</h3>', unsafe_allow_html=True)
+# --- Scenario 6: Statistical Insights (t-test per Director) ---
+if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
+    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
 
     st.write("""
-    This analysis compares **your ratings** with **IMDb ratings** for each genre using a **paired t-test**.
+This analysis examines how your ratings compare with IMDb ratings for each director using a **paired t-test**.  
+The paired t-test is a statistical method used to determine whether the mean difference between two related sets of observations is significantly different from zero.  
 
-    **Columns explained:**
-    - **Genre**: Movie genre.
-    - **Num_Movies**: Number of movies rated by you and IMDb for that genre.
-    - **Mean_IMDb**: Average IMDb rating for that genre.
-    - **Mean_Mine**: Average of your ratings for that genre.
-    - **t_statistic**: t-test statistic for the paired comparison.
-    - **p_value**: Probability value from the t-test.  
-      - If p < 0.05, the difference is statistically significant.
-    - **Interpretation**: "Significant (p < 0.05)" or "Not Significant".
-    """)
+- Each pair consists of your rating and the IMDb rating for the same movie.  
+- We group the movies by **director** to see whether, on average, your ratings for a particular director differ from IMDb ratings.  
+- Directors with **fewer than 5 movies** are ignored by default because statistical tests are unreliable with very small samples.  
 
-    # Sidebar slider for minimum number of movies per genre
-    min_movies = st.sidebar.slider("Minimum movies per genre for t-test", 2, 10, 2)
+**Columns in the output table:**
+- **Director**: Name of the director.  
+- **Num_Movies**: Number of movies rated by you for that director.  
+- **Mean_IMDb**: Average IMDb rating for that director's movies.  
+- **Mean_Mine**: Average of your ratings for that director's movies.  
+- **t_statistic**: t-test statistic.  
+- **p_value**: Probability value from the t-test.  
+  - p < 0.05 → the difference is statistically significant.  
+  - p ≥ 0.05 → no significant difference detected.  
+- **Interpretation**: "Significant (p < 0.05)" or "Not Significant".  
 
-    # Default code (editable)
-    ttest_code_genre = f'''
+This helps understand my personal rating tendencies versus general IMDb trends by directors, highlighting where your preferences align or diverge from the wider audience.
+""")
+
+    # Sidebar slider for minimum movies per director
+    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
+
+    # Default editable code
+    ttest_code_director = f'''
 from scipy.stats import ttest_rel
 import pandas as pd
 
@@ -340,13 +348,13 @@ df_ttest = IMDB_Ratings.merge(
 
 results = []
 
-# Loop over genres
-for genre, group in df_ttest.groupby('Genre'):
+# Loop over directors
+for director, group in df_ttest.groupby('Director'):
     if len(group) >= {min_movies}:  # apply minimum movie threshold
         stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
         interpretation = "Significant (p < 0.05)" if pval < 0.05 else "Not Significant"
         results.append({{
-            "Genre": genre,
+            "Director": director,
             "Num_Movies": len(group),
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
             "Mean_Mine": group['Your Rating'].mean().round(2),
@@ -358,19 +366,19 @@ for genre, group in df_ttest.groupby('Genre'):
 # Convert results to DataFrame
 df_results = pd.DataFrame(results)
 
-# Sort ascending by p-value (most significant first)
+# Sort ascending by p-value (most significant differences first)
 df_results = df_results.sort_values(by="p_value")
 df_results
 '''
 
-    # Editable code box
-    user_ttest_code_genre = st.text_area("Python t-test per Genre Code (editable)", ttest_code_genre, height=650)
+    # Editable grey code box
+    user_ttest_code_director = st.text_area("Python t-test per Director Code (editable)", ttest_code_director, height=650)
 
     # Run button
-    if st.button("Run t-test Analysis", key="run_ttest_genre6"):
+    if st.button("Run t-test Analysis", key="run_ttest_director6"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
-            exec(user_ttest_code_genre, {}, local_vars)
+            exec(user_ttest_code_director, {}, local_vars)
 
             if "df_results" in local_vars:
                 st.dataframe(local_vars["df_results"], width="stretch", height=500)
