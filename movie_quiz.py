@@ -244,7 +244,7 @@ predict_df
             )
         except Exception as e:
             st.error(f"Error running ML code: {e}")
-
+            
 if st.button("Run Statistical Analysis", key="run_stats"):
     # --- Clean column names ---
     IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
@@ -294,12 +294,13 @@ if st.button("Run Statistical Analysis", key="run_stats"):
             st.success("✅ Overall difference is statistically significant (t-test, p < 0.05).")
         else:
             st.info("ℹ️ Overall difference is not statistically significant (t-test, p ≥ 0.05).")
-        # --- Extra explanation ---
-st.write("""
-**What this means:**  
-- The **mean ratings** tell you if you generally rate movies higher or lower than IMDb.  
-- A **significant t-test** (p < 0.05) means that, on average, your ratings are systematically different from IMDb’s.  
-- The **Wilcoxon test** confirms this even if the differences aren’t perfectly normally distributed.  
-- The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
-- Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
-""")
+
+        # --- Extra explanation (INSIDE BUTTON BLOCK) ---
+        st.write("""
+        **What this means:**  
+        - The **mean ratings** tell you if you generally rate movies higher or lower than IMDb.  
+        - A **significant t-test** (p < 0.05) means that, on average, your ratings are systematically different from IMDb’s.  
+        - The **Wilcoxon test** confirms this even if the differences aren’t perfectly normally distributed.  
+        - The boxplot below shows this difference visually for each genre — notice which genres you consistently rate higher or lower than IMDb.  
+        - Outliers (dots above/below the boxes) show movies where your rating is very different from IMDb.
+        """)
