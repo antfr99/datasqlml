@@ -167,9 +167,9 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
         except Exception as e:
             st.error(f"Error in SQL query: {e}")
 
-# --- Scenario 4: ML ---
+# --- Scenario 4: Python ML ---
 if scenario == "Scenario 4 – Predict My Ratings (ML)":
-    st.markdown('<h3 style="color:green;">Scenario 4 (Predict My Ratings – ML)</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="color:green;">Scenario 4 (Predict My Ratings – ML):</h3>', unsafe_allow_html=True)
     st.write("""
     Predict my ratings for unseen movies using a machine learning model.
 
@@ -186,16 +186,51 @@ if scenario == "Scenario 4 – Predict My Ratings (ML)":
 
     **Note:** Running the prediction may take over a 1 minute. Please be patient.
     """)
+    
+    ml_code = '''
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
-    ml_code = ''' # ... same ML code as before ...'''
+# Merge IMDb and My Ratings
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+train_df = df_ml[df_ml['Your Rating'].notna()]
+predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    user_ml_code = st.text_area("ML Code (editable)", ml_code, height=1000)
+# Features
+categorical_features = ['Genre', 'Director']
+numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+
+# Preprocessing + Model
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+        ('num', 'passthrough', numerical_features)
+    ]
+)
+
+model = Pipeline([
+    ('prep', preprocessor),
+    ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+])
+
+# Train & predict
+X_train = train_df[categorical_features + numerical_features]
+y_train = train_df['Your Rating']
+model.fit(X_train, y_train)
+X_pred = predict_df[categorical_features + numerical_features]
+predict_df['Predicted Rating'] = model.predict(X_pred)
+predict_df
+'''
+
+    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=1000)
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
     top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 30, step=5)
 
-    if st.button("Run ML Prediction", key="run_ml"):
+    if st.button("Run Python ML Code", key="run_ml"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_ml_code, {}, local_vars)
@@ -211,7 +246,10 @@ if scenario == "Scenario 4 – Predict My Ratings (ML)":
             st.error(f"Error running ML code: {e}")
 
 
+
+
 # --- Scenario 5: Statistical Insights ---
+
 if scenario == "Scenario 5- Statistical Insights by Genre (Agreement %)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
@@ -249,20 +287,17 @@ genre_agreement['Agreement_%'] = (
     genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
 ).round(2)
 
-# Final result
-genre_agreement.sort_values(by='Agreement_%', ascending=False)
+# Ensure sorted assignment
+genre_agreement = genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
-    # Editable code box
     user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
 
     if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
-            # Run the code entered in the text area
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_stats_code, {}, local_vars)
 
-            # Retrieve dataframe if created
             if "genre_agreement" in local_vars:
                 st.dataframe(local_vars["genre_agreement"], width="stretch", height=500)
             else:
@@ -271,25 +306,23 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
 
+
+
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
+
 if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
-
     st.write("""
 This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
-It highlights where my preferences align or diverge from general IMDb ratings.  
-Directors with too few movies are ignored as small samples can give unreliable results.
+Directors with too few movies are ignored.
 """)
 
-    # Sidebar slider for minimum movies per director
     min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
 
-    # Default editable code
     ttest_code_director = f'''
 from scipy.stats import ttest_rel
 import pandas as pd
 
-# Merge IMDb and My Ratings
 df_ttest = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
@@ -297,10 +330,9 @@ df_ttest = IMDB_Ratings.merge(
 
 results = []
 
-# Loop over directors
 for director, group in df_ttest.groupby('Director'):
     n = len(group)
-    if n >= {min_movies}:  # apply minimum movie threshold
+    if n >= {min_movies}:
         stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
         if pval < 0.05:
             if n <= 2*{min_movies}:
@@ -319,37 +351,19 @@ for director, group in df_ttest.groupby('Director'):
             "Interpretation": interpretation
         }})
 
-# Convert results to DataFrame
 df_results = pd.DataFrame(results)
-
-# Sort ascending by p-value (most significant differences first)
 df_results = df_results.sort_values(by="p_value")
-df_results
 '''
 
-    # Editable grey code box
     user_ttest_code_director = st.text_area("Python t-test per Director Code (editable)", ttest_code_director, height=650)
 
-    # Run button
     if st.button("Run t-test Analysis", key="run_ttest_director6"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
             exec(user_ttest_code_director, {}, local_vars)
 
             if "df_results" in local_vars:
-                df_results = local_vars["df_results"]
-                st.dataframe(df_results, width="stretch", height=500)
-
-                # --- Dynamic interpretation per director ---
-                st.write("### Director-wise Interpretations")
-                for idx, row in df_results.iterrows():
-                    diff = row['Mean_Mine'] - row['Mean_IMDb']
-                    direction = "higher" if diff > 0 else "lower" if diff < 0 else "about the same"
-                    caution = " This is a small sample; interpret cautiously." if "small sample" in row['Interpretation'] else ""
-                    st.write(f"**{row['Director']} ({row['Num_Movies']} movies):** "
-                             f"My average rating is {direction} than IMDb ({row['Mean_Mine']} vs {row['Mean_IMDb']}). "
-                             f"{row['Interpretation']}.{caution}")
-
+                st.dataframe(local_vars["df_results"], width="stretch", height=500)
             else:
                 st.warning("No dataframe named 'df_results' was produced. Please check your code.")
 
