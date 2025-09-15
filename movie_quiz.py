@@ -312,32 +312,26 @@ if scenario == "Scenario 6- Statistical Insights by Director (t-test)":
 
     st.write("""
 This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
-The paired t-test is a statistical method used to determine whether the mean difference between two related sets of observations is significantly different from zero.  
+The paired t-test determines whether the mean difference between my ratings and IMDb ratings is statistically significant.  
 
 - Each pair consists of my rating and the IMDb rating for the same movie.  
-- Movies are grouped by **director**, so we can see whether my average rating for a particular director systematically differs from IMDb ratings.  
-- Directors with fewer than the minimum number of movies (default 5) are ignored because statistical tests are unreliable with very small samples.  
+- Movies are grouped by **director**.  
+- Directors with fewer than the minimum number of movies (default 5) are ignored because tests are unreliable.  
 
 **Columns in the output table:**
 - **Director**: Name of the director.  
 - **Num_Movies**: Number of movies rated by me for that director.  
 - **Mean_IMDb**: Average IMDb rating for that director's movies.  
 - **Mean_Mine**: Average of my ratings for that director's movies.  
-- **t_statistic**: t-test statistic, indicating the magnitude of the difference relative to variation.  
-- **p_value**: Probability value from the t-test.  
-  - p < 0.05 → difference is statistically significant.  
-  - p ≥ 0.05 → difference is not significant.  
-- **Interpretation**: "Significant (p < 0.05)" or "Not Significant", summarizing the statistical conclusion.  
+- **t_statistic**: t-test statistic.  
+- **p_value**: Probability from the t-test.  
+- **Interpretation**: Indicates significance and warns if the sample is small.  
 
-**Example interpretation:**
-- Peter Jackson (Num_Movies = 7, Mean IMDb = 8.13, Mean Mine = 7.14, t = -3.308, p = 0.0162):  
-  Significant difference → I systematically rate Peter Jackson movies lower than IMDb.  
-- Woody Allen (Num_Movies = 16, Mean IMDb = 7.43, Mean Mine = 7.25, t = -1.025, p = 0.3214):  
-  Not Significant → My ratings roughly align with IMDb.
+This helps understand my rating tendencies versus IMDb trends by directors, highlighting where my preferences align or diverge from the wider audience.
 """)
 
     # Sidebar slider for minimum movies per director
-    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 6)
+    min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
 
     # Default editable code
     ttest_code_director = f'''
@@ -354,12 +348,19 @@ results = []
 
 # Loop over directors
 for director, group in df_ttest.groupby('Director'):
-    if len(group) >= {min_movies}:  # apply minimum movie threshold
+    n = len(group)
+    if n >= {min_movies}:  # apply minimum movie threshold
         stat, pval = ttest_rel(group['Your Rating'], group['IMDb Rating'])
-        interpretation = "Significant (p < 0.05)" if pval < 0.05 else "Not Significant"
+        if pval < 0.05:
+            if n <= 2*{min_movies}:
+                interpretation = "Significant (p < 0.05) — small sample, interpret cautiously"
+            else:
+                interpretation = "Significant (p < 0.05)"
+        else:
+            interpretation = "Not Significant"
         results.append({{
             "Director": director,
-            "Num_Movies": len(group),
+            "Num_Movies": n,
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
             "Mean_Mine": group['Your Rating'].mean().round(2),
             "t_statistic": round(stat, 3),
