@@ -57,6 +57,7 @@ scenario = st.radio(
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
         "Scenario 6 - Statistical Insights by Director (t-test)"
+        "Scenario 7 — NLP Script Analysis (scene segmentation, character extraction, NER, sentiment, summary)."
     ]
 )
 
@@ -384,3 +385,173 @@ df_results = df_results.sort_values(by="p_value")
 
         except Exception as e:
             st.error(f"Error running t-test analysis: {e}")
+
+
+# Scenario 7 - NLP Script Analysis
+import streamlit as st
+import re
+from io import BytesIO
+import pandas as pd
+
+# Optional NLP libs
+try:
+    import docx    # python-docx
+except Exception:
+    docx = None
+
+try:
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+except Exception:
+    spacy = None
+    nlp = None
+
+try:
+    from textblob import TextBlob
+except Exception:
+    TextBlob = None
+
+# Optional summarizer (transformers)
+try:
+    from transformers import pipeline
+    summarizer = pipeline("summarization")
+except Exception:
+    summarizer = None
+
+st.header("Scenario 7 — NLP Script Analysis")
+
+# Input: upload .docx or paste text
+upload = st.file_uploader("Upload a .docx script file (or paste below)", type=["docx", "txt"])
+pasted = st.text_area("Or paste the script text here (overrides upload)")
+
+def read_docx_file(uploaded_file):
+    if docx is None:
+        st.warning("python-docx not installed — please paste text or install python-docx.")
+        return ""
+    doc = docx.Document(uploaded_file)
+    return "\n".join(p.text for p in doc.paragraphs)
+
+text = ""
+if pasted.strip():
+    text = pasted
+elif upload is not None:
+    if upload.type == "text/plain":
+        text = upload.getvalue().decode("utf-8")
+    else:
+        text = read_docx_file(upload)
+
+if not text:
+    st.info("Provide a script file or paste text to analyze.")
+    st.stop()
+
+# Options
+min_scene_len = st.sidebar.slider("Minimum words in scene to keep", 5, 200, 8)
+preserve_case = st.sidebar.checkbox("Preserve original case (disable normalization)", value=False)
+do_ner = st.sidebar.checkbox("Run spaCy NER (may be slow)", value=True if nlp else False)
+do_sentiment = st.sidebar.checkbox("Run sentiment (TextBlob)", value=True if TextBlob else False)
+do_summary = st.sidebar.checkbox("Generate scene summaries (transformers)", value=True if summarizer else False)
+
+# --- Cleaning & normalization ---
+def normalize_text(t, preserve_case=False):
+    # Basic normalization but keep important screenplay punctuation
+    t = t.replace("\r\n", "\n").replace("\r", "\n")
+    if not preserve_case:
+        # keep headings / character detection easier by uppercasing lines where appropriate:
+        # we will still detect uppercase blocks later; for now just return lowered text for NLP models
+        t = t.strip()
+    return t
+
+text_clean = normalize_text(text, preserve_case=preserve_case)
+
+# --- Scene segmentation ---
+scene_split_regex = re.compile(r'(?=(?:^|\n)(INT\.|EXT\.|FADE IN:|CUT TO:|SCENE|EXT\.)\b)', flags=re.IGNORECASE)
+parts = [p.strip() for p in scene_split_regex.split(text_clean)]
+# The splitting above will produce tokens with the marker; rebuild scenes
+scenes = []
+if len(parts) == 1:
+    scenes = [parts[0]]
+else:
+    # parts like ['', 'INT.', 'scene text', 'EXT.', 'more text', ...]
+    i = 0
+    while i < len(parts):
+        marker = parts[i]
+        if marker.strip() == "":
+            i += 1
+            continue
+        if re.match(r'^(INT\.|EXT\.|FADE IN:|CUT TO:|SCENE|EXT\.)', marker, flags=re.IGNORECASE):
+            header = marker.strip()
+            body = parts[i+1] if i+1 < len(parts) else ""
+            scenes.append((header, body.strip()))
+            i += 2
+        else:
+            # fallback
+            scenes.append(("UNKNOWN", parts[i].strip()))
+            i += 1
+
+# Filter tiny scenes
+scenes = [(h,b) for (h,b) in scenes if len(b.split()) >= min_scene_len]
+
+st.write(f"Detected **{len(scenes)}** scenes (after filtering).")
+
+# --- Character extraction (simple heuristic) ---
+def extract_characters_from_scene(body_text):
+    # find uppercase lines 2-3 words long (character names often appear alone in uppercase)
+    names = set()
+    for line in body_text.splitlines():
+        s = line.strip()
+        # ignore lines that are stage directions with punctuation at end
+        if len(s) > 0 and s.isupper() and 1 <= len(s.split()) <= 4 and len(s) < 40:
+            # remove trailing punctuation
+            s2 = re.sub(r'[^A-Z0-9\s\-\']', '', s)
+            if len(s2) > 0:
+                names.add(s2)
+    return sorted(names)
+
+scene_records = []
+all_characters = set()
+for idx, (header, body) in enumerate(scenes, start=1):
+    chars = extract_characters_from_scene(body)
+    all_characters.update(chars)
+    # NER
+    ner_entities = []
+    if do_ner and nlp:
+        doc = nlp(body)
+        ner_entities = [(ent.text, ent.label_) for ent in doc.ents]
+    # Sentiment
+    sentiment_polarity = None
+    if do_sentiment and TextBlob:
+        tb = TextBlob(body)
+        sentiment_polarity = round(tb.sentiment.polarity, 3)
+    # Summary
+    summary = None
+    if do_summary and summarizer:
+        try:
+            # summarizer may have limits — truncate
+            snippet = body[:2000]
+            summ = summarizer(snippet, max_length=60, min_length=15, do_sample=False)
+            summary = summ[0]['summary_text']
+        except Exception:
+            summary = None
+
+    scene_records.append({
+        "SceneIndex": idx,
+        "Header": header,
+        "NumWords": len(body.split()),
+        "Characters": ", ".join(chars) if chars else "",
+        "NER": str(ner_entities) if ner_entities else "",
+        "Sentiment": sentiment_polarity,
+        "Summary": summary or ""
+    })
+
+df_scenes = pd.DataFrame(scene_records)
+
+# Show scenes table and top characters
+st.subheader("Scenes table")
+st.dataframe(df_scenes)
+
+st.subheader("Top detected characters")
+st.write(sorted(list(all_characters))[:50])
+
+# Export
+csv = df_scenes.to_csv(index=False).encode("utf-8")
+st.download_button("Download scenes CSV", csv, file_name="script_scenes.csv", mime="text/csv")
