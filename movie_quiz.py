@@ -56,11 +56,10 @@ scenario = st.radio(
         "Scenario 3 – Top Unseen Films by Decade (SQL)",
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
-        "Scenario 6 - Statistical Insights by Director (t-test)"
+        "Scenario 6 - Statistical Insights by Director (t-test)",
         "Scenario 7 — NLP Script Analysis (scene segmentation, character extraction, NER, sentiment, summary)."
     ]
 )
-
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1 – Highlight Disagreements (SQL)":
     st.markdown('<h3 style="color:green;">Scenario 1 (My Ratings vs IMDb)</h3>', unsafe_allow_html=True)
