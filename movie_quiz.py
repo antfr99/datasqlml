@@ -184,7 +184,6 @@ if scenario == "Scenario 4 – Predict My Ratings (ML)":
     3. A Random Forest Regressor learns patterns from the movies I've already rated.
     4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`).
 
-    **Note:** Running the prediction may take over a 1 minute. Please be patient.
     """)
     
     ml_code = '''
