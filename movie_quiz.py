@@ -428,7 +428,7 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
             "Sentiment": round(sentiment, 3),
             "Subjectivity": round(subjectivity, 3),
             "Entities": ", ".join(set(ents)),
-            "Snippet": review[:150] + ("..." if len(review) > 150 else "")
+            "Snippet": review[:500] + ("..." if len(review) > 500 else "")
         })
 
     df_reviews = pd.DataFrame(review_records)
