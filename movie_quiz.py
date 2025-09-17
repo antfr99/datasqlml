@@ -655,6 +655,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
+    import numpy as np
 
     # --- Prepare Data ---
     df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
@@ -707,14 +708,14 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Group'] != "Director")]
         context_features = context_features.sort_values(by='Importance', ascending=True)
         
-        plt.figure(figsize=(8,5))
+        plt.figure(figsize=(6,3))  # smaller chart
         sns.barplot(
             x='Importance',
             y='Feature',
             data=context_features,
-            palette="coolwarm"
+            palette=["#FF9999" if f==dir_feature else "#66B2FF" for f in context_features['Feature']]
         )
-        plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=14)
+        plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=12)
         plt.xlabel("Importance")
         plt.ylabel("Feature")
         st.pyplot(plt.gcf())
@@ -724,13 +725,31 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
 
-    # Filter for target directors
-    target_director_names = ["Steven Spielberg", "Alfred Hitchcock"]
-    director_results = predict_df[predict_df['Director'].isin(target_director_names)]
+    # --- Add breakdown of contributions ---
+    # Use partial contributions based on feature importance (rough estimate)
+    contrib = X_pred.copy()
+    for col in numerical_features:
+        contrib[col + ' Contribution'] = X_pred[col] * importances[feature_names.index(col)]
+    for col in categorical_features:
+        # Get one-hot columns
+        ohe_cols = [f for f in feature_names if f.startswith(col+'_')]
+        for oc in ohe_cols:
+            idx = feature_names.index(oc)
+            contrib[oc + ' Contribution'] = model.named_steps['prep'].named_transformers_['cat'].transform(X_pred[[col]]).toarray()[:,list(cat_features).index(oc)] * importances[idx]
 
-    st.subheader("Predicted Ratings for Selected Directors")
+    # Keep only sum of numeric vs categorical contributions for readability
+    contrib['Numeric Contribution'] = contrib[[c+' Contribution' for c in numerical_features]].sum(axis=1)
+    contrib['Categorical Contribution'] = contrib[[c+' Contribution' for c in contrib.columns if 'Contribution' in c and c not in [f+' Contribution' for f in numerical_features]]].sum(axis=1)
+
+    # Merge contributions into predict_df
+    director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Alfred Hitchcock"])].copy()
+    director_results['Numeric Contribution'] = contrib['Numeric Contribution']
+    director_results['Categorical Contribution'] = contrib['Categorical Contribution']
+
+    st.subheader("Predicted Ratings for Selected Directors with Contributions")
     st.dataframe(
-        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating']]
+        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating',
+                          'Numeric Contribution','Categorical Contribution']]
         .sort_values(by='Predicted Rating', ascending=False)
         .reset_index(drop=True),
         width="stretch",
@@ -740,12 +759,11 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Commentary ---
     st.markdown("""
     ### Why this matters
-    - The charts show **how important each feature is for each director individually**.  
+    - The charts show **how important each feature is for each director individually**, with the director feature highlighted.  
     - Numeric and genre features are included for context.  
     - The table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.  
     - **Columns explanation:**  
         - **Title / Director / Genre / Year / Num Votes**: context about each movie.  
         - **Predicted Rating**: how the model predicts you would rate it.  
+        - **Numeric Contribution / Categorical Contribution**: rough estimate of how much numeric vs categorical features influenced the prediction.  
     """)
-
-
