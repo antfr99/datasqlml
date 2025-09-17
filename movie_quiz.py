@@ -595,9 +595,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         # Summary explanation
         st.write("""
         **Interpretation:**  
-        The top features above contribute most to predicting your ratings.  
+        The top features above contribute most to predicting my ratings.  
         - Features like `Genre_...` or `Director_...` indicate which genres or directors I tend to rate higher or lower.  
-        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in your preferences relative to movie popularity or ratings.
+        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in my preferences relative to movie popularity or ratings.
         """)
 
         # --- Automatic explanation for top Director ---
@@ -642,7 +642,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         st.write("""
         **Interpretation:**  
         Aggregating features by category helps to understand **overall trends**:  
-        - If `Genre` has high total importance, your ratings are heavily influenced by movie genres.  
+        - If `Genre` has high total importance, my ratings are heavily influenced by movie genres.  
         - If `Director` is high, certain directors strongly affect my ratings.  
         - Numerical features indicate general importance of ratings, year, or popularity.
         """)
