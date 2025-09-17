@@ -654,6 +654,8 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
     import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
     # --- Prepare Data ---
     df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
@@ -693,13 +695,14 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
 
-    numeric_idx = [feature_names.index(f) for f in numerical_features]
+    # Numeric contributions
     numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
+    # Categorical contributions
     cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
     predict_df['Numeric Contribution'] = numeric_contrib
     predict_df['Categorical Contribution'] = cat_contrib
 
-    # --- Remove duplicates before filtering ---
+    # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
     # --- Director-specific plotting & tables ---
@@ -721,18 +724,19 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
         context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
-        # --- Smaller bar chart ---
-        fig, ax = plt.subplots(figsize=(4,3))  # half-size
+        # --- Horizontal bar chart ---
+        fig, ax = plt.subplots(figsize=(4,3))
         sns.barplot(
             x='Importance',
             y='Feature',
             data=context_features.sort_values(by='Importance', ascending=True),
             palette="coolwarm",
+            orient='h',
             ax=ax
         )
         ax.set_title(f"Feature Importances for {dir_name}", fontsize=10)
         ax.set_xlabel("Importance")
-        ax.set_ylabel("Feature")
+        ax.set_ylabel("")
         st.pyplot(fig)
         plt.close(fig)
 
@@ -745,11 +749,20 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
             .sort_values(by='Predicted Rating', ascending=False)
             .reset_index(drop=True)
         )
-# --- Scenario 9: Director Model Evaluation ---
-elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for Specific Directors")
-    
-    # --- all your model, predictions, plots, tables code here ---
+
+        # --- Explain feature importance vs contributions ---
+        st.markdown(f"""
+        **Explanation for {dir_name}:**
+
+        - The horizontal bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
+        - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
+        - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
+        - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error. 
+        - For example:
+          - If `Genre_Thriller` has high importance for Hitchcock, it means that whether a movie is a thriller strongly affects the predicted rating.
+          - The sum of all categorical feature effects approximates the `Categorical Contribution`.
+        - In short, **bar chart importance → explains which features drive predictions**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**.
+        """)
 
     # --- Commentary ONLY for Scenario 9 ---
     st.markdown("""
