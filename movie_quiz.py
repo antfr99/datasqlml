@@ -443,9 +443,10 @@ I can now say that once you understand the characters and why they represent, yo
 
     """
 
+   
     # --- Convert multi-line text to list of reviews ---
-    # Split by empty lines, strip whitespace, ignore empty strings
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
+
     st.write(f"Loaded **{len(reviews)}** reviews")
 
     # --- NLP ---
@@ -456,7 +457,12 @@ I can now say that once you understand the characters and why they represent, yo
         st.warning("spaCy model not available, skipping NER")
 
     review_records = []
-    for idx, review in enumerate(reviews, start=1):
+    review_counter = 1
+    for review in reviews:
+        # Skip very short reviews
+        if len(review.split()) < 5:
+            continue
+
         tb = TextBlob(review)
         sentiment = tb.sentiment.polarity
         subjectivity = tb.sentiment.subjectivity
@@ -467,16 +473,16 @@ I can now say that once you understand the characters and why they represent, yo
             ents = [ent.text for ent in doc_nlp.ents if ent.label_ in ["PERSON","ORG","WORK_OF_ART"]]
 
         review_records.append({
-            "ReviewID": idx,
+            "ReviewID": review_counter,
             "Words": len(review.split()),
             "Sentiment": round(sentiment, 3),
             "Subjectivity": round(subjectivity, 3),
             "Entities": ", ".join(set(ents)),
             "Snippet": review[:500] + ("..." if len(review) > 500 else "")
         })
+        review_counter += 1
 
     df_reviews = pd.DataFrame(review_records)
-    df_reviews = df_reviews[df_reviews["Words"] >= 5]
 
     # --- Display table ---
     st.subheader("Reviews overview")
@@ -499,4 +505,5 @@ I can now say that once you understand the characters and why they represent, yo
     st.markdown("---")
     with st.expander("Full Reviews (click to expand)"):
         for r in reviews:
-            st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
+            if len(r.split()) >= 5:  # Only show meaningful reviews
+                st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
