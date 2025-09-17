@@ -645,7 +645,6 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         - Numerical features indicate general importance of ratings, year, or popularity.
         """)
 
-
 # --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
@@ -703,7 +702,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Remove duplicates before filtering ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director-specific plotting ---
+    # --- Director-specific plotting & tables ---
     target_directors = ["Steven Spielberg", "Alfred Hitchcock"]
 
     for dir_name in target_directors:
@@ -723,7 +722,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
         # --- Smaller bar chart ---
-        fig, ax = plt.subplots(figsize=(3,2))  # half-size
+        fig, ax = plt.subplots(figsize=(1,1))  # half-size
         sns.barplot(
             x='Importance',
             y='Feature',
@@ -737,22 +736,48 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         st.pyplot(fig)
         plt.close(fig)
 
-    # --- Filter director predictions ---
-    director_results = predict_df[predict_df['Director'].isin(target_directors)]
+        # --- Director-specific predicted ratings table ---
+        director_table = predict_df[predict_df['Director'] == dir_name]
+        st.subheader(f"Predicted Ratings for {dir_name} Movies")
+        st.dataframe(
+            director_table[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
+                            'Numeric Contribution','Categorical Contribution','Predicted Rating']]
+            .sort_values(by='Predicted Rating', ascending=False)
+            .reset_index(drop=True)
+        )
 
-    # --- Display table ---
-    st.subheader("Predicted Ratings for Spielberg & Hitchcock Movies")
-    st.dataframe(
-        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
-                          'Numeric Contribution','Categorical Contribution','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .reset_index(drop=True)
-    )
+# --- Commentary ---
+st.markdown("""
+### Why Comparing Director Feature Importances is Valuable
 
-    # --- Commentary ---
-    st.markdown("""
-    ### Why this matters
-    - Each director chart now shows **only features relevant to their movies** (their director feature, genres they made, years they made movies, numeric features).  
-    - Numeric and categorical contributions show **how each feature type impacts the predictions**.  
-    - Table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.
-    """)
+Comparing feature importances for specific directors gives a **personalized, interpretable view** of how the model predicts your ratings.
+
+#### 1. Tailored Insights 
+- Each director has a unique body of work: certain genres, typical themes, production years, or recurring collaborators.
+- By isolating the features relevant to a single director, I see which aspects **actually drive my ratings** for their movies.
+- Example: For Alfred Hitchcock, `Genre_Thriller` and `Director_Alfred Hitchcock` may be highly important, showing your high ratings are tied to thrillers, not comedies or dramas.
+
+#### 2. Actionable Information 
+- Filtering feature importance to the director’s own feature, their genres, the years of their films, and numeric features ensures **clarity and relevance**.
+- I can see patterns like:
+  - I rate Spielberg’s adventure films higher than his dramas.
+  - I rate Hitchcock’s 1960s thrillers higher than his later films.
+- This helps in making **data-driven viewing predictions** for unseen movies.
+
+#### 3. Model Validation 
+- Examining director-specific feature importance allows me to check whether the model aligns with your intuition.
+- High importance for `Director_Alfred Hitchcock` or `Genre_Thriller` confirms the model recognizes my consistent preferences.
+
+#### 4. Contribution Analysis 
+- The breakdown into numeric (IMDb rating, number of votes) and categorical (Director, Genre, Year) contributions shows **why a predicted rating is high or low**.
+- This helps me understand whether the model’s prediction is driven by:
+  - Movie popularity or rating (numeric features), or  
+  - My personal preference for the director, genre, or release year (categorical features).
+
+#### 5. Focused Comparison Between Directors 
+- Comparing Spielberg vs Hitchcock side by side highlights **differences in what influences your ratings** for each director.
+- For example, the model might show that `Genre_Sci-Fi` is more important for Spielberg than Hitchcock, helping you understand **your nuanced tastes**.
+
+**Overall**, this approach transforms a Random Forest’s opaque feature importance into **personalized insights about your movie preferences**, making the predictions both interpretable and actionable.
+""")
+
