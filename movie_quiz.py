@@ -395,7 +395,7 @@ import pandas as pd
 import re
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
-    st.header("Scenario 7 — Film Review Analysis")
+    st.header("Scenario 7 — Film Review Analysis - Mother!2017")
 
     # --- Load document ---
     doc = Document("Mother.docx")
