@@ -560,108 +560,121 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             st.success("Model trained successfully! You can now view feature importance.")
                        
 # --- Scenario 9: Director Model Evaluation ---
-elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for Specific Directors")
-
-    import pandas as pd
-    import numpy as np
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    from sklearn.preprocessing import OneHotEncoder
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.compose import ColumnTransformer
-    from sklearn.pipeline import Pipeline
-
-    # --- Prepare Data ---
-    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-    train_df = df_ml[df_ml['Your Rating'].notna()]
-    predict_df = df_ml[df_ml['Your Rating'].isna()]
-
-    # --- Director dropdown ---
-    directors = sorted(df_ml['Director'].dropna().unique())
-    selected_director = st.selectbox("Select Director", directors, index=directors.index("Alfred Hitchcock"))
-
-    # --- Feature Lists ---
-    categorical_features = ['Genre', 'Director', 'Year']  # Year as categorical
-    numerical_features = ['IMDb Rating', 'Num Votes']
-
-    # --- Pipeline ---
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-            ('num', 'passthrough', numerical_features)
-        ]
-    )
-
-    model = Pipeline([
-        ('prep', preprocessor),
-        ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
-    ])
-
-    # --- Fit model ---
-    X_train = train_df[categorical_features + numerical_features]
-    y_train = train_df['Your Rating']
-    model.fit(X_train, y_train)
-
-    # --- Feature Importances ---
-    encoder = model.named_steps['prep'].named_transformers_['cat']
-    cat_features = encoder.get_feature_names_out(categorical_features)
-    feature_names = list(cat_features) + numerical_features
-    importances = model.named_steps['reg'].feature_importances_
-    fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-
-    # --- Predictions and Contributions ---
-    X_pred = predict_df[categorical_features + numerical_features]
-    predict_df['Predicted Rating'] = model.predict(X_pred)
-
-    # Numeric and categorical contributions
-    numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
-    cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
-    predict_df['Numeric Contribution'] = numeric_contrib
-    predict_df['Categorical Contribution'] = cat_contrib
-
-    # --- Remove duplicates ---
-    predict_df = predict_df.drop_duplicates(subset='Movie ID')
-
-    # --- Director-specific data ---
-    dir_name = selected_director
-    dir_feature = f"Director_{dir_name}"
-    dir_movies = train_df[train_df['Director'] == dir_name]
-
-    dir_genres = dir_movies['Genre'].unique()
-    genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
-
-    dir_years = dir_movies['Year'].unique()
-    year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
-
-    num_features = numerical_features
-    dir_features_to_show = [dir_feature] + genre_features + year_features + num_features
-    context_features = fi_df[fi_df['Feature'].isin(dir_features_to_show)].sort_values(by='Importance', ascending=False)
-
-    # --- Show feature importances as table ---
-    st.subheader(f"Feature Importances for {dir_name}")
-    st.dataframe(context_features.reset_index(drop=True))
-
-    # --- Director-specific predicted ratings table ---
-    director_table = predict_df[predict_df['Director'] == dir_name]
-    st.subheader(f"Predicted Ratings for {dir_name} Movies")
-    st.dataframe(
-        director_table[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
-                        'Numeric Contribution','Categorical Contribution','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .reset_index(drop=True)
-    )
-
-    # --- Explanation ---
-    st.markdown(f"""
-    **Explanation for {dir_name}:**
-
-    - The feature importance table shows **all features affecting the model's predictions** for {dir_name} movies.
-    - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
-    - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
-    - A feature with high importance indicates the model frequently uses it to reduce prediction error.
-    - The sum of all categorical feature effects approximates the `Categorical Contribution`.
-    - In short:
-        - **Feature Importance → shows which features the model considers important**
-        - **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**
+# --- Scenario 8: Model Evaluation (Feature Importance) ---
+if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
+    st.header("Scenario 8 – Model Evaluation: Feature Importance")
+    st.write("""
+    Analyze which features are most important in predicting **my movie ratings** using a Random Forest model.  
+    Requires a trained model from Scenario 4.
     """)
+
+    if 'model' not in st.session_state:
+        st.warning("Model not found. You need to run Scenario 4 first or retrain here.")
+        if st.button("Train Model Now for Scenario 8"):
+            df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+            train_df = df_ml[df_ml['Your Rating'].notna()]
+
+            categorical_features = ['Genre', 'Director', 'Year']
+            numerical_features = ['IMDb Rating', 'Num Votes']
+
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                    ('num', 'passthrough', numerical_features)
+                ]
+            )
+
+            model = Pipeline([
+                ('prep', preprocessor),
+                ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+            ])
+
+            X_train = train_df[categorical_features + numerical_features]
+            y_train = train_df['Your Rating']
+            model.fit(X_train, y_train)
+
+            st.session_state['model'] = model
+            st.success("Model trained successfully! You can now view feature importance.")
+
+    else:
+        model = st.session_state['model']
+        # Show overall feature importances
+        encoder = model.named_steps['prep'].named_transformers_['cat']
+        cat_features = encoder.get_feature_names_out(['Genre', 'Director', 'Year'])
+        feature_names = list(cat_features) + ['IMDb Rating', 'Num Votes']
+        importances = model.named_steps['reg'].feature_importances_
+        fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+        fi_df = fi_df.sort_values(by='Importance', ascending=False)
+
+        st.subheader("Overall Feature Importances")
+        st.dataframe(fi_df.reset_index(drop=True))
+
+
+# --- Scenario 9: Director Model Evaluation ---
+if scenario == "Scenario 9 – Director Model Evaluation":
+    st.header("Scenario 9 — Model Evaluation for Specific Directors")
+    
+    if 'model' not in st.session_state:
+        st.warning("Model not found. Please run Scenario 4 or Scenario 8 first to train the model.")
+    else:
+        model = st.session_state['model']
+
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+        train_df = df_ml[df_ml['Your Rating'].notna()]
+        predict_df = df_ml[df_ml['Your Rating'].isna()]
+
+        # Director dropdown (default Alfred Hitchcock if present)
+        directors = sorted(df_ml['Director'].dropna().unique())
+        default_idx = directors.index("Alfred Hitchcock") if "Alfred Hitchcock" in directors else 0
+        selected_director = st.selectbox("Select Director", directors, index=default_idx)
+
+        # Feature lists
+        categorical_features = ['Genre', 'Director', 'Year']
+        numerical_features = ['IMDb Rating', 'Num Votes']
+
+        # Feature importances
+        encoder = model.named_steps['prep'].named_transformers_['cat']
+        cat_features = encoder.get_feature_names_out(categorical_features)
+        feature_names = list(cat_features) + numerical_features
+        importances = model.named_steps['reg'].feature_importances_
+        fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+
+        # Director-specific data
+        dir_movies = train_df[train_df['Director'] == selected_director]
+        dir_genres = dir_movies['Genre'].unique()
+        genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
+        dir_years = dir_movies['Year'].unique()
+        year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
+        dir_feature = f"Director_{selected_director}"
+        dir_features_to_show = [dir_feature] + genre_features + year_features + numerical_features
+        context_features = fi_df[fi_df['Feature'].isin(dir_features_to_show)].sort_values(by='Importance', ascending=False)
+
+        # Display
+        st.subheader(f"Feature Importances for {selected_director}")
+        st.dataframe(context_features.reset_index(drop=True))
+
+        # Predictions for that director
+        X_pred = predict_df[categorical_features + numerical_features]
+        predict_df['Predicted Rating'] = model.predict(X_pred)
+
+        numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
+        cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
+        predict_df['Numeric Contribution'] = numeric_contrib
+        predict_df['Categorical Contribution'] = cat_contrib
+
+        director_table = predict_df[predict_df['Director'] == selected_director]
+        st.subheader(f"Predicted Ratings for {selected_director} Movies")
+        st.dataframe(
+            director_table[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
+                            'Numeric Contribution','Categorical Contribution','Predicted Rating']]
+            .sort_values(by='Predicted Rating', ascending=False)
+            .reset_index(drop=True)
+        )
+
+        st.markdown(f"""
+        **Explanation for {selected_director}:**
+        - Feature importance table shows features affecting model predictions.
+        - Numeric features contribute via `Numeric Contribution`.
+        - Categorical features contribute via `Categorical Contribution`.
+        - Sum of contributions approximates predicted rating.
+        """)
