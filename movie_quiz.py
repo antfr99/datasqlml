@@ -522,7 +522,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     st.header("Scenario 8 – Model Evaluation: Feature Importance")
 
     st.write("""
-    In this scenario, we analyze which features are most important in predicting **your movie ratings** using a Random Forest model.  
+    In this scenario, we analyze which features are most important in predicting **my movie ratings** using a Random Forest model.  
 
     **Feature Importance:** Random Forest assigns a score to each feature indicating how much it contributes to predicting the target variable.  
     - Higher importance → more influence on the predictions.  
@@ -582,7 +582,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             'Importance': importances
         }).sort_values(by='Importance', ascending=False)
 
-        # --- Top N individual features ---
+                # --- Top N individual features ---
         top_n = 20
         fi_top = fi_df.head(top_n)
 
@@ -620,3 +620,28 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         - If `Director` is high, certain directors strongly affect your ratings.  
         - Numerical features indicate general importance of ratings, year, or popularity.
         """)
+
+        # --- Automatic explanation for top individual Director features ---
+        director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
+        top_directors = director_features.sort_values(by='Importance', ascending=False).head(3)
+
+        if not top_directors.empty:
+            st.write("**Director-specific insights:**")
+            for idx, row in top_directors.iterrows():
+                feature = row['Feature']
+                importance = row['Importance']
+                director_name = feature.replace('Director_','')
+                st.write(f"""
+                **{feature}** (importance {importance:.3f}):
+                
+                1️⃣ **What the feature represents:**  
+                `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.
+
+                2️⃣ **What “high importance” means in the model:**  
+                Random Forest uses this feature to reduce prediction error. A high importance for `{feature}` means the model often splits on this feature to predict your rating. In other words, knowing whether a movie is directed by {director_name} significantly helps the model guess your rating.
+
+                3️⃣ **What it tells about you:**  
+                If the model relies heavily on `{feature}`, it suggests you consistently rate {director_name}'s movies differently from other movies.  
+                - You might tend to give their movies higher ratings compared to similar movies by other directors, or lower ratings if you dislike them.  
+                - Either way, your rating pattern is strongly associated with {director_name}'s movies.
+                """)
