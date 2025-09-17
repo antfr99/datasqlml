@@ -722,7 +722,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
         # --- Smaller bar chart ---
-        fig, ax = plt.subplots(figsize=(1,1))  # half-size
+        fig, ax = plt.subplots(figsize=(4,3))  # half-size
         sns.barplot(
             x='Importance',
             y='Feature',
