@@ -646,8 +646,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         """)
 
 # --- Scenario 9: Director Model Evaluation ---
+
 elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for Specific Directors")
+    st.header("Scenario 9 — Model Evaluation for Nicolas Winding Refn")
 
     from sklearn.preprocessing import OneHotEncoder
     from sklearn.ensemble import RandomForestRegressor
@@ -705,96 +706,83 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director-specific plotting & tables ---
-    target_directors = ["Steven Spielberg", "Alfred Hitchcock"]
+    # --- Director-specific plotting & table for Nicolas Winding Refn ---
+    dir_name = "Nicolas Winding Refn"
+    dir_feature = f"Director_{dir_name}"
+    dir_movies = train_df[train_df['Director'] == dir_name]
 
-    for dir_name in target_directors:
-        dir_feature = f"Director_{dir_name}"
-        dir_movies = train_df[train_df['Director'] == dir_name]
+    # --- Only genres and years relevant to this director ---
+    dir_genres = dir_movies['Genre'].unique()
+    genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
 
-        # --- Only genres and years relevant to this director ---
-        dir_genres = dir_movies['Genre'].unique()
-        genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
+    dir_years = dir_movies['Year'].unique()
+    year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
 
-        dir_years = dir_movies['Year'].unique()
-        year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
+    num_features = numerical_features
+    dir_features_to_plot = [dir_feature] + genre_features + year_features + num_features
+    context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
+    context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
-        num_features = numerical_features
-        dir_features_to_plot = [dir_feature] + genre_features + year_features + num_features
-        context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
-        context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
+    # --- Horizontal bar chart ---
+    fig, ax = plt.subplots(figsize=(4,3))
+    sns.barplot(
+        x='Importance',
+        y='Feature',
+        data=context_features.sort_values(by='Importance', ascending=True),
+        palette="coolwarm",
+        orient='h',
+        ax=ax
+    )
+    ax.set_title(f"Feature Importances for {dir_name}", fontsize=10)
+    ax.set_xlabel("Importance")
+    ax.set_ylabel("")
+    st.pyplot(fig)
+    plt.close(fig)
 
-        # --- Horizontal bar chart ---
-        fig, ax = plt.subplots(figsize=(4,3))
-        sns.barplot(
-            x='Importance',
-            y='Feature',
-            data=context_features.sort_values(by='Importance', ascending=True),
-            palette="coolwarm",
-            orient='h',
-            ax=ax
-        )
-        ax.set_title(f"Feature Importances for {dir_name}", fontsize=10)
-        ax.set_xlabel("Importance")
-        ax.set_ylabel("")
-        st.pyplot(fig)
-        plt.close(fig)
+    # --- Director-specific predicted ratings table ---
+    director_table = predict_df[predict_df['Director'] == dir_name]
+    st.subheader(f"Predicted Ratings for {dir_name} Movies")
+    st.dataframe(
+        director_table[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
+                        'Numeric Contribution','Categorical Contribution','Predicted Rating']]
+        .sort_values(by='Predicted Rating', ascending=False)
+        .reset_index(drop=True)
+    )
 
-        # --- Director-specific predicted ratings table ---
-        director_table = predict_df[predict_df['Director'] == dir_name]
-        st.subheader(f"Predicted Ratings for {dir_name} Movies")
-        st.dataframe(
-            director_table[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
-                            'Numeric Contribution','Categorical Contribution','Predicted Rating']]
-            .sort_values(by='Predicted Rating', ascending=False)
-            .reset_index(drop=True)
-        )
+    # --- Explain feature importance vs contributions ---
+    st.markdown(f"""
+    **Explanation for {dir_name}:**
 
-        # --- Explain feature importance vs contributions ---
-        st.markdown(f"""
-        **Explanation for {dir_name}:**
+    - The horizontal bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
+    - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
+    - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
+    - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error. 
+    - For example:
+      - If `Genre_Action` has high importance for {dir_name}, it means that whether a movie is in that genre strongly affects the predicted rating.
+      - The sum of all categorical feature effects approximates the `Categorical Contribution`.
+    - In short, **bar chart importance → shows which features the model considers important**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**.
+    """)
 
-        - The horizontal bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
-        - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
-        - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
-        - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error. 
-        - For example:
-          - If `Genre_Thriller` has high importance for Hitchcock, it means that whether a movie is a thriller strongly affects the predicted rating.
-          - The sum of all categorical feature effects approximates the `Categorical Contribution`.
-        - In short, **bar chart importance → explains which features drive predictions**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**.
-        """)
-
-    # --- Commentary ONLY for Scenario 9 ---
+    # --- Commentary ONLY for Nicolas Winding Refn ---
     st.markdown("""
-    ### Why Comparing Director Feature Importances is Valuable
+    ### Why Comparing Feature Importances for Nicolas Winding Refn is Valuable
 
-    Comparing feature importances for specific directors gives a **personalized, interpretable view** of how the model predicts your ratings.
+    This gives a **personalized, interpretable view** of how the model predicts your ratings for his movies.
 
     #### 1. Tailored Insights 
-    - Each director has a unique body of work: certain genres, typical themes, production years, or recurring collaborators.
-    - By isolating the features relevant to a single director, I see which aspects **actually drive my ratings** for their movies.
-    - Example: For Alfred Hitchcock, `Genre_Thriller` and `Director_Alfred Hitchcock` may be highly important, showing your high ratings are tied to thrillers, not comedies or dramas.
+    - Nicolas Winding Refn has a unique style and genre choices.
+    - By isolating features relevant to him, I can see which aspects **actually drive my ratings** for his movies.
+    - Example: `Genre_Action` or `Director_Nicolas Winding Refn` may be highly important, showing which movies I’m likely to enjoy.
 
     #### 2. Actionable Information 
-    - Filtering feature importance to the director’s own feature, their genres, the years of their films, and numeric features ensures **clarity and relevance**.
-    - I can see patterns like:
-      - I rate Spielberg’s adventure films higher than his dramas.
-      - I rate Hitchcock’s 1960s thrillers higher than his later films.
-    - This helps in making **data-driven viewing predictions** for unseen movies.
+    - Filtering to the director’s own feature, genres, years, and numeric features ensures **clarity**.
+    - Helps identify patterns like which years or genres I rate higher for him.
 
     #### 3. Model Validation 
-    - Examining director-specific feature importance allows me to check whether the model aligns with your intuition.
-    - High importance for `Director_Alfred Hitchcock` or `Genre_Thriller` confirms the model recognizes my consistent preferences.
+    - Examining his feature importance ensures the model aligns with my personal preferences.
 
     #### 4. Contribution Analysis 
-    - The breakdown into numeric (IMDb rating, number of votes) and categorical (Director, Genre, Year) contributions shows **why a predicted rating is high or low**.
-    - This helps me understand whether the model’s prediction is driven by:
-      - Movie popularity or rating (numeric features), or  
-      - My personal preference for the director, genre, or release year (categorical features).
+    - Numeric vs categorical contributions explain whether ratings are driven by popularity or by my preferences.
 
-    #### 5. Focused Comparison Between Directors 
-    - Comparing Spielberg vs Hitchcock side by side highlights **differences in what influences your ratings** for each director.
-    - For example, the model might show that `Genre_Sci-Fi` is more important for Spielberg than Hitchcock, helping you understand **your nuanced tastes**.
-
-    **Overall**, this approach transforms a Random Forest’s opaque feature importance into **personalized insights about your movie preferences**, making the predictions both interpretable and actionable.
+    **Overall**, this transforms the Random Forest’s opaque feature importances into **personalized insights about my preferences** for Nicolas Winding Refn’s movies.
     """)
