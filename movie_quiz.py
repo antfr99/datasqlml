@@ -701,17 +701,17 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     fi_df['Group'] = fi_df['Feature'].map(group_feature)
 
     # --- Separate Charts for Each Director ---
-    target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
+    target_directors = ["Director_Steven Spielberg", "Director_Alfred Hitchcock"]
 
     for dir_feature in target_directors:
-        # Keep only the director + numeric/genre features for context
         context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Group'] != "Director")]
+        context_features = context_features.sort_values(by='Importance', ascending=True)
         
         plt.figure(figsize=(8,5))
         sns.barplot(
             x='Importance',
             y='Feature',
-            data=context_features.sort_values(by='Importance', ascending=True),
+            data=context_features,
             palette="coolwarm"
         )
         plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=14)
@@ -725,13 +725,16 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     predict_df['Predicted Rating'] = model.predict(X_pred)
 
     # Filter for target directors
-    director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Nicolas Winding Refn"])]
+    target_director_names = ["Steven Spielberg", "Alfred Hitchcock"]
+    director_results = predict_df[predict_df['Director'].isin(target_director_names)]
 
-    st.subheader("Predicted Ratings for Spielberg & Refn Movies")
+    st.subheader("Predicted Ratings for Selected Directors")
     st.dataframe(
-        director_results[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating']]
         .sort_values(by='Predicted Rating', ascending=False)
-        .reset_index(drop=True)
+        .reset_index(drop=True),
+        width="stretch",
+        height=500
     )
 
     # --- Commentary ---
@@ -739,5 +742,10 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     ### Why this matters
     - The charts show **how important each feature is for each director individually**.  
     - Numeric and genre features are included for context.  
-    - The table shows model predictions for Spielberg and Refn movies you haven’t rated yet.  
+    - The table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.  
+    - **Columns explanation:**  
+        - **Title / Director / Genre / Year / Num Votes**: context about each movie.  
+        - **Predicted Rating**: how the model predicts you would rate it.  
     """)
+
+
