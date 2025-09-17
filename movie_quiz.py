@@ -487,6 +487,9 @@ I can now say that once you understand the characters and why they represent, yo
 
     # --- Remove any rows with empty Snippet just in case ---
     df_reviews = df_reviews[df_reviews['Snippet'].str.strip() != ""].reset_index(drop=True)
+
+    # --- Filter to ReviewID 1 to 8 ---
+    df_reviews = df_reviews[df_reviews['ReviewID'].between(1, 8)].reset_index(drop=True)
     
     # --- Display table ---
     st.subheader("Reviews overview")
