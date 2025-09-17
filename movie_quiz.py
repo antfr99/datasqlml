@@ -58,7 +58,7 @@ scenario = st.radio(
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
         "Scenario 6 - Statistical Insights by Director (t-test)",
-        "Scenario 7 — Review Analysis (Sentiment, Keywords, Summary)"
+        "Scenario 7 — Review Analysis (Sentiment, Subjectivity)"
     ]
 )
 
@@ -396,7 +396,7 @@ from textblob import TextBlob
 import pandas as pd
 import streamlit as st
 
-if scenario == "Scenario 7 — Review Analysis (Sentiment, Keywords, Summary)":
+if scenario == "Scenario 7 — Review Analysis (Sentiment, Subjectivity)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
 
 
