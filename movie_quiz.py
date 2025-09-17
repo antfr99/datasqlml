@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob ), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -520,44 +520,66 @@ import matplotlib.pyplot as plt
 if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     st.header("Scenario 8 – Model Evaluation: Feature Importance")
 
-    st.warning("""
-    ⚠️ **Important:** You must first run **Scenario 4 – Predict My Ratings (ML)** to train the model.
-    Scenario 8 relies on the trained Random Forest model from Scenario 4.
-    """)
-
     st.write("""
-    Visualize which features had the greatest impact on your Random Forest model predicting your ratings.
+    This scenario shows feature importance for your Random Forest model predicting your ratings.  
+    **Note:** Requires a trained model from Scenario 4.
     """)
 
-    # --- Extract feature importances from Scenario 4's trained model ---
-    try:
-        rf_model = model.named_steps['reg']
-        preprocessor = model.named_steps['prep']
+    # Button to retrain the model if not already trained
+    if 'model' not in st.session_state:
+        st.warning("Model not found. You need to run Scenario 4 first or retrain here.")
+        if st.button("Run Scenario 4 Training Now"):
+            # Run the same training code from Scenario 4
+            from sklearn.preprocessing import OneHotEncoder
+            from sklearn.ensemble import RandomForestRegressor
+            from sklearn.compose import ColumnTransformer
+            from sklearn.pipeline import Pipeline
 
-        cat_features = preprocessor.transformers_[0][2]  # ['Genre', 'Director']
-        ohe = preprocessor.transformers_[0][1]  # OneHotEncoder
-        ohe_feature_names = ohe.get_feature_names_out(cat_features)
+            df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+            train_df = df_ml[df_ml['Your Rating'].notna()]
 
-        num_features = preprocessor.transformers_[1][2]  # numerical features
-        all_feature_names = np.concatenate([ohe_feature_names, num_features])
+            categorical_features = ['Genre', 'Director']
+            numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-        importances = rf_model.feature_importances_
-        feat_imp_df = pd.DataFrame({
-            'Feature': all_feature_names,
-            'Importance': importances
-        }).sort_values(by='Importance', ascending=False)
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                    ('num', 'passthrough', numerical_features)
+                ]
+            )
 
-        st.subheader("Top Features by Importance")
-        st.dataframe(feat_imp_df.head(20), width="stretch")
+            model = Pipeline([
+                ('prep', preprocessor),
+                ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+            ])
 
-        # --- Bar Chart ---
-        st.subheader("Feature Importance Bar Chart")
+            X_train = train_df[categorical_features + numerical_features]
+            y_train = train_df['Your Rating']
+            model.fit(X_train, y_train)
+
+            st.session_state['model'] = model
+            st.success("Model trained successfully! You can now view feature importance.")
+
+    # If model exists, show feature importance
+    if 'model' in st.session_state:
         import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(10,6))
-        ax.barh(feat_imp_df['Feature'].head(20)[::-1], feat_imp_df['Importance'].head(20)[::-1], color='skyblue')
-        ax.set_xlabel("Importance")
-        ax.set_title("Top 20 Feature Importances")
-        st.pyplot(fig)
+        import numpy as np
 
-    except Exception as e:
-        st.error(f"Scenario 8 requires a trained ML model from Scenario 4. Error: {e}")
+        trained_model = st.session_state['model']
+        # Extract feature importances from Random Forest
+        rf = trained_model.named_steps['reg']
+        preproc = trained_model.named_steps['prep']
+
+        # Get feature names after one-hot encoding
+        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(categorical_features)
+        all_features = np.concatenate([cat_features, numerical_features])
+        importances = rf.feature_importances_
+
+        # Create bar chart
+        fi_df = pd.DataFrame({
+            'Feature': all_features,
+            'Importance': importances
+        }).sort_values(by='Importance', ascending=True)
+
+        st.subheader("Feature Importance")
+        st.bar_chart(fi_df.set_index('Feature'))
