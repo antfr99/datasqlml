@@ -648,19 +648,31 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
 
-    # Button to re-run Scenario 4 if needed
     if st.button("Run Scenario 4 (Train Model)"):
-        st.session_state.pop("model", None)
-        st.session_state.pop("X_train", None)
-        st.session_state.pop("X_test", None)
-        st.session_state.pop("y_test", None)
-        st.session_state.pop("feature_names", None)
-        st.rerun()
+        # Run the training pipeline directly here
+        from sklearn.ensemble import RandomForestRegressor
 
-    # Ensure model + data from Scenario 4 are available
-    if "model" not in st.session_state or "X_train" not in st.session_state or "X_test" not in st.session_state:
+        X_train = st.session_state.X_train
+        y_train = st.session_state.y_train
+        feature_names = st.session_state.feature_names
+
+        model = RandomForestRegressor(n_estimators=200, random_state=42)
+        model.fit(X_train, y_train)
+
+        # Save model + state
+        st.session_state.model = model
+        st.session_state.X_train = X_train
+        st.session_state.X_test = st.session_state.X_test
+        st.session_state.y_test = st.session_state.y_test
+        st.session_state.feature_names = feature_names
+
+        st.success("✅ Model retrained successfully (Scenario 4). Now you can run Scenario 9.")
+
+    if "model" not in st.session_state:
         st.warning("⚠️ Please run Scenario 4 first (or click the button above).")
     else:
+        # ... rest of Scenario 9 code ...
+
         model = st.session_state.model
         X_train = st.session_state.X_train
         X_test = st.session_state.X_test
