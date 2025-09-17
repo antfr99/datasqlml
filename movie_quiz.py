@@ -647,8 +647,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 
 # --- Scenario 9: Director Model Evaluation ---
 
+# --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for Nicolas Winding Refn")
+    st.header("Scenario 9 — Model Evaluation for Alfred Hitchcock")
 
     from sklearn.preprocessing import OneHotEncoder
     from sklearn.ensemble import RandomForestRegressor
@@ -706,8 +707,8 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director-specific plotting & table for Nicolas Winding Refn ---
-    dir_name = "Nicolas Winding Refn"
+    # --- Director-specific plotting & table for Alfred Hitchcock ---
+    dir_name = "Alfred Hitchcock"
     dir_feature = f"Director_{dir_name}"
     dir_movies = train_df[train_df['Director'] == dir_name]
 
@@ -723,19 +724,19 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
     context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
-    # --- Horizontal bar chart ---
-    fig, ax = plt.subplots(figsize=(4,3))
+    # --- Vertical bar chart ---
+    fig, ax = plt.subplots(figsize=(5,4))
     sns.barplot(
-        x='Importance',
-        y='Feature',
-        data=context_features.sort_values(by='Importance', ascending=True),
+        x='Feature',
+        y='Importance',
+        data=context_features,
         palette="coolwarm",
-        orient='h',
         ax=ax
     )
-    ax.set_title(f"Feature Importances for {dir_name}", fontsize=10)
-    ax.set_xlabel("Importance")
-    ax.set_ylabel("")
+    ax.set_title(f"Feature Importances for {dir_name}", fontsize=12)
+    ax.set_ylabel("Importance")
+    ax.set_xlabel("")
+    plt.xticks(rotation=45, ha='right')
     st.pyplot(fig)
     plt.close(fig)
 
@@ -749,40 +750,17 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         .reset_index(drop=True)
     )
 
-    # --- Explain feature importance vs contributions ---
+    # --- Explanation of feature importance vs contributions ---
     st.markdown(f"""
     **Explanation for {dir_name}:**
 
-    - The horizontal bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
+    - The vertical bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
     - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
     - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
-    - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error. 
+    - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error.
     - For example:
-      - If `Genre_Action` has high importance for {dir_name}, it means that whether a movie is in that genre strongly affects the predicted rating.
+      - If `Genre_Thriller` has high importance for {dir_name}, it means that whether a movie is a thriller strongly affects the predicted rating.
       - The sum of all categorical feature effects approximates the `Categorical Contribution`.
+    - **Negative categorical contributions** can appear if the combination of director, genre, and year features decreases the predicted rating relative to the numeric features. This is normal and reflects interactions captured by the Random Forest.
     - In short, **bar chart importance → shows which features the model considers important**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**.
-    """)
-
-    # --- Commentary ONLY for Nicolas Winding Refn ---
-    st.markdown("""
-    ### Why Comparing Feature Importances for Nicolas Winding Refn is Valuable
-
-    This gives a **personalized, interpretable view** of how the model predicts your ratings for his movies.
-
-    #### 1. Tailored Insights 
-    - Nicolas Winding Refn has a unique style and genre choices.
-    - By isolating features relevant to him, I can see which aspects **actually drive my ratings** for his movies.
-    - Example: `Genre_Action` or `Director_Nicolas Winding Refn` may be highly important, showing which movies I’m likely to enjoy.
-
-    #### 2. Actionable Information 
-    - Filtering to the director’s own feature, genres, years, and numeric features ensures **clarity**.
-    - Helps identify patterns like which years or genres I rate higher for him.
-
-    #### 3. Model Validation 
-    - Examining his feature importance ensures the model aligns with my personal preferences.
-
-    #### 4. Contribution Analysis 
-    - Numeric vs categorical contributions explain whether ratings are driven by popularity or by my preferences.
-
-    **Overall**, this transforms the Random Forest’s opaque feature importances into **personalized insights about my preferences** for Nicolas Winding Refn’s movies.
     """)
