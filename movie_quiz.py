@@ -197,16 +197,14 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-# Merge IMDb and My Ratings
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-# Features
+
 categorical_features = ['Genre', 'Director']
 numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-# Preprocessing + Model
 preprocessor = ColumnTransformer(
     transformers=[
         ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
@@ -219,7 +217,7 @@ model = Pipeline([
     ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
 ])
 
-# Train & predict
+
 X_train = train_df[categorical_features + numerical_features]
 y_train = train_df['Your Rating']
 model.fit(X_train, y_train)
@@ -261,18 +259,18 @@ if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement %)":
     """)
 
     stats_code = '''
-# Merge IMDb and My Ratings
+
 df_compare = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
 )
 
-# Calculate agreement (±1 tolerance)
+
 df_compare['Agreement'] = (
     (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
 )
 
-# Aggregate per genre
+
 genre_agreement = (
     df_compare.groupby('Genre')
     .agg(
@@ -282,7 +280,7 @@ genre_agreement = (
     .reset_index()
 )
 
-# Add disagreements and percentages
+
 genre_agreement['Disagreements'] = (
     genre_agreement['Total_Movies'] - genre_agreement['Agreements']
 )
@@ -290,7 +288,7 @@ genre_agreement['Agreement_%'] = (
     genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
 ).round(2)
 
-# Final result
+
 genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
@@ -333,7 +331,6 @@ from scipy.stats import ttest_rel
 import numpy as np
 import pandas as pd
 
-# Merge IMDb and My Ratings
 df_ttest = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
@@ -346,7 +343,7 @@ for director, group in df_ttest.groupby('Director'):
     if n >= {min_movies}:
         differences = group['Your Rating'] - group['IMDb Rating']
 
-        # Handle zero variance (all differences identical)
+        
         if differences.std() == 0:
             stat, pval = np.nan, np.nan
             interpretation = "All differences identical — t-test undefined"
@@ -370,7 +367,6 @@ for director, group in df_ttest.groupby('Director'):
             "Interpretation": interpretation
         }})
 
-# Convert results to DataFrame
 df_results = pd.DataFrame(results)
 df_results = df_results.sort_values(by="p_value")
 '''
@@ -659,7 +655,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         st.session_state.pop("X_test", None)
         st.session_state.pop("y_test", None)
         st.session_state.pop("feature_names", None)
-        st.experimental_rerun()
+        st.rerun()
 
     # Ensure model + data from Scenario 4 are available
     if "model" not in st.session_state or "X_train" not in st.session_state or "X_test" not in st.session_state:
