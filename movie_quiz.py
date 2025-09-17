@@ -57,9 +57,10 @@ scenario = st.radio(
         "Scenario 3 – Top Unseen Films by Decade (SQL)",
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
-        "Scenario 6 - Statistical Insights by Director (t-test)",
-        "Scenario 7 — Review Analysis (Sentiment, Subjectivity)",
-        "Scenario 8 – Model Evaluation (Feature Importance)"
+        "Scenario 6 – Statistical Insights by Director (t-test)",
+        "Scenario 7 – Review Analysis (Sentiment, Subjectivity)",
+        "Scenario 8 – Model Evaluation (Feature Importance)",
+        "Scenario 9 – Director Model Evaluation"
     ]
 )
 
@@ -645,4 +646,103 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         - If `Genre` has high total importance, my ratings are heavily influenced by movie genres.  
         - If `Director` is high, certain directors strongly affect my ratings.  
         - Numerical features indicate general importance of ratings, year, or popularity.
+        """)
+
+
+elif scenario == "Scenario 9 – Director Model Evaluation":
+    st.header("Scenario 9 — Model Evaluation for Specific Directors")
+
+    # Button to re-run Scenario 4 if needed
+    if st.button("Run Scenario 4 (Train Model)"):
+        st.session_state.pop("model", None)
+        st.session_state.pop("X_train", None)
+        st.session_state.pop("X_test", None)
+        st.session_state.pop("y_test", None)
+        st.session_state.pop("feature_names", None)
+        st.experimental_rerun()
+
+    # Ensure model + data from Scenario 4 are available
+    if "model" not in st.session_state or "X_train" not in st.session_state or "X_test" not in st.session_state:
+        st.warning("⚠️ Please run Scenario 4 first (or click the button above).")
+    else:
+        model = st.session_state.model
+        X_train = st.session_state.X_train
+        X_test = st.session_state.X_test
+        y_test = st.session_state.y_test
+        feature_names = st.session_state.feature_names
+
+        # Directors of interest
+        target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
+
+        # --- Feature Importances for Spielberg & Refn ---
+        fi_df = pd.DataFrame({
+            'Feature': feature_names,
+            'Importance': model.feature_importances_
+        }).sort_values(by="Importance", ascending=False)
+
+        fi_directors = fi_df[fi_df['Feature'].isin(target_directors)]
+
+        st.subheader("Feature Importance for Selected Directors")
+        plt.figure(figsize=(6, 4))
+        sns.barplot(x='Importance', y='Feature', data=fi_directors, palette="Set2")
+        plt.title("Importance of Spielberg & Refn Features", fontsize=14)
+        plt.xlabel("Importance")
+        plt.ylabel("Director Feature")
+        st.pyplot(plt.gcf())
+        plt.close()
+
+        # --- Grouped Feature Importances ---
+        def group_feature(name):
+            if name.startswith("Genre_"):
+                return "Genre"
+            elif name.startswith("Director_"):
+                return "Director"
+            else:
+                return name
+
+        fi_df['Group'] = fi_df['Feature'].map(group_feature)
+        grouped = fi_df.groupby("Group")['Importance'].sum().reset_index().sort_values(by="Importance", ascending=False)
+
+        st.subheader("Grouped Feature Importances (Context for Spielberg & Refn)")
+        plt.figure(figsize=(8, 5))
+        sns.barplot(x='Importance', y='Group', data=grouped, palette="coolwarm")
+        plt.title("Grouped Feature Importances", fontsize=14)
+        plt.xlabel("Total Importance")
+        plt.ylabel("Feature Group")
+        st.pyplot(plt.gcf())
+        plt.close()
+
+        # --- Predictions Table ---
+        st.subheader("Model Predictions for Spielberg & Refn Movies")
+
+        preds = model.predict(X_test)
+        results_df = X_test.copy()
+        results_df["Actual"] = y_test.values
+        results_df["Predicted"] = preds
+
+        # Keep only movies from Spielberg or Refn
+        mask = (results_df.get("Director_Steven Spielberg", 0) == 1) | (results_df.get("Director_Nicolas Winding Refn", 0) == 1)
+        director_results = results_df[mask]
+
+        # Optional: add readable director column
+        def map_director(row):
+            if row.get("Director_Steven Spielberg", 0) == 1:
+                return "Steven Spielberg"
+            elif row.get("Director_Nicolas Winding Refn", 0) == 1:
+                return "Nicolas Winding Refn"
+            return "Other"
+
+        director_results["Director"] = director_results.apply(map_director, axis=1)
+
+        # Show selected columns
+        display_cols = ["Director", "Actual", "Predicted"]
+        st.dataframe(director_results[display_cols].reset_index(drop=True))
+        
+        # Commentary
+        st.markdown("""
+        ### Why this matters
+        - The first chart shows how important the *Spielberg* and *Refn* dummy variables are in the model.  
+        - The second chart gives context: how much weight directors have overall compared to genres and numeric features.  
+        - The table shows **actual vs. predicted outcomes** for Spielberg and Refn movies in the test set, 
+          helping you see how well the model performs for these two directors specifically.  
         """)
