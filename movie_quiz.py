@@ -601,48 +601,70 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         - Numerical features like `IMDb Rating` or `Num Votes` show general trends in your preferences relative to movie popularity or ratings.
         """)
 
+# --- Automatic explanation for top Director ---
+director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
+if not director_features.empty:
+    top_director = director_features.sort_values(by='Importance', ascending=False).iloc[0]
+    feature = top_director['Feature']
+    importance = top_director['Importance']
+    director_name = feature.replace('Director_','')
+    
+    st.write("**Top Director-specific insight:**")
+    st.write(f"""
+    **{feature}** (importance {importance:.3f}):
+    
+    **1. What the feature represents:**  
+    `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.
 
-        # --- Automatic explanation for top individual Director features ---
-        director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
-        top_directors = director_features.sort_values(by='Importance', ascending=False).head(3)
+    **2. What “high importance” means in the model:**  
+    Random Forest uses this feature to reduce prediction error. A high importance for `{feature}` means the model often splits on this feature to predict your rating. In other words, knowing whether a movie is directed by {director_name} significantly helps the model guess your rating.
 
-        if not top_directors.empty:
-            st.write("**Director-specific insights:**")
-            for idx, row in top_directors.iterrows():
-                feature = row['Feature']
-                importance = row['Importance']
-                director_name = feature.replace('Director_','')
-                st.write(f"""
-                **{feature}** (importance {importance:.3f}):
-                
-                1**What the feature represents:**  
-                `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.
+    **3. What it tells about you:**  
+    If the model relies heavily on `{feature}`, it suggests you consistently rate {director_name}'s movies differently from other movies.  
+    - You might tend to give their movies higher ratings compared to similar movies by other directors, or lower ratings if you dislike them.  
+    - Either way, your rating pattern is strongly associated with {director_name}'s movies.
+    """)
 
-                2️**What “high importance” means in the model:**  
-                Random Forest uses this feature to reduce prediction error. A high importance for `{feature}` means the model often splits on this feature to predict your rating. In other words, knowing whether a movie is directed by {director_name} significantly helps the model guess your rating.
+# --- Automatic explanation for top Genre ---
+genre_features = fi_df[fi_df['Feature'].str.startswith('Genre')]
+if not genre_features.empty:
+    top_genre = genre_features.sort_values(by='Importance', ascending=False).iloc[0]
+    feature = top_genre['Feature']
+    importance = top_genre['Importance']
+    genre_name = feature.replace('Genre_','')
+    
+    st.write("**Top Genre-specific insight:**")
+    st.write(f"""
+    **{feature}** (importance {importance:.3f}):
+    
+    **1. What the feature represents:**  
+    `{feature}` is a one-hot encoded feature: 1 if the movie belongs to the {genre_name} genre, 0 otherwise.
 
-                3**What it tells about you:**  
-                If the model relies heavily on `{feature}`, it suggests you consistently rate {director_name}'s movies differently from other movies.  
-                - You might tend to give their movies higher ratings compared to similar movies by other directors, or lower ratings if you dislike them.  
-                - Either way, your rating pattern is strongly associated with {director_name}'s movies.
-                """)
+    **2. What “high importance” means in the model:**  
+    Random Forest uses this feature to reduce prediction error. A high importance for `{feature}` means the model often splits on this feature to predict your rating. In other words, knowing whether a movie belongs to the {genre_name} genre significantly helps the model guess your rating.
 
-        # --- Aggregated by categorical variable ---
-        fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
-        agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
+    **3. What it tells about you:**  
+    If the model relies heavily on `{feature}`, it suggests you consistently rate {genre_name} movies differently from other genres.  
+    - You might tend to give these movies higher ratings compared to other genres, or lower ratings if you dislike them.  
+    - Either way, your rating pattern is strongly associated with the {genre_name} genre.
+    """)
 
-        st.subheader("Aggregated Feature Importances by Category")
-        plt.figure(figsize=(8,4))
-        sns.barplot(x=agg_df.values, y=agg_df.index, palette='magma')
-        plt.title("Aggregated Feature Importances")
-        plt.tight_layout()
-        st.pyplot(plt)
 
-        # Summary explanation below aggregated chart
-        st.write("""
-        **Interpretation:**  
-        Aggregating features by category helps to understand **overall trends**:  
-        - If `Genre` has high total importance, your ratings are heavily influenced by movie genres.  
-        - If `Director` is high, certain directors strongly affect your ratings.  
-        - Numerical features indicate general importance of ratings, year, or popularity.
-        """)
+
+     # --- Aggregated by categorical variable ---
+    fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
+    agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
+
+    st.subheader("Aggregated Feature Importances by Category")
+    plt.figure(figsize=(8,4))
+    sns.barplot(x=agg_df.values, y=agg_df.index, palette='magma')
+    plt.title("Aggregated Feature Importances")
+    st.pyplot(plt)
+
+    # Summary explanation below aggregated chart
+    st.write("""   **Interpretation:**  
+     Aggregating features by category helps to understand **overall trends**:  
+    - If `Genre` has high total importance, your ratings are heavily influenced by movie genres.  
+    - If `Director` is high, certain directors strongly affect your ratings.  
+    - Numerical features indicate general importance of ratings, year, or popularity.
+     """)
