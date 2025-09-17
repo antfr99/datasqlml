@@ -1,26 +1,15 @@
 import streamlit as st
 import pandas as pd
 import pandasql as ps
-
-# --- Force reload latest code ---
-if st.button("Reload App / Clear Cache & Session"):
-    # Clear Streamlit cache
-    try:
-        st.cache_data.clear()
-    except Exception:
-        pass
-    try:
-        st.cache_resource.clear()
-    except Exception:
-        pass
-
-    # Clear session_state
-    for key in st.session_state.keys():
-        del st.session_state[key]
-
-    # Rerun the app
-    st.experimental_rerun()
-
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from scipy.stats import ttest_rel
+from textblob import TextBlob
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
@@ -67,8 +56,7 @@ if not My_Ratings.empty:
 else:
     st.warning("My Ratings table is empty or failed to load.")
 
-# --- Scenarios ---
-
+# --- Scenario Selection ---
 scenario = st.radio(
     "Choose a scenario:",
     [
@@ -535,32 +523,21 @@ import seaborn as sns
 
 # --- Scenario 8 ---
 # --- Scenario 8 ---
+
+# Example for Scenario 8: remove old rerun logic
 if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     st.header("Scenario 8 – Model Evaluation: Feature Importance")
-
     st.write("""
-    In this scenario, we analyze which features are most important in predicting **my movie ratings** using a Random Forest model.  
-
-    **Feature Importance:** Random Forest assigns a score to each feature indicating how much it contributes to predicting the target variable.  
-    - Higher importance → more influence on the predictions.  
-    - Lower importance → less influence.  
-
-    **Note:** Requires a trained model from Scenario 4.
+    Analyze which features are most important in predicting **my movie ratings** using a Random Forest model.  
+    Requires a trained model from Scenario 4.
     """)
 
-    # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
         st.warning("Model not found. You need to run Scenario 4 first or retrain here.")
         if st.button("Run Scenario 4 Training Now"):
-            from sklearn.preprocessing import OneHotEncoder
-            from sklearn.ensemble import RandomForestRegressor
-            from sklearn.compose import ColumnTransformer
-            from sklearn.pipeline import Pipeline
-
             df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
             train_df = df_ml[df_ml['Your Rating'].notna()]
 
-            # --- Year as categorical now ---
             categorical_features = ['Genre', 'Director', 'Year']
             numerical_features = ['IMDb Rating', 'Num Votes']
 
@@ -579,80 +556,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             X_train = train_df[categorical_features + numerical_features]
             y_train = train_df['Your Rating']
             model.fit(X_train, y_train)
-
             st.session_state['model'] = model
             st.success("Model trained successfully! You can now view feature importance.")
-
-    # --- Show feature importance if model exists ---
-    if 'model' in st.session_state:
-        trained_model = st.session_state['model']
-        rf = trained_model.named_steps['reg']
-        preproc = trained_model.named_steps['prep']
-
-        # Feature names
-        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(['Genre','Director','Year'])
-        numerical_features = ['IMDb Rating', 'Num Votes']
-        all_features = np.concatenate([cat_features, numerical_features])
-        importances = rf.feature_importances_
-
-        fi_df = pd.DataFrame({
-            'Feature': all_features,
-            'Importance': importances
-        }).sort_values(by='Importance', ascending=False)
-
-        # --- Display as table (all features) ---
-        st.subheader("Feature Importances (All Features)")
-        st.dataframe(fi_df.reset_index(drop=True), width="stretch", height=600)
-
-        # Summary explanation
-        st.write("""
-        **Interpretation:**  
-        The table above shows the importance of **all features** used in the model.  
-        - Features like `Genre_...`, `Director_...`, and `Year_...` are **one-hot encoded categorical features**.  
-        - Numerical features like `IMDb Rating` and `Num Votes` are continuous.  
-        - A higher importance means the feature is more influential in predicting my ratings.
-        """)
-
-        # --- Automatic explanation for top Director ---
-        director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
-        if not director_features.empty:
-            top_director = director_features.sort_values(by='Importance', ascending=False).iloc[0]
-            feature = top_director['Feature']
-            importance = top_director['Importance']
-            director_name = feature.replace('Director_','')
-
-            st.write("**Top Director-specific insight:**")
-            st.write(f"""
-            **{feature}** (importance {importance:.3f}):
-
-            **1. What the feature represents:**  
-            `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.  
-
-            **2. What “high importance” means in the model:**  
-            A high importance for `{feature}` means whether a movie is directed by {director_name} strongly influences the predicted rating.
-
-            **3. What it tells about you:**  
-            I have a consistent rating pattern for {director_name} movies.  
-            High importance indicates my rating behavior for {director_name} movies is distinct and the model relies on it to make accurate predictions.
-            """)
-
-        # --- Aggregated by category ---
-        fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
-        agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
-
-        st.subheader("Aggregated Feature Importances by Category")
-        st.dataframe(agg_df.reset_index(), width="stretch", height=300)
-
-        # Summary explanation
-        st.write("""
-        **Interpretation:**  
-        Aggregating features by category helps understand overall trends:  
-        - `Genre` → influence of movie genres.  
-        - `Director` → influence of specific directors.  
-        - `Year` → influence of movie release year.  
-        - Numerical features → general influence of ratings and popularity.
-        """)
-
+                       
 # --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
