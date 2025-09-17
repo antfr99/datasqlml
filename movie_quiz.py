@@ -662,114 +662,87 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     train_df = df_ml[df_ml['Your Rating'].notna()]
     predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    categorical_features = ['Genre', 'Director']
-    numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+# --- Adjust feature lists ---
+categorical_features = ['Genre', 'Director', 'Year']  # Year as categorical
+numerical_features = ['IMDb Rating', 'Num Votes']     # only numeric features
 
-    # --- Pipeline ---
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-            ('num', 'passthrough', numerical_features)
-        ]
+# --- Pipeline ---
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+        ('num', 'passthrough', numerical_features)
+    ]
+)
+
+model = Pipeline([
+    ('prep', preprocessor),
+    ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
+])
+
+# --- Fit model ---
+X_train = train_df[categorical_features + numerical_features]
+y_train = train_df['Your Rating']
+model.fit(X_train, y_train)
+
+# --- Feature Importances ---
+encoder = model.named_steps['prep'].named_transformers_['cat']
+cat_features = encoder.get_feature_names_out(categorical_features)
+feature_names = list(cat_features) + numerical_features
+importances = model.named_steps['reg'].feature_importances_
+fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+
+# --- Bar charts smaller ---
+target_directors = ["Director_Steven Spielberg", "Director_Alfred Hitchcock"]
+for dir_feature in target_directors:
+    context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Feature'].str.startswith('Genre_')) | (fi_df['Feature'].isin(numerical_features))]
+    plt.figure(figsize=(6,4))  # smaller chart
+    sns.barplot(
+        x='Importance',
+        y='Feature',
+        data=context_features.sort_values(by='Importance', ascending=True),
+        palette="coolwarm"
     )
-
-    model = Pipeline([
-        ('prep', preprocessor),
-        ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
-    ])
-
-    X_train = train_df[categorical_features + numerical_features]
-    y_train = train_df['Your Rating']
-    model.fit(X_train, y_train)
-
-    # --- Feature Importances ---
-    encoder = model.named_steps['prep'].named_transformers_['cat']
-    cat_features = encoder.get_feature_names_out(categorical_features)
-    feature_names = list(cat_features) + numerical_features
-    importances = model.named_steps['reg'].feature_importances_
-
-    fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-
-    # Helper function to group features
-    def group_feature(name):
-        if name.startswith("Genre_"):
-            return "Genre"
-        elif name.startswith("Director_"):
-            return "Director"
-        else:
-            return name
-
-    fi_df['Group'] = fi_df['Feature'].map(group_feature)
-
-    # --- Separate Charts for Each Director ---
-    target_directors = ["Director_Steven Spielberg", "Director_Alfred Hitchcock"]
-
-    for dir_feature in target_directors:
-        context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Group'] != "Director")]
-        context_features = context_features.sort_values(by='Importance', ascending=True)
-        
-        plt.figure(figsize=(6,3))  # smaller chart
-        sns.barplot(
-            x='Importance',
-            y='Feature',
-            data=context_features,
-            palette=["#FF9999" if f==dir_feature else "#66B2FF" for f in context_features['Feature']]
-        )
-        plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=12)
-        plt.xlabel("Importance")
-        plt.ylabel("Feature")
-        st.pyplot(plt.gcf())
-        plt.close()
+    plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=12)
+    plt.xlabel("Importance")
+    plt.ylabel("Feature")
+    st.pyplot(plt.gcf())
+    plt.close()
 
 # --- Predictions ---
 X_pred = predict_df[categorical_features + numerical_features]
 predict_df['Predicted Rating'] = model.predict(X_pred)
 
-# --- Add breakdown of contributions ---
-# Transform all categorical features together
-cat_ohe = model.named_steps['prep'].named_transformers_['cat'].transform(X_pred[categorical_features]).toarray()
-cat_feature_names = model.named_steps['prep'].named_transformers_['cat'].get_feature_names_out(categorical_features)
+# --- Contributions ---
+# Numeric Contribution
+numeric_idx = [feature_names.index(f) for f in numerical_features]
+numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
+# Categorical Contribution
+cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
+predict_df['Numeric Contribution'] = numeric_contrib
+predict_df['Categorical Contribution'] = cat_contrib
 
-# Compute contributions
-contrib = pd.DataFrame(index=X_pred.index)
-# Numeric contributions
-for col in numerical_features:
-    idx = feature_names.index(col)
-    contrib[col + ' Contribution'] = X_pred[col] * importances[idx]
-# Categorical contributions
-for i, col in enumerate(cat_feature_names):
-    idx = feature_names.index(col)
-    contrib[col + ' Contribution'] = cat_ohe[:, i] * importances[idx]
+# --- Filter target directors ---
+director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Alfred Hitchcock"])]
 
-# Sum contributions
-contrib['Numeric Contribution'] = contrib[[c+' Contribution' for c in numerical_features]].sum(axis=1)
-contrib['Categorical Contribution'] = contrib[[c for c in contrib.columns if 'Contribution' in c and c not in [f+' Contribution' for f in numerical_features]]].sum(axis=1)
-
-# Merge contributions into predict_df
-director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Alfred Hitchcock"])].copy()
-director_results['Numeric Contribution'] = contrib['Numeric Contribution']
-director_results['Categorical Contribution'] = contrib['Categorical Contribution']
-
-st.subheader("Predicted Ratings for Selected Directors with Contributions")
+# --- Display table with specified columns ---
+st.subheader("Predicted Ratings for Spielberg & Hitchcock Movies")
 st.dataframe(
-    director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating',
-                      'Numeric Contribution','Categorical Contribution']]
+    director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
+                      'Numeric Contribution','Categorical Contribution','Predicted Rating']]
     .sort_values(by='Predicted Rating', ascending=False)
-    .reset_index(drop=True),
-    width="stretch",
-    height=500
+    .reset_index(drop=True)
 )
 
 # --- Commentary ---
 st.markdown("""
 ### Why this matters
 - The charts show **how important each feature is for each director individually**, with the director feature highlighted.  
-- Numeric and genre features are included for context.  
+- Numeric and categorical features are included for context.  
 - The table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.  
 - **Columns explanation:**  
     - **Title / Director / Genre / Year / Num Votes**: context about each movie.  
     - **Predicted Rating**: the rating the model predicts you would give.  
-    - **Numeric Contribution**: the combined impact of numeric features (IMDb Rating, Year, Num Votes) on the predicted rating.  
-    - **Categorical Contribution**: the combined impact of categorical features (Genre, Director) on the predicted rating.  
-    - **Predicted Rating ≈ Numeric Contribution + Categorical Contribution**, giving a sense of how each type of feature influenced the final prediction.
+    - **Numeric Contribution**: impact of numeric features (IMDb Rating, Num Votes) on the predicted rating.  
+    - **Categorical Contribution**: impact of categorical features (Genre, Director, Year) on the predicted rating.  
+    - **Predicted Rating ≈ Numeric Contribution + Categorical Contribution**, showing how each type of feature influenced the prediction.
 """)
