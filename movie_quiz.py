@@ -315,7 +315,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
 
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
-if scenario == "Scenario 6 - Statistical Insights by Director (t-test)":
+if scenario == "Scenario 6 – Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
     st.write("""
 This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
@@ -647,7 +647,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 
 # --- Scenario 9: Director Model Evaluation ---
 
-
+# --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
 
@@ -656,7 +656,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
 
-    # Prepare data (same as Scenario 4)
+    # --- Prepare Data ---
     df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
     train_df = df_ml[df_ml['Your Rating'].notna()]
     predict_df = df_ml[df_ml['Your Rating'].isna()]
@@ -664,6 +664,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     categorical_features = ['Genre', 'Director']
     numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
+    # --- Pipeline ---
     preprocessor = ColumnTransformer(
         transformers=[
             ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
@@ -680,29 +681,15 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     y_train = train_df['Your Rating']
     model.fit(X_train, y_train)
 
-    # Extract feature names after one-hot encoding
+    # --- Feature Importances ---
     encoder = model.named_steps['prep'].named_transformers_['cat']
     cat_features = encoder.get_feature_names_out(categorical_features)
     feature_names = list(cat_features) + numerical_features
-
     importances = model.named_steps['reg'].feature_importances_
-    fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances}).sort_values(by="Importance", ascending=False)
 
-    # Directors of interest
-    target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
-    fi_directors = fi_df[fi_df['Feature'].isin(target_directors)]
+    fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
 
-    # --- Chart 1: Spielberg & Refn only ---
-    st.subheader("Feature Importance for Spielberg & Refn")
-    plt.figure(figsize=(6, 4))
-    sns.barplot(x='Importance', y='Feature', data=fi_directors, palette="Set2")
-    plt.title("Importance of Spielberg & Refn Features", fontsize=14)
-    plt.xlabel("Importance")
-    plt.ylabel("Director Feature")
-    st.pyplot(plt.gcf())
-    plt.close()
-
-    # --- Chart 2: Grouped Importances ---
+    # Helper function to group features
     def group_feature(name):
         if name.startswith("Genre_"):
             return "Genre"
@@ -712,22 +699,32 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
             return name
 
     fi_df['Group'] = fi_df['Feature'].map(group_feature)
-    grouped = fi_df.groupby("Group")['Importance'].sum().reset_index().sort_values(by="Importance", ascending=False)
 
-    st.subheader("Grouped Feature Importances (Context for Spielberg & Refn)")
-    plt.figure(figsize=(8, 5))
-    sns.barplot(x='Importance', y='Group', data=grouped, palette="coolwarm")
-    plt.title("Grouped Feature Importances", fontsize=14)
-    plt.xlabel("Total Importance")
-    plt.ylabel("Feature Group")
-    st.pyplot(plt.gcf())
-    plt.close()
+    # --- Separate Charts for Each Director ---
+    target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
 
-    # --- Predictions for Spielberg & Refn ---
+    for dir_feature in target_directors:
+        # Keep only the director + numeric/genre features for context
+        context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Group'] != "Director")]
+        
+        plt.figure(figsize=(8,5))
+        sns.barplot(
+            x='Importance',
+            y='Feature',
+            data=context_features.sort_values(by='Importance', ascending=True),
+            palette="coolwarm"
+        )
+        plt.title(f"Feature Importances for {dir_feature.replace('Director_','')}", fontsize=14)
+        plt.xlabel("Importance")
+        plt.ylabel("Feature")
+        st.pyplot(plt.gcf())
+        plt.close()
+
+    # --- Predictions ---
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
 
-    # Filter only Spielberg & Refn movies
+    # Filter for target directors
     director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Nicolas Winding Refn"])]
 
     st.subheader("Predicted Ratings for Spielberg & Refn Movies")
@@ -740,7 +737,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Commentary ---
     st.markdown("""
     ### Why this matters
-    - The first chart shows how important the *Spielberg* and *Refn* dummy variables are in the model.  
-    - The second chart shows grouped context: how directors compare to genres and numeric features overall.  
-    - The table at the bottom shows the **model’s predictions** for Spielberg and Refn movies you haven’t rated yet.  
+    - The charts show **how important each feature is for each director individually**.  
+    - Numeric and genre features are included for context.  
+    - The table shows model predictions for Spielberg and Refn movies you haven’t rated yet.  
     """)
