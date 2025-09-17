@@ -51,15 +51,15 @@ else:
 scenario = st.radio(
     "Choose a scenario:",
     [
-        "Scenario 1 – Highlight Disagreements (SQL)",
-        "Scenario 2 – Hybrid Recommendation (SQL)",
-        "Scenario 3 – Top Unseen Films by Decade (SQL)",
-        "Scenario 4 – Predict My Ratings (ML)",
-        "Scenario 5 – Statistical Insights by Genre (Agreement %)",
-        "Scenario 6 - Statistical Insights by Director (t-test)",
-        "Scenario 7 — NLP Script Analysis (scene segmentation, character extraction, NER, sentiment, summary)."
+        "Scenario 1- SQL", 
+        "Scenario 2- SQL", 
+        "Scenario 3- SQL", 
+        "Scenario 4- Python Machine Learning",
+        "Scenario 5- Statistical Insights by Genre (Paired t-test)",
+        "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)"
     ]
 )
+
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1 – Highlight Disagreements (SQL)":
     st.markdown('<h3 style="color:green;">Scenario 1 (My Ratings vs IMDb)</h3>', unsafe_allow_html=True)
@@ -387,96 +387,74 @@ df_results = df_results.sort_values(by="p_value")
 
 # --- Scenario 7 - NLP Script Analysis ---
 
-# --- Scenario 7: NLP Script Analysis ---
-if scenario == "Scenario 7 — NLP Script Analysis (scene segmentation, character extraction, NER, sentiment, summary).":
-    import re
-    import pandas as pd
-    import spacy
-    from textblob import TextBlob
 
-    st.header("Scenario 7 — NLP Script Analysis")
+import spacy
+from textblob import TextBlob
+from docx import Document
+from collections import Counter
+import pandas as pd
+import re
 
-    # Grey text box
-    script_text = st.text_area("Paste your movie script here:", height=400)
+if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
+    st.header("Scenario 7 — Film Review Analysis")
 
-    if st.button("Analyse Script"):
-        if not script_text.strip():
-            st.warning("⚠️ Please paste a script before analysing.")
-            st.stop()
+    # --- Load document ---
+    doc = Document("Mother.docx")
+    reviews = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
 
-        st.success(f"✅ Script loaded with {len(script_text.split())} words")
+    st.write(f"Loaded **{len(reviews)}** reviews")
 
-        # --- Scene Segmentation ---
-        scene_split_regex = re.compile(r'(?=(?:^|\n)(INT\.|EXT\.|FADE IN:|CUT TO:|SCENE)\b)', flags=re.IGNORECASE)
-        parts = [p.strip() for p in scene_split_regex.split(script_text)]
-        scenes = []
-        if len(parts) == 1:
-            scenes = [(None, parts[0])]
-        else:
-            i = 0
-            while i < len(parts):
-                marker = parts[i]
-                if marker.strip() == "":
-                    i += 1
-                    continue
-                if re.match(r'^(INT\.|EXT\.|FADE IN:|CUT TO:|SCENE)', marker, flags=re.IGNORECASE):
-                    header = marker.strip()
-                    body = parts[i+1] if i+1 < len(parts) else ""
-                    scenes.append((header, body.strip()))
-                    i += 2
-                else:
-                    scenes.append(("UNKNOWN", parts[i].strip()))
-                    i += 1
+    # --- NLP ---
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except:
+        nlp = None
+        st.warning("spaCy model not available, skipping NER")
 
-        st.write(f"Detected **{len(scenes)}** scenes")
+    review_records = []
+    all_entities = []
+    all_words = []
 
-        # --- NLP (NER + Sentiment) ---
-        try:
-            nlp = spacy.load("en_core_web_sm")
-        except Exception:
-            nlp = None
-            st.warning("spaCy model not available, skipping NER.")
+    for idx, review in enumerate(reviews, start=1):
+        tb = TextBlob(review)
+        sentiment = tb.sentiment.polarity
+        subjectivity = tb.sentiment.subjectivity
 
-        scene_records = []
-        all_characters = set()
+        ents = []
+        if nlp:
+            doc_nlp = nlp(review)
+            ents = [ent.text for ent in doc_nlp.ents if ent.label_ in ["PERSON","ORG","WORK_OF_ART"]]
+            all_entities.extend(ents)
 
-        for idx, (header, body) in enumerate(scenes, start=1):
-            # Character extraction (simple heuristic)
-            chars = []
-            for line in body.splitlines():
-                s = line.strip()
-                if len(s) > 0 and s.isupper() and 1 <= len(s.split()) <= 4 and len(s) < 40:
-                    chars.append(s)
-            all_characters.update(chars)
+        # simple keywords
+        words = [w.lower() for w in re.findall(r'\b\w+\b', review) if len(w) > 4]
+        all_words.extend(words)
 
-            # NER
-            ner_entities = []
-            if nlp:
-                doc = nlp(body)
-                ner_entities = [(ent.text, ent.label_) for ent in doc.ents if ent.label_ == "PERSON"]
+        review_records.append({
+            "ReviewID": idx,
+            "Words": len(review.split()),
+            "Sentiment": round(sentiment,3),
+            "Subjectivity": round(subjectivity,3),
+            "Entities": ", ".join(set(ents)),
+            "Snippet": review[:150] + ("..." if len(review)>150 else "")
+        })
 
-            # Sentiment
-            tb = TextBlob(body)
-            sentiment_polarity = round(tb.sentiment.polarity, 3)
+    df_reviews = pd.DataFrame(review_records)
 
-            scene_records.append({
-                "SceneIndex": idx,
-                "Header": header,
-                "NumWords": len(body.split()),
-                "Characters": ", ".join(chars),
-                "NER": str(ner_entities),
-                "Sentiment": sentiment_polarity
-            })
+    st.subheader("Reviews overview")
+    st.dataframe(df_reviews)
 
-        df_scenes = pd.DataFrame(scene_records)
+    # --- Overall statistics ---
+    st.subheader("Aggregate Insights")
 
-        # Show results
-        st.subheader("Scenes table")
-        st.dataframe(df_scenes)
+    st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
+    st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
 
-        st.subheader("Top detected characters")
-        st.write(sorted(list(all_characters))[:50])
+    if all_entities:
+        common_ents = Counter(all_entities).most_common(10)
+        st.write("**Top mentioned people/works:**")
+        st.write(common_ents)
 
-        # Export
-        csv = df_scenes.to_csv(index=False).encode("utf-8")
-        st.download_button("Download scenes CSV", csv, file_name="script_scenes.csv", mime="text/csv")
+    common_words = Counter(all_words).most_common(15)
+    st.write("**Top keywords (non-stopwords):**")
+    st.write(common_words)
