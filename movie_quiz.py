@@ -2,6 +2,26 @@ import streamlit as st
 import pandas as pd
 import pandasql as ps
 
+# --- Force reload latest code ---
+if st.button("Reload App / Clear Cache & Session"):
+    # Clear Streamlit cache
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    try:
+        st.cache_resource.clear()
+    except Exception:
+        pass
+
+    # Clear session_state
+    for key in st.session_state.keys():
+        del st.session_state[key]
+
+    # Rerun the app
+    st.experimental_rerun()
+
+
 # --- Page Config ---
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
