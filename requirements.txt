@@ -8,3 +8,5 @@ spacy>=3.0
 textblob
 python-docx
 openpyxl
+matplotlib
+seaborn
