@@ -441,6 +441,13 @@ If you like movies which make you feel uneasy, and make you think you're going m
 Edit:So after having a day or so to ponder over the meaning of this movie - I've changed my rating and edited my review based on what I have come to know.
 I can now say that once you understand the characters and why they represent, you'll understand the meaning and it could change your entire view of this movie.
 
+If you just watch the pictures, the are confusing, disturbing, chaotic but their actual meaning is the representation of a person giving everything for someone else and still is not enough and everything she gives is topped by something else, every precious moment is taken to be shared.
+I don't want to go into details of the meaning of every scene and why the movie develops the way it does, it would probably take a book to describe.
+Every scene is symbolic, really well done.
+
+This is a phenomenal film, full of details, full of symbolism and references to the Bible, to man's relationship to the mother Earth, to the state of consciousness in which we find ourselves as humanity. The atmosphere is superb and the actors are exceptional. I think this is my favorite Darren Aronofsky's movie. And I'm a bit sad because people in their reviews give it worst grade just because the movie does not have "enough action", just because is slow or not fun enough, just because the super heroes in it doesn't shoot and fly in the air and perform all kinds of spectacular things. I think, there is internet, there is IMDB and before you go to see a movie (especially if it is a an intellectually demanding like this one) read about it and see, decide if you are interested in such a thing. If it is not for you, there will always be something else to your liking out there An extraordinary movie in every aspect.
+
+I have never watch a movie about it :).Dont try to learn something about the film before watching. Actually, it tells very good the whole life, and theatral aspect was wonderful in the movie. I strongly suggest that movie but, first, you have to leave your superstitions and prejudice . Just watch as an art and movie. But this movie, is not for superhero lovers and childs.
     """
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
