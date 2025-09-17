@@ -8,3 +8,6 @@ spacy
 textblob
 python-docx
 openpyxl
+en-core-web-sm
+
+
