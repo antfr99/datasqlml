@@ -648,10 +648,10 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 # --- Scenario 9: Director Model Evaluation ---
 
 # --- Scenario 9: Director Model Evaluation ---
-# --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for a Specific Director")
+    st.header("Scenario 9 — Model Evaluation for Specific Directors")
 
+    import pandas as pd
     import numpy as np
     import seaborn as sns
     import matplotlib.pyplot as plt
@@ -665,12 +665,12 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     train_df = df_ml[df_ml['Your Rating'].notna()]
     predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    # --- Director filter ---
-    directors_list = sorted(train_df['Director'].unique())
-    selected_director = st.selectbox("Select a Director", directors_list)
+    # --- Director dropdown ---
+    directors = sorted(df_ml['Director'].dropna().unique())
+    selected_director = st.selectbox("Select Director", directors, index=directors.index("Alfred Hitchcock"))
 
     # --- Feature Lists ---
-    categorical_features = ['Genre', 'Director', 'Year']
+    categorical_features = ['Genre', 'Director', 'Year']  # Year as categorical
     numerical_features = ['IMDb Rating', 'Num Votes']
 
     # --- Pipeline ---
@@ -680,6 +680,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
             ('num', 'passthrough', numerical_features)
         ]
     )
+
     model = Pipeline([
         ('prep', preprocessor),
         ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
@@ -697,47 +698,39 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     importances = model.named_steps['reg'].feature_importances_
     fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
 
-    # --- Predictions & Contributions ---
+    # --- Predictions and Contributions ---
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
+
+    # Numeric and categorical contributions
     numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
     cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
     predict_df['Numeric Contribution'] = numeric_contrib
     predict_df['Categorical Contribution'] = cat_contrib
+
+    # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director-specific plotting & table ---
+    # --- Director-specific data ---
     dir_name = selected_director
     dir_feature = f"Director_{dir_name}"
     dir_movies = train_df[train_df['Director'] == dir_name]
 
     dir_genres = dir_movies['Genre'].unique()
     genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
+
     dir_years = dir_movies['Year'].unique()
     year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
 
     num_features = numerical_features
-    dir_features_to_plot = [dir_feature] + genre_features + year_features + num_features
-    context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
-    context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
+    dir_features_to_show = [dir_feature] + genre_features + year_features + num_features
+    context_features = fi_df[fi_df['Feature'].isin(dir_features_to_show)].sort_values(by='Importance', ascending=False)
 
-    # --- Vertical bar chart ---
-    fig, ax = plt.subplots(figsize=(5,4))
-    sns.barplot(
-        x='Feature',
-        y='Importance',
-        data=context_features,
-        palette="coolwarm",
-        ax=ax
-    )
-    ax.set_title(f"Feature Importances for {dir_name}", fontsize=12)
-    ax.set_ylabel("Importance")
-    ax.set_xlabel("")
-    plt.xticks(rotation=45, ha='right')
-    st.pyplot(fig)
-    plt.close(fig)
+    # --- Show feature importances as table ---
+    st.subheader(f"Feature Importances for {dir_name}")
+    st.dataframe(context_features.reset_index(drop=True))
 
-    # --- Predicted ratings table ---
+    # --- Director-specific predicted ratings table ---
     director_table = predict_df[predict_df['Director'] == dir_name]
     st.subheader(f"Predicted Ratings for {dir_name} Movies")
     st.dataframe(
@@ -747,13 +740,16 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         .reset_index(drop=True)
     )
 
-    # --- Explanation of contributions ---
+    # --- Explanation ---
     st.markdown(f"""
     **Explanation for {dir_name}:**
 
-    - Vertical bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
-    - **Numeric features** contribute via `Numeric Contribution`.
-    - **Categorical features** contribute via `Categorical Contribution`.
-    - High importance indicates the feature strongly affects predictions.
-    - Negative categorical contributions are normal: the model predicts lower rating based on that feature combination.
+    - The feature importance table shows **all features affecting the model's predictions** for {dir_name} movies.
+    - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
+    - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
+    - A feature with high importance indicates the model frequently uses it to reduce prediction error.
+    - The sum of all categorical feature effects approximates the `Categorical Contribution`.
+    - In short:
+        - **Feature Importance → shows which features the model considers important**
+        - **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**
     """)
