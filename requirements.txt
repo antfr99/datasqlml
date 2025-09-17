@@ -5,7 +5,7 @@ numpy
 scipy
 scikit-learn
 spacy>=3.0
+en-core-web-sm==3.8.0
 textblob
 python-docx
 openpyxl
-
