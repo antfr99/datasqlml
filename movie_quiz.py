@@ -692,73 +692,56 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
 
     # --- Director-specific plotting ---
     target_directors = ["Steven Spielberg", "Alfred Hitchcock"]
+    
+# --- Director-specific plotting ---
+for dir_name in target_directors:
+    dir_feature = f"Director_{dir_name}"
+    dir_movies = train_df[train_df['Director'] == dir_name]
 
-    for dir_name in target_directors:
-        dir_feature = f"Director_{dir_name}"
+    dir_genres = dir_movies['Genre'].unique()
+    genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
 
-        # --- Movies by this director ---
-        dir_movies = train_df[train_df['Director'] == dir_name]
+    dir_years = dir_movies['Year'].unique()
+    year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
 
-        # --- Genres present in these movies ---
-        dir_genres = dir_movies['Genre'].unique()
-        genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
+    num_features = numerical_features
+    dir_features_to_plot = [dir_feature] + genre_features + year_features + num_features
+    context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
+    context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
-        # --- Years present in these movies ---
-        dir_years = dir_movies['Year'].unique()
-        year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
-
-        # --- Numeric features ---
-        num_features = numerical_features
-
-        # --- Combine relevant features ---
-        dir_features_to_plot = [dir_feature] + genre_features + year_features + num_features
-        context_features = fi_df[fi_df['Feature'].isin(dir_features_to_plot)]
-
-        # --- Keep top 8 by importance ---
-        context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
-
-        # --- Plot ---
-        fig, ax = plt.subplots(figsize=(5,3))
-        sns.barplot(
-            x='Importance',
-            y='Feature',
-            data=context_features.sort_values(by='Importance', ascending=True),
-            palette="coolwarm",
-            ax=ax
-        )
-        ax.set_title(f"Feature Importances for {dir_name}", fontsize=12)
-        ax.set_xlabel("Importance")
-        ax.set_ylabel("Feature")
-        st.pyplot(fig)
-        plt.close(fig)
-
-    # --- Predictions ---
-    X_pred = predict_df[categorical_features + numerical_features]
-    predict_df['Predicted Rating'] = model.predict(X_pred)
-
-    # --- Contributions ---
-    numeric_idx = [feature_names.index(f) for f in numerical_features]
-    numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
-    cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
-    predict_df['Numeric Contribution'] = numeric_contrib
-    predict_df['Categorical Contribution'] = cat_contrib
-
-    # --- Filter target directors ---
-    director_results = predict_df[predict_df['Director'].isin(target_directors)]
-
-    # --- Display table ---
-    st.subheader("Predicted Ratings for Spielberg & Hitchcock Movies")
-    st.dataframe(
-        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
-                          'Numeric Contribution','Categorical Contribution','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .reset_index(drop=True)
+    # --- Smaller bar chart ---
+    fig, ax = plt.subplots(figsize=(3,2))  # half-size chart
+    sns.barplot(
+        x='Importance',
+        y='Feature',
+        data=context_features.sort_values(by='Importance', ascending=True),
+        palette="coolwarm",
+        ax=ax
     )
+    ax.set_title(f"Feature Importances for {dir_name}", fontsize=10)
+    ax.set_xlabel("Importance")
+    ax.set_ylabel("Feature")
+    st.pyplot(fig)
+    plt.close(fig)
+
+# --- Remove duplicates before table ---
+predict_df = predict_df.drop_duplicates(subset='Movie ID')
+director_results = predict_df[predict_df['Director'].isin(target_directors)]
+
+# --- Display table ---
+st.subheader("Predicted Ratings for Spielberg & Hitchcock Movies")
+st.dataframe(
+    director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes',
+                      'Numeric Contribution','Categorical Contribution','Predicted Rating']]
+    .sort_values(by='Predicted Rating', ascending=False)
+    .reset_index(drop=True)
+)
+
 
     # --- Commentary ---
     st.markdown("""
 ### Why this matters
 - Each director chart now shows **only features relevant to their movies** (their director feature, genres they made, years they made movies, numeric features).  
 - Numeric and categorical contributions show **how each feature type impacts the predictions**.  
-- Table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.
+- Table shows model predictions for Spielberg and Hitchcock movies I haven’t rated yet.
 """)
