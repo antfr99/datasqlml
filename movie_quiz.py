@@ -522,7 +522,12 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     st.header("Scenario 8 – Model Evaluation: Feature Importance")
 
     st.write("""
-    This scenario shows feature importance for your Random Forest model predicting your ratings.  
+    In this scenario, we analyze which features are most important in predicting **your movie ratings** using a Random Forest model.  
+
+    **Feature Importance:** Random Forest assigns a score to each feature indicating how much it contributes to predicting the target variable.  
+    - Higher importance → more influence on the predictions.  
+    - Lower importance → less influence.  
+
     **Note:** Requires a trained model from Scenario 4.
     """)
 
@@ -577,7 +582,26 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             'Importance': importances
         }).sort_values(by='Importance', ascending=False)
 
-                # --- Aggregated by categorical variable ---
+        # --- Top N individual features ---
+        top_n = 20
+        fi_top = fi_df.head(top_n)
+
+        st.subheader(f"Top {top_n} Feature Importances (Individual)")
+        plt.figure(figsize=(10,6))
+        sns.barplot(x='Importance', y='Feature', data=fi_top, palette='viridis')
+        plt.title("Top Feature Importances")
+        plt.tight_layout()
+        st.pyplot(plt)
+
+        # Summary explanation below the graph
+        st.write("""
+        **Interpretation:**  
+        The top features above contribute most to predicting your ratings.  
+        - Features like `Genre_...` or `Director_...` indicate which genres or directors you tend to rate higher or lower.  
+        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in your preferences relative to movie popularity or ratings.
+        """)
+
+        # --- Aggregated by categorical variable ---
         fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
         agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
 
@@ -587,3 +611,12 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.title("Aggregated Feature Importances")
         plt.tight_layout()
         st.pyplot(plt)
+
+        # Summary explanation below aggregated chart
+        st.write("""
+        **Interpretation:**  
+        Aggregating features by category helps to understand **overall trends**:  
+        - If `Genre` has high total importance, your ratings are heavily influenced by movie genres.  
+        - If `Director` is high, certain directors strongly affect your ratings.  
+        - Numerical features indicate general importance of ratings, year, or popularity.
+        """)
