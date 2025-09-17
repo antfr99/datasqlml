@@ -389,20 +389,25 @@ df_results = df_results.sort_values(by="p_value")
 
 
 
-# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
 
-# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
-# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
+# --- Remove subprocess and sys imports related to runtime download ---
 
 import spacy
+import en_core_web_sm
 from textblob import TextBlob
 import pandas as pd
 import streamlit as st
-import subprocess
-import sys
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
+
+    # --- Load spaCy model safely ---
+    try:
+        nlp = en_core_web_sm.load()
+    except Exception as e:
+        nlp = None
+        st.warning(f"spaCy model could not be loaded. NER will be skipped. Error: {e}")
+
 
     # --- All reviews stored in a multi-line string ---
     reviews_text = """
