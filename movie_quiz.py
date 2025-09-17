@@ -58,9 +58,11 @@ scenario = st.radio(
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
         "Scenario 6 - Statistical Insights by Director (t-test)",
-        "Scenario 7 — Review Analysis (Sentiment, Subjectivity)"
+        "Scenario 7 — Review Analysis (Sentiment, Subjectivity)",
+        "Scenario 8 – Model Evaluation (Feature Importance)"
     ]
 )
+
 
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1 – Highlight Disagreements (SQL)":
@@ -507,3 +509,55 @@ I have never watch a movie about it :).Dont try to learn something about the fil
         for r in reviews:
             if len(r.split()) >= 5:
                 st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
+
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- Scenario 8 ---
+if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
+    st.header("Scenario 8 – Model Evaluation: Feature Importance")
+
+    st.warning("""
+    ⚠️ **Important:** You must first run **Scenario 4 – Predict My Ratings (ML)** to train the model.
+    Scenario 8 relies on the trained Random Forest model from Scenario 4.
+    """)
+
+    st.write("""
+    Visualize which features had the greatest impact on your Random Forest model predicting your ratings.
+    """)
+
+    # --- Extract feature importances from Scenario 4's trained model ---
+    try:
+        rf_model = model.named_steps['reg']
+        preprocessor = model.named_steps['prep']
+
+        cat_features = preprocessor.transformers_[0][2]  # ['Genre', 'Director']
+        ohe = preprocessor.transformers_[0][1]  # OneHotEncoder
+        ohe_feature_names = ohe.get_feature_names_out(cat_features)
+
+        num_features = preprocessor.transformers_[1][2]  # numerical features
+        all_feature_names = np.concatenate([ohe_feature_names, num_features])
+
+        importances = rf_model.feature_importances_
+        feat_imp_df = pd.DataFrame({
+            'Feature': all_feature_names,
+            'Importance': importances
+        }).sort_values(by='Importance', ascending=False)
+
+        st.subheader("Top Features by Importance")
+        st.dataframe(feat_imp_df.head(20), width="stretch")
+
+        # --- Bar Chart ---
+        st.subheader("Feature Importance Bar Chart")
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(10,6))
+        ax.barh(feat_imp_df['Feature'].head(20)[::-1], feat_imp_df['Importance'].head(20)[::-1], color='skyblue')
+        ax.set_xlabel("Importance")
+        ax.set_title("Top 20 Feature Importances")
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Scenario 8 requires a trained ML model from Scenario 4. Error: {e}")
