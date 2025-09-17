@@ -450,39 +450,42 @@ This is a phenomenal film, full of details, full of symbolism and references to 
 I have never watch a movie about it :).Dont try to learn something about the film before watching. Actually, it tells very good the whole life, and theatral aspect was wonderful in the movie. I strongly suggest that movie but, first, you have to leave your superstitions and prejudice . Just watch as an art and movie. But this movie, is not for superhero lovers and childs.
     """
     # --- Convert multi-line text to list of reviews ---
-    reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
-    st.write(f"Loaded **{len(reviews)}** reviews")
+reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
 
-    review_records = []
-    review_counter = 1
-    for review in reviews:
-        if len(review.split()) < 5:
-            continue
+review_records = []
+review_counter = 1
+for review in reviews:
+    words = review.split()
+    if len(words) < 5:
+        continue  # skip very short reviews
 
-        tb = TextBlob(review)
-        sentiment = tb.sentiment.polarity
-        subjectivity = tb.sentiment.subjectivity
+    tb = TextBlob(review)
+    sentiment = tb.sentiment.polarity
+    subjectivity = tb.sentiment.subjectivity
 
-        review_records.append({
-            "ReviewID": review_counter,
-            "Words": len(review.split()),
-            "Sentiment": round(sentiment, 3),
-            "Subjectivity": round(subjectivity, 3),
-            "Snippet": review[:500] + ("..." if len(review) > 500 else "")
-        })
-        review_counter += 1
+    snippet = review[:500].strip()  # remove leading/trailing whitespace
+    if not snippet:
+        continue  # skip if snippet is empty
 
-    df_reviews = pd.DataFrame(review_records)
+    review_records.append({
+        "ReviewID": review_counter,
+        "Words": len(words),
+        "Sentiment": round(sentiment, 3),
+        "Subjectivity": round(subjectivity, 3),
+        "Snippet": snippet + ("..." if len(review) > 500 else "")
+    })
+    review_counter += 1
 
-    # --- Remove empty rows ---
-    df_reviews = df_reviews[df_reviews['Snippet'].str.strip() != ""].reset_index(drop=True)
+# --- Create DataFrame ---
+df_reviews = pd.DataFrame(review_records)
 
-    # --- Filter ReviewID 1 to 8 ---
-    df_reviews = df_reviews[df_reviews['ReviewID'].between(1, 8)].reset_index(drop=True)
+# --- Reset index to be continuous ---
+df_reviews.reset_index(drop=True, inplace=True)
+df_reviews['ReviewID'] = df_reviews.index + 1
 
-    # --- Display table ---
-    st.subheader("Reviews overview")
-    st.dataframe(df_reviews, width="stretch", height=400)
+# --- Display table ---
+st.subheader("Reviews overview")
+st.dataframe(df_reviews, width="stretch", height=400)
 
     # --- Aggregate statistics ---
     st.subheader("Aggregate Insights")
