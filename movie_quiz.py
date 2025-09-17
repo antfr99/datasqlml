@@ -393,7 +393,6 @@ df_results = df_results.sort_values(by="p_value")
 import spacy
 from textblob import TextBlob
 from docx import Document
-from collections import Counter
 import pandas as pd
 import re
 
@@ -414,8 +413,6 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
         st.warning("spaCy model not available, skipping NER")
 
     review_records = []
-    all_entities = []
-    all_words = []
 
     for idx, review in enumerate(reviews, start=1):
         tb = TextBlob(review)
@@ -426,37 +423,33 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
         if nlp:
             doc_nlp = nlp(review)
             ents = [ent.text for ent in doc_nlp.ents if ent.label_ in ["PERSON","ORG","WORK_OF_ART"]]
-            all_entities.extend(ents)
-
-        # simple keywords
-        words = [w.lower() for w in re.findall(r'\b\w+\b', review) if len(w) > 4]
-        all_words.extend(words)
 
         review_records.append({
             "ReviewID": idx,
             "Words": len(review.split()),
-            "Sentiment": round(sentiment,3),
-            "Subjectivity": round(subjectivity,3),
+            "Sentiment": round(sentiment, 3),
+            "Subjectivity": round(subjectivity, 3),
             "Entities": ", ".join(set(ents)),
-            "Snippet": review[:150] + ("..." if len(review)>150 else "")
+            "Snippet": review[:150] + ("..." if len(review) > 150 else "")
         })
 
     df_reviews = pd.DataFrame(review_records)
+
+    # --- Filter out very short reviews ---
+    df_reviews = df_reviews[df_reviews["Words"] >= 5]
 
     st.subheader("Reviews overview")
     st.dataframe(df_reviews)
 
     # --- Overall statistics ---
     st.subheader("Aggregate Insights")
-
     st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
     st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
 
-    if all_entities:
-        common_ents = Counter(all_entities).most_common(10)
-        st.write("**Top mentioned people/works:**")
-        st.write(common_ents)
-
-    common_words = Counter(all_words).most_common(15)
-    st.write("**Top keywords (non-stopwords):**")
-    st.write(common_words)
+    # --- Explanation ---
+    st.markdown("""
+    **What these metrics mean:**
+    - **Sentiment**: ranges from -1 (negative) to +1 (positive). Shows if the review leans negative or positive.  
+    - **Subjectivity**: ranges from 0 (objective/factual) to 1 (subjective/opinionated). High subjectivity means more personal impressions.  
+    - **Entities**: names of people, organizations, or works of art automatically detected by spaCy.  
+    """)
