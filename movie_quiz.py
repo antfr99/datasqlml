@@ -48,14 +48,16 @@ else:
     st.warning("My Ratings table is empty or failed to load.")
 
 # --- Scenarios ---
+
 scenario = st.radio(
     "Choose a scenario:",
     [
-        "Scenario 1- SQL", 
-        "Scenario 2- SQL", 
-        "Scenario 3- SQL", 
-        "Scenario 4- Python Machine Learning",
-        "Scenario 5- Statistical Insights by Genre (Paired t-test)",
+        "Scenario 1 – Highlight Disagreements (SQL)",
+        "Scenario 2 – Hybrid Recommendation (SQL)",
+        "Scenario 3 – Top Unseen Films by Decade (SQL)",
+        "Scenario 4 – Predict My Ratings (ML)",
+        "Scenario 5 – Statistical Insights by Genre (Agreement %)",
+        "Scenario 6 - Statistical Insights by Director (t-test)",
         "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)"
     ]
 )
