@@ -444,6 +444,7 @@ I can now say that once you understand the characters and why they represent, yo
     """
 
    
+
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
 
@@ -459,8 +460,8 @@ I can now say that once you understand the characters and why they represent, yo
     review_records = []
     review_counter = 1
     for review in reviews:
-        # Skip very short reviews
-        if len(review.split()) < 5:
+        # Skip very short or empty reviews
+        if len(review.split()) < 5 or review.strip() == "":
             continue
 
         tb = TextBlob(review)
@@ -484,8 +485,8 @@ I can now say that once you understand the characters and why they represent, yo
 
     df_reviews = pd.DataFrame(review_records)
 
-    # Remove completely empty rows and reset index
-    df_reviews = df_reviews.dropna(how='all').reset_index(drop=True)
+    # --- Remove any rows with empty Snippet just in case ---
+    df_reviews = df_reviews[df_reviews['Snippet'].str.strip() != ""].reset_index(drop=True)
     
     # --- Display table ---
     st.subheader("Reviews overview")
@@ -508,5 +509,5 @@ I can now say that once you understand the characters and why they represent, yo
     st.markdown("---")
     with st.expander("Full Reviews (click to expand)"):
         for r in reviews:
-            if len(r.split()) >= 5:  # Only show meaningful reviews
+            if len(r.split()) >= 5 and r.strip() != "":
                 st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
