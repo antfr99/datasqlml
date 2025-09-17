@@ -515,6 +515,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # --- Scenario 8 ---
 if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
@@ -525,11 +526,10 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     **Note:** Requires a trained model from Scenario 4.
     """)
 
-    # Button to retrain the model if not already trained
+    # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
         st.warning("Model not found. You need to run Scenario 4 first or retrain here.")
         if st.button("Run Scenario 4 Training Now"):
-            # Run the same training code from Scenario 4
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
             from sklearn.compose import ColumnTransformer
@@ -560,26 +560,41 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             st.session_state['model'] = model
             st.success("Model trained successfully! You can now view feature importance.")
 
-    # If model exists, show feature importance
+    # --- Show feature importance ---
     if 'model' in st.session_state:
-        import matplotlib.pyplot as plt
-        import numpy as np
-
         trained_model = st.session_state['model']
-        # Extract feature importances from Random Forest
         rf = trained_model.named_steps['reg']
         preproc = trained_model.named_steps['prep']
 
-        # Get feature names after one-hot encoding
-        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(categorical_features)
+        # Feature names
+        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(['Genre','Director'])
+        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
         all_features = np.concatenate([cat_features, numerical_features])
         importances = rf.feature_importances_
 
-        # Create bar chart
         fi_df = pd.DataFrame({
             'Feature': all_features,
             'Importance': importances
-        }).sort_values(by='Importance', ascending=True)
+        }).sort_values(by='Importance', ascending=False)
 
-        st.subheader("Feature Importance")
-        st.bar_chart(fi_df.set_index('Feature'))
+        # --- Top N individual features ---
+        top_n = 20
+        fi_top = fi_df.head(top_n)
+
+        st.subheader(f"Top {top_n} Feature Importances (Individual)")
+        plt.figure(figsize=(10,6))
+        sns.barplot(x='Importance', y='Feature', data=fi_top, palette='viridis')
+        plt.title("Top Feature Importances")
+        plt.tight_layout()
+        st.pyplot(plt)
+
+        # --- Aggregated by categorical variable ---
+        fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
+        agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
+
+        st.subheader("Aggregated Feature Importances by Category")
+        plt.figure(figsize=(8,4))
+        sns.barplot(x=agg_df.values, y=agg_df.index, palette='magma')
+        plt.title("Aggregated Feature Importances")
+        plt.tight_layout()
+        st.pyplot(plt)
