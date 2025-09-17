@@ -392,20 +392,12 @@ df_results = df_results.sort_values(by="p_value")
 
 # --- Remove subprocess and sys imports related to runtime download ---
 
-import spacy
 from textblob import TextBlob
 import pandas as pd
 import streamlit as st
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
-
-    # --- Load spaCy model safely ---
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        nlp = None
-        st.warning("spaCy model not available. NER will be skipped.")
 
 
     # --- All reviews stored in a multi-line string ---
@@ -450,48 +442,32 @@ Edit:So after having a day or so to ponder over the meaning of this movie - I've
 I can now say that once you understand the characters and why they represent, you'll understand the meaning and it could change your entire view of this movie.
 
     """
-
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
-
     st.write(f"Loaded **{len(reviews)}** reviews")
-
-    # --- Ensure spaCy model is available ---
-    try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        st.info("spaCy model not found. Downloading en_core_web_sm...")
-        nlp = spacy.load("en_core_web_sm")
 
     review_records = []
     review_counter = 1
     for review in reviews:
-        # Skip very short or empty reviews
-        if len(review.split()) < 5 or review.strip() == "":
+        if len(review.split()) < 5:
             continue
 
         tb = TextBlob(review)
         sentiment = tb.sentiment.polarity
         subjectivity = tb.sentiment.subjectivity
 
-        ents = []
-        if nlp:
-            doc_nlp = nlp(review)
-            ents = [ent.text for ent in doc_nlp.ents if ent.label_ in ["PERSON","ORG","WORK_OF_ART"]]
-
         review_records.append({
             "ReviewID": review_counter,
             "Words": len(review.split()),
             "Sentiment": round(sentiment, 3),
             "Subjectivity": round(subjectivity, 3),
-            "Entities": ", ".join(set(ents)),
             "Snippet": review[:500] + ("..." if len(review) > 500 else "")
         })
         review_counter += 1
 
     df_reviews = pd.DataFrame(review_records)
 
-    # Remove empty rows
+    # --- Remove empty rows ---
     df_reviews = df_reviews[df_reviews['Snippet'].str.strip() != ""].reset_index(drop=True)
 
     # --- Filter ReviewID 1 to 8 ---
@@ -509,14 +485,14 @@ I can now say that once you understand the characters and why they represent, yo
     # --- Explanation ---
     st.markdown("""
     **What these metrics mean:**
-    - **Sentiment**: ranges from -1 (negative) to +1 (positive). Shows if the review leans negative or positive.  
-    - **Subjectivity**: ranges from 0 (objective/factual) to 1 (subjective/opinionated). High subjectivity means more personal impressions.  
-    - **Entities**: names of people, organizations, or works of art automatically detected by spaCy.  
+    - **Sentiment**: ranges from -1 (negative) to +1 (positive).  
+    - **Subjectivity**: ranges from 0 (objective) to 1 (subjective/opinionated).  
+    - **Snippet**: first 500 characters of the review.  
     """)
 
-    # --- Full reviews in collapsible grey block ---
+    # --- Full reviews in collapsible block ---
     st.markdown("---")
     with st.expander("Full Reviews (click to expand)"):
         for r in reviews:
-            if len(r.split()) >= 5 and r.strip() != "":
+            if len(r.split()) >= 5:
                 st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
