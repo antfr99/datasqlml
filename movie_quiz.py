@@ -389,15 +389,15 @@ df_results = df_results.sort_values(by="p_value")
 
 # --- Scenario 7 - NLP Script Analysis ---
 
-
 import spacy
 from textblob import TextBlob
 from docx import Document
 import pandas as pd
 import re
+import streamlit as st
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
-    st.header("Scenario 7 — Film Review Analysis")
+    st.header("Scenario 7 — Film Review Analysis for *Mother!* (2017)")
 
     # --- Load document ---
     doc = Document("Mother.docx")
@@ -424,32 +424,49 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
             doc_nlp = nlp(review)
             ents = [ent.text for ent in doc_nlp.ents if ent.label_ in ["PERSON","ORG","WORK_OF_ART"]]
 
+        # Snippet with more text
+        snippet = review[:300] + ("..." if len(review) > 300 else "")
+
         review_records.append({
             "ReviewID": idx,
             "Words": len(review.split()),
             "Sentiment": round(sentiment, 3),
             "Subjectivity": round(subjectivity, 3),
             "Entities": ", ".join(set(ents)),
-            "Snippet": review[:150] + ("..." if len(review) > 150 else "")
+            "Snippet": snippet
         })
 
+    # Create DataFrame and filter out short reviews
     df_reviews = pd.DataFrame(review_records)
-
-    # --- Filter out very short reviews ---
-    df_reviews = df_reviews[df_reviews["Words"] >= 5]
+    df_reviews = df_reviews[df_reviews['Words'] >= 5]
 
     st.subheader("Reviews overview")
-    st.dataframe(df_reviews)
+    st.dataframe(df_reviews, width="stretch", height=600)
 
     # --- Overall statistics ---
     st.subheader("Aggregate Insights")
-    st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
-    st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
+    st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}  (range -1 = very negative, +1 = very positive)")
+    st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}  (range 0 = very objective, 1 = very subjective)")
 
-    # --- Explanation ---
-    st.markdown("""
-    **What these metrics mean:**
-    - **Sentiment**: ranges from -1 (negative) to +1 (positive). Shows if the review leans negative or positive.  
-    - **Subjectivity**: ranges from 0 (objective/factual) to 1 (subjective/opinionated). High subjectivity means more personal impressions.  
-    - **Entities**: names of people, organizations, or works of art automatically detected by spaCy.  
-    """)
+    # Show explanation of entities
+    st.write("**Entities extracted (PERSON, ORG, WORK_OF_ART):**")
+    st.write("spaCy identifies named entities such as people, organizations, and works of art mentioned in the reviews.")
+
+    # --- Visual Sentiment Indicator ---
+    avg_sentiment = df_reviews['Sentiment'].mean()
+    sentiment_percentage = int((avg_sentiment + 1) / 2 * 100)
+
+    st.subheader("Visual Sentiment Overview")
+    st.write("Average sentiment across reviews (green = positive, red = negative):")
+    st.progress(sentiment_percentage)
+
+    # Emoji metric
+    if avg_sentiment > 0.05:
+        emoji = "😊"
+    elif avg_sentiment < -0.05:
+        emoji = "😞"
+    else:
+        emoji = "😐"
+
+    st.metric("Average Sentiment", f"{avg_sentiment:.3f}", delta=None, help="Range: -1 (very negative) → +1 (very positive)", label_visibility="visible")
+    st.write(f"Overall sentiment {emoji}")
