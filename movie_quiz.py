@@ -691,11 +691,21 @@ feature_names = list(cat_features) + numerical_features
 importances = model.named_steps['reg'].feature_importances_
 fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
 
-# --- Bar charts smaller ---
+# --- Bar charts smaller & top 10 features ---
 target_directors = ["Director_Steven Spielberg", "Director_Alfred Hitchcock"]
+
 for dir_feature in target_directors:
-    context_features = fi_df[(fi_df['Feature'] == dir_feature) | (fi_df['Feature'].str.startswith('Genre_')) | (fi_df['Feature'].isin(numerical_features))]
-    plt.figure(figsize=(6,4))  # smaller chart
+    context_features = fi_df[
+        (fi_df['Feature'] == dir_feature) | 
+        (fi_df['Feature'].str.startswith('Genre_')) | 
+        (fi_df['Feature'].str.startswith('Year_')) | 
+        (fi_df['Feature'].isin(numerical_features))
+    ]
+    
+    # Keep only top 8 by importance
+    context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
+    
+    plt.figure(figsize=(5,3))  # smaller chart
     sns.barplot(
         x='Importance',
         y='Feature',
