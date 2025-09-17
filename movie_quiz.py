@@ -648,11 +648,13 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 # --- Scenario 9: Director Model Evaluation ---
 
 # --- Scenario 9: Director Model Evaluation ---
+
+# --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
 
-    import numpy as np
     import pandas as pd
+    import numpy as np
     import seaborn as sns
     import matplotlib.pyplot as plt
     from sklearn.preprocessing import OneHotEncoder
@@ -664,6 +666,10 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
     train_df = df_ml[df_ml['Your Rating'].notna()]
     predict_df = df_ml[df_ml['Your Rating'].isna()]
+
+    # --- Director dropdown ---
+    directors = sorted(df_ml['Director'].dropna().unique())
+    selected_director = st.selectbox("Select Director", directors, index=directors.index("Alfred Hitchcock"))
 
     # --- Feature Lists ---
     categorical_features = ['Genre', 'Director', 'Year']  # Year as categorical
@@ -698,6 +704,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
 
+    # Numeric and categorical contributions
     numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
     cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
     predict_df['Numeric Contribution'] = numeric_contrib
@@ -706,27 +713,22 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director selection ---
-    all_directors = sorted(df_ml['Director'].unique())
-    selected_director = st.selectbox("Select a Director", options=all_directors, index=all_directors.index("Alfred Hitchcock"))
-
-    # --- Filter movies for selected director ---
+    # --- Director-specific data ---
     dir_name = selected_director
     dir_feature = f"Director_{dir_name}"
     dir_movies = train_df[train_df['Director'] == dir_name]
 
-    # --- Only genres and years relevant to this director ---
     dir_genres = dir_movies['Genre'].unique()
     genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
 
     dir_years = dir_movies['Year'].unique()
     year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
 
-    # --- Build full feature list for table ---
-    dir_features_to_show = [dir_feature] + genre_features + year_features + numerical_features
+    num_features = numerical_features
+    dir_features_to_show = [dir_feature] + genre_features + year_features + num_features
     context_features = fi_df[fi_df['Feature'].isin(dir_features_to_show)].sort_values(by='Importance', ascending=False)
 
-    # --- Display feature importance as table ---
+    # --- Show feature importances as table ---
     st.subheader(f"Feature Importances for {dir_name}")
     st.dataframe(context_features.reset_index(drop=True))
 
@@ -740,40 +742,16 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         .reset_index(drop=True)
     )
 
-    # --- Explanation of feature importance vs contributions ---
+    # --- Explanation ---
     st.markdown(f"""
     **Explanation for {dir_name}:**
 
-    - The table above shows **all features affecting the model's predictions** for {dir_name} movies.
+    - The feature importance table shows **all features affecting the model's predictions** for {dir_name} movies.
     - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
     - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
-    - A feature with high importance indicates the model frequently uses it to reduce prediction error. 
-    - For example:
-      - If `Genre_Thriller` has high importance for {dir_name}, it means that being a thriller strongly affects the predicted rating.
-      - The sum of all categorical feature effects approximates the `Categorical Contribution`.
-    - In short, **feature importance → shows which features the model considers important**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed** to the predicted rating.
-    """)
-
-    # --- Scenario 9 Commentary ---
-    st.markdown("""
-    ### Why Comparing Director Feature Importances is Valuable
-
-    This analysis gives a **personalized, interpretable view** of how the model predicts my ratings.
-
-    #### 1. Tailored Insights 
-    - Each director has a unique body of work: genres, themes, years.
-    - By isolating the selected director, we see which aspects **actually drive my ratings**.
-
-    #### 2. Actionable Information 
-    - Filtering to the director’s feature, their genres, years, and numeric features ensures **clarity and relevance**.
-    - Helps in making **data-driven predictions** for unseen movies.
-
-    #### 3. Model Validation 
-    - Examining director-specific importance checks alignment with intuition.
-    - High importance for `Director_{dir_name}` confirms the model recognizes my consistent preferences.
-
-    #### 4. Contribution Analysis 
-    - Numeric vs categorical contributions show **why a predicted rating is high or low**.
-
-    **Overall**, this approach transforms a Random Forest’s opaque feature importance into **personalized insights about movie preferences**, making predictions interpretable and actionable.
+    - A feature with high importance indicates the model frequently uses it to reduce prediction error.
+    - The sum of all categorical feature effects approximates the `Categorical Contribution`.
+    - In short:
+        - **Feature Importance → shows which features the model considers important**
+        - **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**
     """)
