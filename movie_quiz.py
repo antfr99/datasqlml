@@ -745,39 +745,43 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
             .sort_values(by='Predicted Rating', ascending=False)
             .reset_index(drop=True)
         )
+# --- Scenario 9: Director Model Evaluation ---
+elif scenario == "Scenario 9 – Director Model Evaluation":
+    st.header("Scenario 9 — Model Evaluation for Specific Directors")
+    
+    # --- all your model, predictions, plots, tables code here ---
 
-# --- Commentary ---
-st.markdown("""
-### Why Comparing Director Feature Importances is Valuable
+    # --- Commentary ONLY for Scenario 9 ---
+    st.markdown("""
+    ### Why Comparing Director Feature Importances is Valuable
 
-Comparing feature importances for specific directors gives a **personalized, interpretable view** of how the model predicts your ratings.
+    Comparing feature importances for specific directors gives a **personalized, interpretable view** of how the model predicts your ratings.
 
-#### 1. Tailored Insights 
-- Each director has a unique body of work: certain genres, typical themes, production years, or recurring collaborators.
-- By isolating the features relevant to a single director, I see which aspects **actually drive my ratings** for their movies.
-- Example: For Alfred Hitchcock, `Genre_Thriller` and `Director_Alfred Hitchcock` may be highly important, showing your high ratings are tied to thrillers, not comedies or dramas.
+    #### 1. Tailored Insights 
+    - Each director has a unique body of work: certain genres, typical themes, production years, or recurring collaborators.
+    - By isolating the features relevant to a single director, I see which aspects **actually drive my ratings** for their movies.
+    - Example: For Alfred Hitchcock, `Genre_Thriller` and `Director_Alfred Hitchcock` may be highly important, showing your high ratings are tied to thrillers, not comedies or dramas.
 
-#### 2. Actionable Information 
-- Filtering feature importance to the director’s own feature, their genres, the years of their films, and numeric features ensures **clarity and relevance**.
-- I can see patterns like:
-  - I rate Spielberg’s adventure films higher than his dramas.
-  - I rate Hitchcock’s 1960s thrillers higher than his later films.
-- This helps in making **data-driven viewing predictions** for unseen movies.
+    #### 2. Actionable Information 
+    - Filtering feature importance to the director’s own feature, their genres, the years of their films, and numeric features ensures **clarity and relevance**.
+    - I can see patterns like:
+      - I rate Spielberg’s adventure films higher than his dramas.
+      - I rate Hitchcock’s 1960s thrillers higher than his later films.
+    - This helps in making **data-driven viewing predictions** for unseen movies.
 
-#### 3. Model Validation 
-- Examining director-specific feature importance allows me to check whether the model aligns with your intuition.
-- High importance for `Director_Alfred Hitchcock` or `Genre_Thriller` confirms the model recognizes my consistent preferences.
+    #### 3. Model Validation 
+    - Examining director-specific feature importance allows me to check whether the model aligns with your intuition.
+    - High importance for `Director_Alfred Hitchcock` or `Genre_Thriller` confirms the model recognizes my consistent preferences.
 
-#### 4. Contribution Analysis 
-- The breakdown into numeric (IMDb rating, number of votes) and categorical (Director, Genre, Year) contributions shows **why a predicted rating is high or low**.
-- This helps me understand whether the model’s prediction is driven by:
-  - Movie popularity or rating (numeric features), or  
-  - My personal preference for the director, genre, or release year (categorical features).
+    #### 4. Contribution Analysis 
+    - The breakdown into numeric (IMDb rating, number of votes) and categorical (Director, Genre, Year) contributions shows **why a predicted rating is high or low**.
+    - This helps me understand whether the model’s prediction is driven by:
+      - Movie popularity or rating (numeric features), or  
+      - My personal preference for the director, genre, or release year (categorical features).
 
-#### 5. Focused Comparison Between Directors 
-- Comparing Spielberg vs Hitchcock side by side highlights **differences in what influences your ratings** for each director.
-- For example, the model might show that `Genre_Sci-Fi` is more important for Spielberg than Hitchcock, helping you understand **your nuanced tastes**.
+    #### 5. Focused Comparison Between Directors 
+    - Comparing Spielberg vs Hitchcock side by side highlights **differences in what influences your ratings** for each director.
+    - For example, the model might show that `Genre_Sci-Fi` is more important for Spielberg than Hitchcock, helping you understand **your nuanced tastes**.
 
-**Overall**, this approach transforms a Random Forest’s opaque feature importance into **personalized insights about your movie preferences**, making the predictions both interpretable and actionable.
-""")
-
+    **Overall**, this approach transforms a Random Forest’s opaque feature importance into **personalized insights about your movie preferences**, making the predictions both interpretable and actionable.
+    """)
