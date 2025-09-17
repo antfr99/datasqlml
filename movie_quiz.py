@@ -392,10 +392,14 @@ df_results = df_results.sort_values(by="p_value")
 # --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
 
 # --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
+# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
+
 import spacy
 from textblob import TextBlob
 import pandas as pd
 import streamlit as st
+import subprocess
+import sys
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
@@ -443,19 +447,18 @@ I can now say that once you understand the characters and why they represent, yo
 
     """
 
-   
-
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
 
     st.write(f"Loaded **{len(reviews)}** reviews")
 
-    # --- NLP ---
+    # --- Ensure spaCy model is available ---
     try:
         nlp = spacy.load("en_core_web_sm")
-    except:
-        nlp = None
-        st.warning("spaCy model not available, skipping NER")
+    except OSError:
+        st.info("spaCy model not found. Downloading en_core_web_sm...")
+        subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+        nlp = spacy.load("en_core_web_sm")
 
     review_records = []
     review_counter = 1
@@ -485,12 +488,12 @@ I can now say that once you understand the characters and why they represent, yo
 
     df_reviews = pd.DataFrame(review_records)
 
-    # --- Remove any rows with empty Snippet just in case ---
+    # Remove empty rows
     df_reviews = df_reviews[df_reviews['Snippet'].str.strip() != ""].reset_index(drop=True)
 
-    # --- Filter to ReviewID 1 to 8 ---
+    # --- Filter ReviewID 1 to 8 ---
     df_reviews = df_reviews[df_reviews['ReviewID'].between(1, 8)].reset_index(drop=True)
-    
+
     # --- Display table ---
     st.subheader("Reviews overview")
     st.dataframe(df_reviews, width="stretch", height=400)
