@@ -577,18 +577,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             'Importance': importances
         }).sort_values(by='Importance', ascending=False)
 
-        # --- Top N individual features ---
-        top_n = 20
-        fi_top = fi_df.head(top_n)
-
-        st.subheader(f"Top {top_n} Feature Importances (Individual)")
-        plt.figure(figsize=(10,6))
-        sns.barplot(x='Importance', y='Feature', data=fi_top, palette='viridis')
-        plt.title("Top Feature Importances")
-        plt.tight_layout()
-        st.pyplot(plt)
-
-        # --- Aggregated by categorical variable ---
+                # --- Aggregated by categorical variable ---
         fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
         agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
 
