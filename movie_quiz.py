@@ -721,49 +721,55 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         st.pyplot(plt.gcf())
         plt.close()
 
-    # --- Predictions ---
-    X_pred = predict_df[categorical_features + numerical_features]
-    predict_df['Predicted Rating'] = model.predict(X_pred)
+# --- Predictions ---
+X_pred = predict_df[categorical_features + numerical_features]
+predict_df['Predicted Rating'] = model.predict(X_pred)
 
-    # --- Add breakdown of contributions ---
-    # Use partial contributions based on feature importance (rough estimate)
-    contrib = X_pred.copy()
-    for col in numerical_features:
-        contrib[col + ' Contribution'] = X_pred[col] * importances[feature_names.index(col)]
-    for col in categorical_features:
-        # Get one-hot columns
-        ohe_cols = [f for f in feature_names if f.startswith(col+'_')]
-        for oc in ohe_cols:
-            idx = feature_names.index(oc)
-            contrib[oc + ' Contribution'] = model.named_steps['prep'].named_transformers_['cat'].transform(X_pred[[col]]).toarray()[:,list(cat_features).index(oc)] * importances[idx]
+# --- Add breakdown of contributions ---
+# Transform all categorical features together
+cat_ohe = model.named_steps['prep'].named_transformers_['cat'].transform(X_pred[categorical_features]).toarray()
+cat_feature_names = model.named_steps['prep'].named_transformers_['cat'].get_feature_names_out(categorical_features)
 
-    # Keep only sum of numeric vs categorical contributions for readability
-    contrib['Numeric Contribution'] = contrib[[c+' Contribution' for c in numerical_features]].sum(axis=1)
-    contrib['Categorical Contribution'] = contrib[[c+' Contribution' for c in contrib.columns if 'Contribution' in c and c not in [f+' Contribution' for f in numerical_features]]].sum(axis=1)
+# Compute contributions
+contrib = pd.DataFrame(index=X_pred.index)
+# Numeric contributions
+for col in numerical_features:
+    idx = feature_names.index(col)
+    contrib[col + ' Contribution'] = X_pred[col] * importances[idx]
+# Categorical contributions
+for i, col in enumerate(cat_feature_names):
+    idx = feature_names.index(col)
+    contrib[col + ' Contribution'] = cat_ohe[:, i] * importances[idx]
 
-    # Merge contributions into predict_df
-    director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Alfred Hitchcock"])].copy()
-    director_results['Numeric Contribution'] = contrib['Numeric Contribution']
-    director_results['Categorical Contribution'] = contrib['Categorical Contribution']
+# Sum contributions
+contrib['Numeric Contribution'] = contrib[[c+' Contribution' for c in numerical_features]].sum(axis=1)
+contrib['Categorical Contribution'] = contrib[[c for c in contrib.columns if 'Contribution' in c and c not in [f+' Contribution' for f in numerical_features]]].sum(axis=1)
 
-    st.subheader("Predicted Ratings for Selected Directors with Contributions")
-    st.dataframe(
-        director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating',
-                          'Numeric Contribution','Categorical Contribution']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .reset_index(drop=True),
-        width="stretch",
-        height=500
-    )
+# Merge contributions into predict_df
+director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Alfred Hitchcock"])].copy()
+director_results['Numeric Contribution'] = contrib['Numeric Contribution']
+director_results['Categorical Contribution'] = contrib['Categorical Contribution']
 
-    # --- Commentary ---
-    st.markdown("""
-    ### Why this matters
-    - The charts show **how important each feature is for each director individually**, with the director feature highlighted.  
-    - Numeric and genre features are included for context.  
-    - The table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.  
-    - **Columns explanation:**  
-        - **Title / Director / Genre / Year / Num Votes**: context about each movie.  
-        - **Predicted Rating**: how the model predicts you would rate it.  
-        - **Numeric Contribution / Categorical Contribution**: rough estimate of how much numeric vs categorical features influenced the prediction.  
-    """)
+st.subheader("Predicted Ratings for Selected Directors with Contributions")
+st.dataframe(
+    director_results[['Title','IMDb Rating','Genre','Director','Year','Num Votes','Predicted Rating',
+                      'Numeric Contribution','Categorical Contribution']]
+    .sort_values(by='Predicted Rating', ascending=False)
+    .reset_index(drop=True),
+    width="stretch",
+    height=500
+)
+
+# --- Commentary ---
+st.markdown("""
+### Why this matters
+- The charts show **how important each feature is for each director individually**, with the director feature highlighted.  
+- Numeric and genre features are included for context.  
+- The table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.  
+- **Columns explanation:**  
+    - **Title / Director / Genre / Year / Num Votes**: context about each movie.  
+    - **Predicted Rating**: the rating the model predicts you would give.  
+    - **Numeric Contribution**: the combined impact of numeric features (IMDb Rating, Year, Num Votes) on the predicted rating.  
+    - **Categorical Contribution**: the combined impact of categorical features (Genre, Director) on the predicted rating.  
+    - **Predicted Rating ≈ Numeric Contribution + Categorical Contribution**, giving a sense of how each type of feature influenced the final prediction.
+""")
