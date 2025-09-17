@@ -5,3 +5,6 @@ streamlit
 scikit-learn
 scipy
 openpyxl
+spacy
+textblob
+docx
