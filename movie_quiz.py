@@ -648,24 +648,29 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 # --- Scenario 9: Director Model Evaluation ---
 
 # --- Scenario 9: Director Model Evaluation ---
+# --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
-    st.header("Scenario 9 — Model Evaluation for Alfred Hitchcock")
+    st.header("Scenario 9 — Model Evaluation for a Specific Director")
 
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
     from sklearn.preprocessing import OneHotEncoder
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.compose import ColumnTransformer
     from sklearn.pipeline import Pipeline
-    import numpy as np
-    import seaborn as sns
-    import matplotlib.pyplot as plt
 
     # --- Prepare Data ---
     df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
     train_df = df_ml[df_ml['Your Rating'].notna()]
     predict_df = df_ml[df_ml['Your Rating'].isna()]
 
+    # --- Director filter ---
+    directors_list = sorted(train_df['Director'].unique())
+    selected_director = st.selectbox("Select a Director", directors_list)
+
     # --- Feature Lists ---
-    categorical_features = ['Genre', 'Director', 'Year']  # Year as categorical
+    categorical_features = ['Genre', 'Director', 'Year']
     numerical_features = ['IMDb Rating', 'Num Votes']
 
     # --- Pipeline ---
@@ -675,7 +680,6 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
             ('num', 'passthrough', numerical_features)
         ]
     )
-
     model = Pipeline([
         ('prep', preprocessor),
         ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
@@ -693,29 +697,22 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     importances = model.named_steps['reg'].feature_importances_
     fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
 
-    # --- Predictions and Contributions ---
+    # --- Predictions & Contributions ---
     X_pred = predict_df[categorical_features + numerical_features]
     predict_df['Predicted Rating'] = model.predict(X_pred)
-
-    # Numeric contributions
     numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
-    # Categorical contributions
     cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
     predict_df['Numeric Contribution'] = numeric_contrib
     predict_df['Categorical Contribution'] = cat_contrib
-
-    # --- Remove duplicates ---
     predict_df = predict_df.drop_duplicates(subset='Movie ID')
 
-    # --- Director-specific plotting & table for Alfred Hitchcock ---
-    dir_name = "Alfred Hitchcock"
+    # --- Director-specific plotting & table ---
+    dir_name = selected_director
     dir_feature = f"Director_{dir_name}"
     dir_movies = train_df[train_df['Director'] == dir_name]
 
-    # --- Only genres and years relevant to this director ---
     dir_genres = dir_movies['Genre'].unique()
     genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
-
     dir_years = dir_movies['Year'].unique()
     year_features = [f'Year_{y}' for y in dir_years if f'Year_{y}' in fi_df['Feature'].values]
 
@@ -740,7 +737,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     st.pyplot(fig)
     plt.close(fig)
 
-    # --- Director-specific predicted ratings table ---
+    # --- Predicted ratings table ---
     director_table = predict_df[predict_df['Director'] == dir_name]
     st.subheader(f"Predicted Ratings for {dir_name} Movies")
     st.dataframe(
@@ -750,17 +747,13 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         .reset_index(drop=True)
     )
 
-    # --- Explanation of feature importance vs contributions ---
+    # --- Explanation of contributions ---
     st.markdown(f"""
     **Explanation for {dir_name}:**
 
-    - The vertical bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
-    - **Numeric features** (IMDb Rating, Num Votes) contribute to the overall rating through the `Numeric Contribution` column.
-    - **Categorical features** (Director, Genre, Year) contribute through the `Categorical Contribution` column.
-    - A feature with high importance in the bar chart indicates the model frequently uses it to reduce prediction error.
-    - For example:
-      - If `Genre_Thriller` has high importance for {dir_name}, it means that whether a movie is a thriller strongly affects the predicted rating.
-      - The sum of all categorical feature effects approximates the `Categorical Contribution`.
-    - **Negative categorical contributions** can appear if the combination of director, genre, and year features decreases the predicted rating relative to the numeric features. This is normal and reflects interactions captured by the Random Forest.
-    - In short, **bar chart importance → shows which features the model considers important**, while **Numeric/Categorical Contribution → shows how much each feature type actually contributed to the predicted rating**.
+    - Vertical bar chart shows **top features affecting the model's predictions** for {dir_name} movies.
+    - **Numeric features** contribute via `Numeric Contribution`.
+    - **Categorical features** contribute via `Categorical Contribution`.
+    - High importance indicates the feature strongly affects predictions.
+    - Negative categorical contributions are normal: the model predicts lower rating based on that feature combination.
     """)
