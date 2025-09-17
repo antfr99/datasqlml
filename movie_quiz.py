@@ -645,6 +645,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         - Numerical features indicate general importance of ratings, year, or popularity.
         """)
 
+
 # --- Scenario 9: Director Model Evaluation ---
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
@@ -689,6 +690,19 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     importances = model.named_steps['reg'].feature_importances_
     fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
 
+    # --- Predictions and Contributions ---
+    X_pred = predict_df[categorical_features + numerical_features]
+    predict_df['Predicted Rating'] = model.predict(X_pred)
+
+    numeric_idx = [feature_names.index(f) for f in numerical_features]
+    numeric_contrib = np.dot(X_pred[numerical_features], importances[-len(numerical_features):])
+    cat_contrib = predict_df['Predicted Rating'] - numeric_contrib
+    predict_df['Numeric Contribution'] = numeric_contrib
+    predict_df['Categorical Contribution'] = cat_contrib
+
+    # --- Remove duplicates before filtering ---
+    predict_df = predict_df.drop_duplicates(subset='Movie ID')
+
     # --- Director-specific plotting ---
     target_directors = ["Steven Spielberg", "Alfred Hitchcock"]
 
@@ -696,6 +710,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         dir_feature = f"Director_{dir_name}"
         dir_movies = train_df[train_df['Director'] == dir_name]
 
+        # --- Only genres and years relevant to this director ---
         dir_genres = dir_movies['Genre'].unique()
         genre_features = [f'Genre_{g}' for g in dir_genres if f'Genre_{g}' in fi_df['Feature'].values]
 
@@ -708,7 +723,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         context_features = context_features.sort_values(by='Importance', ascending=False).head(8)
 
         # --- Smaller bar chart ---
-        fig, ax = plt.subplots(figsize=(3,2))  # half-size chart
+        fig, ax = plt.subplots(figsize=(3,2))  # half-size
         sns.barplot(
             x='Importance',
             y='Feature',
@@ -722,8 +737,7 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
         st.pyplot(fig)
         plt.close(fig)
 
-    # --- Remove duplicates before table ---
-    predict_df = predict_df.drop_duplicates(subset='Movie ID')
+    # --- Filter director predictions ---
     director_results = predict_df[predict_df['Director'].isin(target_directors)]
 
     # --- Display table ---
@@ -740,6 +754,5 @@ elif scenario == "Scenario 9 – Director Model Evaluation":
     ### Why this matters
     - Each director chart now shows **only features relevant to their movies** (their director feature, genres they made, years they made movies, numeric features).  
     - Numeric and categorical contributions show **how each feature type impacts the predictions**.  
-    - Table shows model predictions for Spielberg and Hitchcock movies I haven’t rated yet.
+    - Table shows model predictions for Spielberg and Hitchcock movies you haven’t rated yet.
     """)
-
