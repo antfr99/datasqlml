@@ -1,10 +1,10 @@
+streamlit
 pandas
 pandasql
 numpy
-streamlit
-scikit-learn
 scipy
-openpyxl
+scikit-learn
 spacy
 textblob
-docx
+python-docx
+openpyxl
