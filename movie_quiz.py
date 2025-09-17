@@ -387,19 +387,26 @@ df_results = df_results.sort_values(by="p_value")
         except Exception as e:
             st.error(f"Error running t-test analysis: {e}")
 
-# --- Scenario 7 - NLP Script Analysis ---
+
+
+# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
 import spacy
 from textblob import TextBlob
-from docx import Document
 import pandas as pd
-import re
+import streamlit as st
 
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
 
-    # --- Load document ---
-    doc = Document("Mother.docx")
-    reviews = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+    # --- Reviews stored in Python ---
+    reviews = [
+        "Mother! is a visually stunning but polarizing movie. Darren Aronofsky's direction is intense.",
+        "Jennifer Lawrence gives a remarkable performance, but the narrative is confusing for some viewers.",
+        "A bold, allegorical film that divides audiences. The horror elements are striking.",
+        "The soundtrack is haunting and complements the psychological tension perfectly.",
+        "Some viewers find the symbolism overwhelming, but it's a masterpiece in artistic storytelling."
+        # Add more reviews as needed
+    ]
 
     st.write(f"Loaded **{len(reviews)}** reviews")
 
@@ -411,7 +418,6 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
         st.warning("spaCy model not available, skipping NER")
 
     review_records = []
-
     for idx, review in enumerate(reviews, start=1):
         tb = TextBlob(review)
         sentiment = tb.sentiment.polarity
@@ -432,14 +438,13 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
         })
 
     df_reviews = pd.DataFrame(review_records)
-
-    # --- Filter out very short reviews ---
     df_reviews = df_reviews[df_reviews["Words"] >= 5]
 
+    # --- Display table ---
     st.subheader("Reviews overview")
-    st.dataframe(df_reviews)
+    st.dataframe(df_reviews, width="stretch", height=400)
 
-    # --- Overall statistics ---
+    # --- Aggregate statistics ---
     st.subheader("Aggregate Insights")
     st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
     st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
@@ -451,3 +456,9 @@ if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summar
     - **Subjectivity**: ranges from 0 (objective/factual) to 1 (subjective/opinionated). High subjectivity means more personal impressions.  
     - **Entities**: names of people, organizations, or works of art automatically detected by spaCy.  
     """)
+
+    # --- Full reviews in collapsible grey block ---
+    st.markdown("---")
+    with st.expander("Full Reviews (click to expand)"):
+        for r in reviews:
+            st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
