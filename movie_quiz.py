@@ -390,6 +390,8 @@ df_results = df_results.sort_values(by="p_value")
 
 
 # --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
+
+# --- Scenario 7: Review Analysis (NER, Sentiment, Keywords, Summary) ---
 import spacy
 from textblob import TextBlob
 import pandas as pd
@@ -398,16 +400,52 @@ import streamlit as st
 if scenario == "Scenario 7 — Review Analysis (NER, Sentiment, Keywords, Summary)":
     st.header("Scenario 7 — Film Review Analysis - Mother!2017")
 
-    # --- Reviews stored in Python ---
-    reviews = [
-        "Mother! is a visually stunning but polarizing movie. Darren Aronofsky's direction is intense.",
-        "Jennifer Lawrence gives a remarkable performance, but the narrative is confusing for some viewers.",
-        "A bold, allegorical film that divides audiences. The horror elements are striking.",
-        "The soundtrack is haunting and complements the psychological tension perfectly.",
-        "Some viewers find the symbolism overwhelming, but it's a masterpiece in artistic storytelling."
-        # Add more reviews as needed
-    ]
+    # --- All reviews stored in a multi-line string ---
+    reviews_text = """
+Religious allegories abound but really it's just pretentious nonsense
+Now I'm not one to disparage the director, I liked Requiem for a Dream and loved Black Swan, but this is a stinker and just simply boring. It's all just packed full of cod biblical allegories spread thickly throughout which tries to twist between different types of horror genres, but leaved me unintrigued. 
+Granted the settings, claustrophobic direction and acting are top notch but it shouldn't mask for what otherwise is a poor uninteresting movie. It unsettles and bores, way too much to care, and as the ending dragged on I was left increasingly frustrated as it refused to just shut up shop. 
+It's totally split opinion from what I've seen so far, and you'll struggle to find anyone in the middle on this one. In fairness, some credit to the film studios for risking this effort in launching it into mainstream cinemas but without the director it would have rightfully languished on cable late night showings.
+There's no point going anymore into this. I simply hated it, and that despite being a major admirer of offbeat horror and psychological movies, but this isn't in the same league as for example Raw or Get Out, which is a shame. I'd recommend you pass on this there are far better films out there to go watch.
+Aronofsky's mother! will be hated by many, but loved by a precious few
 
+Horrifying. Just.. horrifying. Aronofsky really got me with this one. Not only did he manage to grab me on an intellectual level, but also on an emotional one...
+# (Include all remaining reviews here, each separated by an empty line)
+
+Usually this is where I put my plot description but it's best that you go into Darren Aronofsky's latest knowing as little as possible. Lets just say that Jennifer Lawrence and Javier Bardem are living in a large house all alone when a surprise visit sets them off into madness.
+It really shocks me that Paramount would try to push MOTHER! onto the masses. For starters, the majority of moviegoers today do not want to think and they certainly don't want to see a movie where everything isn't explained. In fact, most people need everything explained in the trailer before they'll even go see a movie. A movie like MOTHER! is something that never explains itself and it constantly keeps you guessing from one scene to the next. What's it about? It's really hard to say as every viewer is going to come away with something different. With all of that said, it's easy to see why the film bombed at the box office and why those who did see it gave it a F rating.
+what I loved most about this movie is that the setting is just so perfect. You've got a large beautiful house out in the middle of nowhere and it's surrounded by beautiful grass and trees. From the very first scene we can just tell that something isn't quite right and Aronofsky puts us in this beautiful place with confusing surroundings. What makes the film so special is the fact that nothing is ever explained and with each new plot twist your brain just becomes more confused as to what's going on. We know something is happening and we know something bad is going to happen but you're constantly trying to guess what.
+Of course, a movie like this wouldn't work without a terrific cast to pull it off. Lawrence turns in another terrific performance and I thought she as fabulous at showing how fractured this character was. We're often questioning her mental state and I thought Lawrence managed to make you feel for the character and go along with her confusion to everything that is happening. Bardem actually steals the show with his fiery performance and I really loved the rage and anger he brought to the film as well as another side that I won't spoil to prevent giving away aspects of the plot. Both Ed Harris and Michelle Pfeiffer were also terrific but, again, I'll hold off commenting more to prevent plot points.
+The cinematography is terrific and on a technical level the film is quite flawless. The story is a very interesting one and one that keeps you guessing throughout. The performances just seal the deal. With that said, the film certainly goes downright insane at times and the ending is just one that will have you staggering out of the theater. I must say that I thought the finale went on a bit too long and that it would have worked better had it been edited down a bit. Still, MOTHER! is a film that I really loved and one that I really respected but at the same time I'm not sure who I'd recommend it to.
+
+Went to the first matinée available locally and I am still thinking the picture over. Will definitely see this one again, if it hasn't left the theatre abruptly. I was certainly horrified by the film, which is a good thing, as I had assumed it was a horror picture. It is, of course, much more than that. Nonetheless, it is NOT The Conjuring or Get Out (both good films, for sure), so just be warned.
+By now you are aware that the film has been controversial, also a good thing. Jennifer Lawrence does a fine job and her career is certainly not going to suffer for her performance. I am not exactly a JLaw "fan" (could live without the Hunger Games), although I will pay closer attention to her future performances, especially if she pulls off more roles like this one (really liked Winter's Bone, by the way). As I understand the Hollywood scene, it is a respectable personal decision to take on a challenging role in an avant garde picture, especially if you have already banked serious money from popular roles in blockbusters. Javier Bardem, Michelle Pfeiffer, and Ed Harris also do their respective parts justice--a well-acted film by A-listers, overall. Camera work and special effects are also impressive.
+The story is genuinely disturbing in a Requiem for a Dream way, so don't go if you can't handle that sort of thing. Some of the violence is, indeed, OVER THE TOP. Seriously, not for the faint of heart. Aside from the biblical allegory stuff, I found the character portrayals creepy as hell in a (sur?)realistic David Lynch-esque way. Hell is other people!
+I applaud Mr. Aronofsky for keeping his vision intact all the way to the big screen. For reference, I just don't need any more movies based on superheros, comic books (except The Tenth or Gen 13), children's cartoons, vampires fighting werewolves, or horror stick about unfriending weirdos on facebook. 
+You will have to make up your own mind on this one, so please do just that. Even if you end up despising the film, try to remember that, to quote Rob Zombie, "Art's Not Safe."
+
+A married couple live in an isolated country house. He is a celebrated poet, suffering from writer's block, and she is working on renovating the house. Then a guest, a stranger, suddenly drops in and nothing will ever be the same again. 
+Written and directed by Darren Aronofsky who gave us masterpieces like 'The Wrestler' and 'Requiem for a Dream', as well as the excellent 'Black Swan'. The fact that he wrote and directed this was the only reason I watched it, hoping that he was back to the form of those movies as his previous movie was the craptacular-beyond-belief 'Noah'.
+Unfortunately, no, he isn't, though initially there was a glimmer of hope. The movie started interestingly enough, with some decent character development and some interesting themes. However, from the outset it was slow, plus there were signs this wasn't going to be a character-based drama but something symbolic, and pretentious.
+Plus it was annoying. The only likeable character was Jennifer Lawrence's. Javier Bardem's was selfish and egotistical and every single other character was incredibly irritating. 
+Still, I was hoping this would all develop into something interesting and profound. Wrong again. It develops into anarchy and some sort of badly-thought-out horror movie, and the annoyance factor gets pushed to the max. Of course, it's all meant to be symbolic, but figuring out everything would require you to think about the movie, and do so you would have had to have concentrated all through the tidal wave of excrement that was the movie.
+Pretentious and annoying, and evidence that, sadly, Darren Aronofsky has run out of ideas.
+
+I have been going to the movies for 45 years. This is, hands down, the worst movie I have ever seen. I mean, I hated this movie. Plan 9 From Outer Space and The Room were at least entertaining. This is like being locked in a cell with a stoned college student who can't shut up and thinks that every opinion they have, is the final word on a subject for 2 hours. Jennifer Lawrence should stick to roles that require her to paint herself blue or shoot arrows. Darren Aronofsky wants to be Luis Buñuel but he's closer to Uwe Boll. He cites The Exterminating Angel as the inspiration for Mother! I agree, in the sense that I did feel like one of the dinner guests who can't leave in Buñuel's classic during the course of watching Mother after paying 13 bucks to see this pretentious, heavy handed waste of time. Do yourself a favor, don't go see this movie, you won't get the 2 hours of your life back if you do. When it shows up on The Movie Channel playing at 3 in the morning in a couple of months, don't even set your DVR to record it. There are infomercials about gardening tools on at the same time, that are much more entertaining to watch that this.
+
+I thought this was worth its salt even though it did tend towards cliché as it wore on. The disappointing aspect of this film is that Jennifer Lawrence somehow portrays an ego that is beyond the character. It's a kind of "you know that I know I'm only acting this and the real movie is me" that seems to have perpetuated in every film she had made since Silver linings Playbook, bar X-Men (when she was covered in paint and having to "live in" the previous "humble" shoes of Rebecca Romijn) and American Hustle (where she was greedy White Trash). She needs a director who can "humble her down", in the same way Eastwood did for Jolie in Changeling, so that her ego is less of a distraction for her acting.
+
+Where to start - I've literally just finished watching this and spent the last hour questioning if I had been transported to another universe.
+This movie had all the potential to be something great, from the cast to the secluded creepy setting - but no, we got almost 2 hours of the what could only be described as one of those brainwashing experimental videos where you have no idea what's going on.
+If you like movies which make you feel uneasy, and make you think you're going mad then this might be the movies for you. Otherwise, I wouldn't bother.
+Edit:So after having a day or so to ponder over the meaning of this movie - I've changed my rating and edited my review based on what I have come to know.
+I can now say that once you understand the characters and why they represent, you'll understand the meaning and it could change your entire view of this movie.
+
+    """
+
+    # --- Convert multi-line text to list of reviews ---
+    # Split by empty lines, strip whitespace, ignore empty strings
+    reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
     st.write(f"Loaded **{len(reviews)}** reviews")
 
     # --- NLP ---
