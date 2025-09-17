@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy ), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Spacy, Textblob ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -484,6 +484,9 @@ I can now say that once you understand the characters and why they represent, yo
 
     df_reviews = pd.DataFrame(review_records)
 
+    # Remove completely empty rows and reset index
+    df_reviews = df_reviews.dropna(how='all').reset_index(drop=True)
+    
     # --- Display table ---
     st.subheader("Reviews overview")
     st.dataframe(df_reviews, width="stretch", height=400)
