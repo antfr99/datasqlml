@@ -6,7 +6,7 @@ import pandasql as ps
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Spacy, Textblob ), SQL, and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob ), SQL, and GitHub.
 """)
 
 # --- Load Excel files ---
@@ -449,7 +449,7 @@ This is a phenomenal film, full of details, full of symbolism and references to 
 
 I have never watch a movie about it :).Dont try to learn something about the film before watching. Actually, it tells very good the whole life, and theatral aspect was wonderful in the movie. I strongly suggest that movie but, first, you have to leave your superstitions and prejudice . Just watch as an art and movie. But this movie, is not for superhero lovers and childs.
     """
-    
+
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
 
