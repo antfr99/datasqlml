@@ -645,112 +645,102 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         """)
 
 
+# --- Scenario 9: Director Model Evaluation ---
+
+
 elif scenario == "Scenario 9 – Director Model Evaluation":
     st.header("Scenario 9 — Model Evaluation for Specific Directors")
 
-    if st.button("Run Scenario 4 (Train Model)"):
-        # Run the training pipeline directly here
-        from sklearn.ensemble import RandomForestRegressor
+    from sklearn.preprocessing import OneHotEncoder
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.compose import ColumnTransformer
+    from sklearn.pipeline import Pipeline
 
-        X_train = st.session_state.X_train
-        y_train = st.session_state.y_train
-        feature_names = st.session_state.feature_names
+    # Prepare data (same as Scenario 4)
+    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+    train_df = df_ml[df_ml['Your Rating'].notna()]
+    predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-        model = RandomForestRegressor(n_estimators=200, random_state=42)
-        model.fit(X_train, y_train)
+    categorical_features = ['Genre', 'Director']
+    numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-        # Save model + state
-        st.session_state.model = model
-        st.session_state.X_train = X_train
-        st.session_state.X_test = st.session_state.X_test
-        st.session_state.y_test = st.session_state.y_test
-        st.session_state.feature_names = feature_names
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+            ('num', 'passthrough', numerical_features)
+        ]
+    )
 
-        st.success("✅ Model retrained successfully (Scenario 4). Now you can run Scenario 9.")
+    model = Pipeline([
+        ('prep', preprocessor),
+        ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
+    ])
 
-    if "model" not in st.session_state:
-        st.warning("⚠️ Please run Scenario 4 first (or click the button above).")
-    else:
-        # ... rest of Scenario 9 code ...
+    X_train = train_df[categorical_features + numerical_features]
+    y_train = train_df['Your Rating']
+    model.fit(X_train, y_train)
 
-        model = st.session_state.model
-        X_train = st.session_state.X_train
-        X_test = st.session_state.X_test
-        y_test = st.session_state.y_test
-        feature_names = st.session_state.feature_names
+    # Extract feature names after one-hot encoding
+    encoder = model.named_steps['prep'].named_transformers_['cat']
+    cat_features = encoder.get_feature_names_out(categorical_features)
+    feature_names = list(cat_features) + numerical_features
 
-        # Directors of interest
-        target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
+    importances = model.named_steps['reg'].feature_importances_
+    fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances}).sort_values(by="Importance", ascending=False)
 
-        # --- Feature Importances for Spielberg & Refn ---
-        fi_df = pd.DataFrame({
-            'Feature': feature_names,
-            'Importance': model.feature_importances_
-        }).sort_values(by="Importance", ascending=False)
+    # Directors of interest
+    target_directors = ["Director_Steven Spielberg", "Director_Nicolas Winding Refn"]
+    fi_directors = fi_df[fi_df['Feature'].isin(target_directors)]
 
-        fi_directors = fi_df[fi_df['Feature'].isin(target_directors)]
+    # --- Chart 1: Spielberg & Refn only ---
+    st.subheader("Feature Importance for Spielberg & Refn")
+    plt.figure(figsize=(6, 4))
+    sns.barplot(x='Importance', y='Feature', data=fi_directors, palette="Set2")
+    plt.title("Importance of Spielberg & Refn Features", fontsize=14)
+    plt.xlabel("Importance")
+    plt.ylabel("Director Feature")
+    st.pyplot(plt.gcf())
+    plt.close()
 
-        st.subheader("Feature Importance for Selected Directors")
-        plt.figure(figsize=(6, 4))
-        sns.barplot(x='Importance', y='Feature', data=fi_directors, palette="Set2")
-        plt.title("Importance of Spielberg & Refn Features", fontsize=14)
-        plt.xlabel("Importance")
-        plt.ylabel("Director Feature")
-        st.pyplot(plt.gcf())
-        plt.close()
+    # --- Chart 2: Grouped Importances ---
+    def group_feature(name):
+        if name.startswith("Genre_"):
+            return "Genre"
+        elif name.startswith("Director_"):
+            return "Director"
+        else:
+            return name
 
-        # --- Grouped Feature Importances ---
-        def group_feature(name):
-            if name.startswith("Genre_"):
-                return "Genre"
-            elif name.startswith("Director_"):
-                return "Director"
-            else:
-                return name
+    fi_df['Group'] = fi_df['Feature'].map(group_feature)
+    grouped = fi_df.groupby("Group")['Importance'].sum().reset_index().sort_values(by="Importance", ascending=False)
 
-        fi_df['Group'] = fi_df['Feature'].map(group_feature)
-        grouped = fi_df.groupby("Group")['Importance'].sum().reset_index().sort_values(by="Importance", ascending=False)
+    st.subheader("Grouped Feature Importances (Context for Spielberg & Refn)")
+    plt.figure(figsize=(8, 5))
+    sns.barplot(x='Importance', y='Group', data=grouped, palette="coolwarm")
+    plt.title("Grouped Feature Importances", fontsize=14)
+    plt.xlabel("Total Importance")
+    plt.ylabel("Feature Group")
+    st.pyplot(plt.gcf())
+    plt.close()
 
-        st.subheader("Grouped Feature Importances (Context for Spielberg & Refn)")
-        plt.figure(figsize=(8, 5))
-        sns.barplot(x='Importance', y='Group', data=grouped, palette="coolwarm")
-        plt.title("Grouped Feature Importances", fontsize=14)
-        plt.xlabel("Total Importance")
-        plt.ylabel("Feature Group")
-        st.pyplot(plt.gcf())
-        plt.close()
+    # --- Predictions for Spielberg & Refn ---
+    X_pred = predict_df[categorical_features + numerical_features]
+    predict_df['Predicted Rating'] = model.predict(X_pred)
 
-        # --- Predictions Table ---
-        st.subheader("Model Predictions for Spielberg & Refn Movies")
+    # Filter only Spielberg & Refn movies
+    director_results = predict_df[predict_df['Director'].isin(["Steven Spielberg", "Nicolas Winding Refn"])]
 
-        preds = model.predict(X_test)
-        results_df = X_test.copy()
-        results_df["Actual"] = y_test.values
-        results_df["Predicted"] = preds
+    st.subheader("Predicted Ratings for Spielberg & Refn Movies")
+    st.dataframe(
+        director_results[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+        .sort_values(by='Predicted Rating', ascending=False)
+        .reset_index(drop=True)
+    )
 
-        # Keep only movies from Spielberg or Refn
-        mask = (results_df.get("Director_Steven Spielberg", 0) == 1) | (results_df.get("Director_Nicolas Winding Refn", 0) == 1)
-        director_results = results_df[mask]
-
-        # Optional: add readable director column
-        def map_director(row):
-            if row.get("Director_Steven Spielberg", 0) == 1:
-                return "Steven Spielberg"
-            elif row.get("Director_Nicolas Winding Refn", 0) == 1:
-                return "Nicolas Winding Refn"
-            return "Other"
-
-        director_results["Director"] = director_results.apply(map_director, axis=1)
-
-        # Show selected columns
-        display_cols = ["Director", "Actual", "Predicted"]
-        st.dataframe(director_results[display_cols].reset_index(drop=True))
-        
-        # Commentary
-        st.markdown("""
-        ### Why this matters
-        - The first chart shows how important the *Spielberg* and *Refn* dummy variables are in the model.  
-        - The second chart gives context: how much weight directors have overall compared to genres and numeric features.  
-        - The table shows **actual vs. predicted outcomes** for Spielberg and Refn movies in the test set, 
-          helping you see how well the model performs for these two directors specifically.  
-        """)
+    # --- Commentary ---
+    st.markdown("""
+    ### Why this matters
+    - The first chart shows how important the *Spielberg* and *Refn* dummy variables are in the model.  
+    - The second chart shows grouped context: how directors compare to genres and numeric features overall.  
+    - The table at the bottom shows the **model’s predictions** for Spielberg and Refn movies you haven’t rated yet.  
+    """)
