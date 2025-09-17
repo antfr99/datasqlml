@@ -4,10 +4,8 @@ pandasql
 numpy
 scipy
 scikit-learn
-spacy
+spacy>=3.0
 textblob
 python-docx
 openpyxl
-en-core-web-sm
-
 
