@@ -308,6 +308,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
 
 
+
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
 
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
@@ -318,7 +319,9 @@ This analysis compares my ratings with IMDb ratings on a director-by-director ba
 The test checks whether the differences between my ratings and IMDb’s are statistically significant for each director.  
 
 - **t-statistic**: shows the size and direction of the difference (positive = I rate higher than IMDb, negative = I rate lower).  
-- **p-value**: shows whether the difference is statistically significant or could be due to chance.If p < 0.05 (significant) → it’s unlikely the difference is due to chance. This means I consistently rate this director higher or lower than IMDb.
+- **p-value**: shows whether the difference is statistically significant or could be due to chance. p < 0.05 (significant) → Unlikely the difference is due to chance. I consistently rate this director higher or lower than IMDb. 
+""")
+
     # Sidebar slider for minimum movies per director
     min_movies = st.sidebar.slider("Minimum movies per director for t-test", 2, 10, 5)
 
