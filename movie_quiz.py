@@ -510,6 +510,9 @@ I have never watch a movie about it :).Dont try to learn something about the fil
             if len(r.split()) >= 5:
                 st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
 
+
+
+ # --- Scenario 8---
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -521,18 +524,18 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
     st.header("Scenario 8 – Model Evaluation: Feature Importance")
 
     st.write("""
-    In this scenario, we analyze which features are most important in predicting **my movie ratings** using a Random Forest model.  
+    We analyze which features matter most for predicting **my movie ratings** using a Random Forest model.  
 
-    **Feature Importance:** Random Forest assigns a score to each feature indicating how much it contributes to predicting the target variable.  
-    - Higher importance → more influence on the predictions.  
-    - Lower importance → less influence.  
+    **Feature Importance:**  
+    - Higher score → stronger influence on predictions.  
+    - Lower score → weaker influence.  
 
-    **Note:** Requires a trained model from Scenario 4.
+    *(Requires a trained model from Scenario 4.)*
     """)
 
     # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
-        st.warning("Model not found. You need to run Scenario 4 first or retrain here.")
+        st.warning("Model not found. Run Scenario 4 first or retrain here.")
         if st.button("Run Scenario 4 Training Now"):
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
@@ -542,8 +545,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
             train_df = df_ml[df_ml['Your Rating'].notna()]
 
-            categorical_features = ['Genre', 'Director']
-            numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+            # Treat Year as categorical
+            categorical_features = ['Genre', 'Director', 'Year']
+            numerical_features = ['IMDb Rating', 'Num Votes']
 
             preprocessor = ColumnTransformer(
                 transformers=[
@@ -571,8 +575,8 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         preproc = trained_model.named_steps['prep']
 
         # Feature names
-        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(['Genre','Director'])
-        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+        cat_features = preproc.named_transformers_['cat'].get_feature_names_out(['Genre','Director','Year'])
+        numerical_features = ['IMDb Rating', 'Num Votes']
         all_features = np.concatenate([cat_features, numerical_features])
         importances = rf.feature_importances_
 
@@ -585,19 +589,19 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         top_n = 20
         fi_top = fi_df.head(top_n)
 
-        st.subheader(f"Top {top_n} Feature Importances (Individual)")
+        st.subheader(f"Top {top_n} Feature Importances")
         plt.figure(figsize=(10,6))
         sns.barplot(x='Importance', y='Feature', data=fi_top, palette='viridis')
         plt.title("Top Feature Importances")
         plt.tight_layout()
         st.pyplot(plt)
 
-        # Summary explanation
         st.write("""
-        **Interpretation:**  
-        The top features above contribute most to predicting my ratings.  
-        - Features like `Genre_...` or `Director_...` indicate which genres or directors I tend to rate higher or lower.  
-        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in my preferences relative to movie popularity or ratings.
+        **Interpretation (short):**  
+        - `Genre_...` → Genres I react to consistently.  
+        - `Director_...` → Directors that strongly affect my ratings.  
+        - `IMDb Rating` / `Num Votes` → show influence of popularity or critical reception.  
+        - `Year_...` → preferences tied to certain eras.
         """)
 
         # --- Automatic explanation for top Director ---
@@ -608,41 +612,25 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             importance = top_director['Importance']
             director_name = feature.replace('Director_','')
 
-            st.write("**Top Director-specific insight:**")
+            st.subheader("Top Director Insight")
             st.write(f"""
-            **{feature}** (importance {importance:.3f}):
-
-            **1. What the feature represents:**  
-            `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.  
-            The model uses this feature to distinguish {director_name} movies from all other movies.
-
-            **2. What “high importance” means in the model:**  
-            Random Forest evaluates how much each feature helps reduce prediction error.  
-            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.  
-            In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.
-
-            **3. What it tells about you:**  
-            High importance indicates I have a consistent pattern in rating {director_name} movies:  
-            - I might tend to give their movies higher ratings compared to other directors, or lower ratings if I dislike them.  
-            - Either way, my rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
+            **{director_name}** stands out (importance {importance:.3f}).  
+            The model frequently uses this feature, meaning my ratings for {director_name} movies differ clearly from how I rate others.  
             """)
 
-        # --- Aggregated by categorical variable ---
+        # --- Aggregated by category ---
         fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
         agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
 
-        st.subheader("Aggregated Feature Importances by Category")
+        st.subheader("Feature Importance by Category")
         plt.figure(figsize=(8, 4))
         sns.barplot(x=agg_df.values, y=agg_df.index, palette='magma')
-        plt.title("Aggregated Feature Importances")
+        plt.title("Aggregated Importances")
         plt.tight_layout()
         st.pyplot(plt)
 
-        # Summary explanation
+        # --- Final comment only on directors ---
         st.write("""
-        **Interpretation:**  
-        Aggregating features by category helps to understand **overall trends**:  
-        - If `Genre` has high total importance, my ratings are heavily influenced by movie genres.  
-        - If `Director` is high, certain directors strongly affect my ratings.  
-        - Numerical features indicate general importance of ratings, year, or popularity.
+        **Final note:**  
+        Director features are particularly revealing — they highlight which filmmakers most influence my rating habits.
         """)
