@@ -637,5 +637,5 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         **Why movies are my choice for all scenarios:**  
         Movies are personal. Unlike abstract datasets, I have close experience with films and directors.  
         This makes the insights richer — I can interpret the model’s patterns through my own perspective as a movie fan.  
-        That connection is what makes the subject matter of film as my selection to explore all these scenarios.
+        That connection is why I chose film as the subject matter to explore these scenarios.
         """)
