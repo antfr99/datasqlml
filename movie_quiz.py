@@ -607,16 +607,14 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             director_name = feature.replace('Director_','')
 
             st.write("**Top Director-specific insight:**")
-            
+
             st.write(f"""
             **{feature}** (importance {importance:.3f}):
 
             **What the feature represents:**  
             `For {feature}` the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.
-            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.  
-            In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.
-            High importance indicates I have a consistent pattern in rating {director_name} movies:  
-            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
+            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.
+            High importance indicates I have a consistent pattern in rating {director_name} movies: My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
             """)
 
         # --- Aggregated by category ---
