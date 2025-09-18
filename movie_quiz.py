@@ -626,18 +626,18 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
-    # --- Summary explanation (correctly aligned with scenario) ---
-    st.write("""
-    **Interpretation:**  
-    Aggregating features by category shows the bigger picture of what drives my ratings.  
-    - If `Director` is high, it means certain directors consistently shape how I score movies.  
+        # --- Summary explanation (only shows when model exists) ---
+        st.write("""
+        **Interpretation:**  
+        Aggregating features by category shows the bigger picture of what drives my ratings.  
+        - If `Director` is high, it means certain directors consistently shape how I score movies.  
 
-    **Why this matters for me:**  
-    I bring my own personal insight into how I feel about directors — their style, storytelling, or reputation.  
-    The model simply quantifies what I already sense: that my ratings often rise or fall depending on who directed the film.  
+        **Why this matters for me:**  
+        I bring my own personal insight into how I feel about directors — their style, storytelling, or reputation.  
+        The model simply quantifies what I already sense: that my ratings often rise or fall depending on who directed the film.  
 
-    **Why movies are my choice for all scenarios:**  
-    Movies are personal. Unlike abstract datasets, I have lived experience with the films and directors.  
-    This makes the insights richer — I can interpret the model’s patterns through my own perspective as a movie fan.  
-    That connection is what makes movies the right domain for exploring all these scenarios.
-    """)
+        **Why movies are my choice for all scenarios:**  
+        Movies are personal. Unlike abstract datasets, I have lived experience with the films and directors.  
+        This makes the insights richer — I can interpret the model’s patterns through my own perspective as a movie fan.  
+        That connection is what makes movies the right domain for exploring all these scenarios.
+        """)
