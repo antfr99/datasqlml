@@ -610,9 +610,9 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 
             **What the feature represents:**  
             For `{feature}`, the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.  
-            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.  
+            A high importance for `{feature}` means the model often uses this feature to try to predict my rating.  
             In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.  
-            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
+            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make predictions.
             """)
 
         # --- Aggregated by category ---
@@ -629,15 +629,14 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         # --- Summary explanation (only shows when model exists) ---
         st.write("""
         **Interpretation:**  
-        Aggregating features by category shows the bigger picture of what drives my ratings.  
-        - If `Director` is high, it means certain directors consistently shape how I score movies.  
+        Aggregating features by category shows the bigger picture of what drives my ratings.If `Director` is high, it means certain directors consistently shape how I score movies.  
 
         **Why this matters for me:**  
         I bring my own personal insight into how I feel about directors — their style, storytelling, or reputation.  
         The model simply quantifies what I already sense: that my ratings often rise or fall depending on who directed the film.  
 
         **Why movies are my choice for all scenarios:**  
-        Movies are personal. Unlike abstract datasets, I have lived experience with the films and directors.  
+        Movies are personal. Unlike abstract datasets, I have a personal experience with films and directors.  
         This makes the insights richer — I can interpret the model’s patterns through my own perspective as a movie fan.  
-        That connection is what makes movies the right domain for exploring all these scenarios.
+        That connection is what makes the subject matter of filam as my selection to explore all these scenarios.
         """)
