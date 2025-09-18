@@ -596,13 +596,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
-        # Summary explanation
-        st.write("""
-        **Interpretation:**  
-        The top features above contribute most to predicting my ratings.  
-        - Features like `Genre_...` or `Director_...` indicate which genres or directors I tend to rate higher or lower.  
-        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in my preferences relative to movie popularity or ratings.
-        """)
+
 
         # --- Automatic explanation for top Director ---
         director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
@@ -613,6 +607,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             director_name = feature.replace('Director_','')
 
             st.write("**Top Director-specific insight:**")
+            
             st.write(f"""
             **{feature}** (importance {importance:.3f}):
 
