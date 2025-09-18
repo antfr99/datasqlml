@@ -396,9 +396,18 @@ from textblob import TextBlob
 import pandas as pd
 import streamlit as st
 
-if scenario == "Scenario 7 — Review Analysis (Sentiment, Subjectivity)":
-    st.header("Scenario 7 — Film Review Analysis - Mother!2017")
 
+if scenario == "Scenario 7 — Review Analysis (Sentiment, Subjectivity)":
+    st.header("Scenario 7 — Film Review Analysis - Mother! (2017)")
+
+    # --- Short explanation ---
+    st.markdown("""
+    This scenario analyzes **audience reviews** of *Mother! (2017)*.  
+    Each review is processed with natural language techniques to calculate:
+    - **Sentiment** (negative to positive tone, -1 → +1)  
+    - **Subjectivity** (objective → opinionated, 0 → 1)  
+    The results include a summary table, aggregate metrics, and sample snippets.  
+    """)
 
     # --- All reviews stored in a multi-line string ---
     reviews_text = """
