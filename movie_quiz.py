@@ -596,12 +596,12 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
+        # Summary explanation
         st.write("""
-        **Interpretation (short):**  
-        - `Genre_...` → Genres I react to consistently.  
-        - `Director_...` → Directors that strongly affect my ratings.  
-        - `IMDb Rating` / `Num Votes` → show influence of popularity or critical reception.  
-        - `Year_...` → preferences tied to certain eras.
+        **Interpretation:**  
+        The top features above contribute most to predicting my ratings.  
+        - Features like `Genre_...` or `Director_...` indicate which genres or directors I tend to rate higher or lower.  
+        - Numerical features like `IMDb Rating` or `Num Votes` show general trends in my preferences relative to movie popularity or ratings.
         """)
 
         # --- Automatic explanation for top Director ---
@@ -612,10 +612,17 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             importance = top_director['Importance']
             director_name = feature.replace('Director_','')
 
-            st.subheader("Top Director Insight")
+            st.write("**Top Director-specific insight:**")
             st.write(f"""
-            **{director_name}** stands out (importance {importance:.3f}).  
-            The model frequently uses this feature, meaning my ratings for {director_name} movies differ clearly from how I rate others.  
+            **{feature}** (importance {importance:.3f}):
+
+            **What the feature represents:**  
+            `{feature}` is a one-hot encoded feature: 1 if the movie is directed by {director_name}, 0 otherwise.  
+            The model uses this feature to distinguish {director_name} movies from all other movies.
+            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.  
+            In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.
+            High importance indicates I have a consistent pattern in rating {director_name} movies:  
+            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
             """)
 
         # --- Aggregated by category ---
@@ -629,8 +636,10 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
-        # --- Final comment only on directors ---
+        # Summary explanation
         st.write("""
-        **Final note:**  
-        Director features are particularly revealing — they highlight which filmmakers most influence my rating habits.
-        """)
+        **Interpretation:**  
+        Aggregating features by category helps to understand **overall trends**:  
+        - If `Genre` has high total importance, my ratings are heavily influenced by movie genres.  
+        - If `Director` is high, certain directors strongly affect my ratings.  
+           """)
