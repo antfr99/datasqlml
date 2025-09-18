@@ -331,7 +331,6 @@ from scipy.stats import ttest_rel
 import numpy as np
 import pandas as pd
 
-# Merge IMDb and My Ratings
 df_ttest = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
