@@ -610,9 +610,8 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 
             **What the feature represents:**  
             For `{feature}`, the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.  
-            A high importance for `{feature}` means the model often uses this feature to try to predict my rating.  
             In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.  
-            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make predictions.
+            My rating behavior for {director_name} movies is distinct from my average ratings, and therefore the model relies on this pattern to make predictions.
             """)
 
         # --- Aggregated by category ---
@@ -638,5 +637,5 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         **Why movies are my choice for all scenarios:**  
         Movies are personal. Unlike abstract datasets, I have a personal experience with films and directors.  
         This makes the insights richer — I can interpret the model’s patterns through my own perspective as a movie fan.  
-        That connection is what makes the subject matter of filam as my selection to explore all these scenarios.
+        That connection is what makes the subject matter of film as my selection to explore all these scenarios.
         """)
