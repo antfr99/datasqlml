@@ -318,7 +318,7 @@ This analysis compares my ratings with IMDb ratings on a director-by-director ba
 The test checks whether the differences between my ratings and IMDb’s are statistically significant for each director.  
 
 - **t-statistic**: shows the size and direction of the difference (positive = I rate higher than IMDb, negative = I rate lower).  
-- **p-value**: shows whether the difference is statistically significant or could be due to chance.  
+- **p-value**: shows whether the difference is statistically significant or could be due to chance. p < 0.05 (significant) → Unlikely the difference is due to chance. I consistently rate this director higher or lower than IMDb. i.e Probability of seeing a difference ( My ratings and IMDb ratings) as large  
 - Directors with very few movies are excluded to avoid unreliable results.
 """)
 
@@ -344,7 +344,7 @@ for director, group in df_ttest.groupby('Director'):
     if n >= {min_movies}:
         differences = group['Your Rating'] - group['IMDb Rating']
 
-        # Handle zero variance (all differences identical)
+        
         if differences.std() == 0:
             stat, pval = np.nan, np.nan
             interpretation = "All differences identical — t-test undefined"
@@ -368,7 +368,7 @@ for director, group in df_ttest.groupby('Director'):
             "Interpretation": interpretation
         }})
 
-# Convert results to DataFrame
+
 df_results = pd.DataFrame(results)
 df_results = df_results.sort_values(by="p_value")
 '''
