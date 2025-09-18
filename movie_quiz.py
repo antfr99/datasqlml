@@ -512,7 +512,7 @@ I have never watch a movie about it :).Dont try to learn something about the fil
 
 
 
- # --- Scenario 8---
+# --- Scenario 8---
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -596,8 +596,6 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
-
-
         # --- Automatic explanation for top Director ---
         director_features = fi_df[fi_df['Feature'].str.startswith('Director')]
         if not director_features.empty:
@@ -607,14 +605,14 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
             director_name = feature.replace('Director_','')
 
             st.write("**Specific Insight:**")
-
             st.write(f"""
             **{feature}** (importance {importance:.3f}):
 
             **What the feature represents:**  
-            `For {feature}` the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.
-            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.
-            High importance indicates I have a consistent pattern in rating {director_name} movies: My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
+            For `{feature}`, the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.  
+            A high importance for `{feature}` means the model often uses this feature to predict my rating accurately.  
+            In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.  
+            My rating behavior for {director_name} movies is distinct from my general ratings, and the model relies on this pattern to make accurate predictions.
             """)
 
         # --- Aggregated by category ---
@@ -628,7 +626,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         plt.tight_layout()
         st.pyplot(plt)
 
-    # Summary explanation
+    # --- Summary explanation (correctly aligned with scenario) ---
     st.write("""
     **Interpretation:**  
     Aggregating features by category shows the bigger picture of what drives my ratings.  
