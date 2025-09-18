@@ -465,7 +465,7 @@ review_counter = 1
 for review in reviews:
     words = review.split()
     if len(words) < 5:
-        continue  # skip very short reviews
+        continue  
 
     tb = TextBlob(review)
     sentiment = tb.sentiment.polarity
