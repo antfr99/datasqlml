@@ -453,61 +453,94 @@ I have never watch a movie about it :).Dont try to learn something about the fil
     # --- Convert multi-line text to list of reviews ---
     reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
 
-    review_records = []
-    review_counter = 1
-    for review in reviews:
-        words = review.split()
-        if len(words) < 5:
-            continue  # skip very short reviews
+    # --- Show code block first ---
+    review_code = '''
+from textblob import TextBlob
+import pandas as pd
 
-        tb = TextBlob(review)
-        sentiment = tb.sentiment.polarity
-        subjectivity = tb.sentiment.subjectivity
+# Convert multi-line text to list of reviews
+reviews = [r.strip() for r in reviews_text.split("\\n\\n") if r.strip()]
 
-        snippet = review[:500].strip()  # remove leading/trailing whitespace
-        if not snippet:
-            continue  # skip if snippet is empty
+review_records = []
+review_counter = 1
+for review in reviews:
+    words = review.split()
+    if len(words) < 5:
+        continue  # skip very short reviews
 
-        review_records.append({
-            "ReviewID": review_counter,
-            "Words": len(words),
-            "Sentiment": round(sentiment, 3),
-            "Subjectivity": round(subjectivity, 3),
-            "Snippet": snippet + ("..." if len(review) > 500 else "")
-        })
-        review_counter += 1
+    tb = TextBlob(review)
+    sentiment = tb.sentiment.polarity
+    subjectivity = tb.sentiment.subjectivity
 
-    # --- Create DataFrame ---
-    df_reviews = pd.DataFrame(review_records)
+    snippet = review[:500].strip()
+    if not snippet:
+        continue
 
-    # --- Reset index to be continuous ---
-    df_reviews.reset_index(drop=True, inplace=True)
-    df_reviews['ReviewID'] = df_reviews.index + 1
+    review_records.append({
+        "ReviewID": review_counter,
+        "Words": len(words),
+        "Sentiment": round(sentiment, 3),
+        "Subjectivity": round(subjectivity, 3),
+        "Snippet": snippet + ("..." if len(review) > 500 else "")
+    })
+    review_counter += 1
 
-    # --- Display table ---
-    st.subheader("Reviews overview")
-    st.dataframe(df_reviews, width="stretch", height=400)
+# Create DataFrame
+df_reviews = pd.DataFrame(review_records)
+df_reviews.reset_index(drop=True, inplace=True)
+df_reviews['ReviewID'] = df_reviews.index + 1
+'''
+    st.subheader("Scenario 7 Code")
+    st.code(review_code, language="python")
 
-    # --- Aggregate statistics ---
-    st.subheader("Aggregate Insights")
-    st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
-    st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
+    # --- Button below grey block ---
+    if st.button("Run Sentiment Analysis"):
+        review_records = []
+        review_counter = 1
+        for review in reviews:
+            words = review.split()
+            if len(words) < 5:
+                continue
+            tb = TextBlob(review)
+            sentiment = tb.sentiment.polarity
+            subjectivity = tb.sentiment.subjectivity
+            snippet = review[:500].strip()
+            if not snippet:
+                continue
+            review_records.append({
+                "ReviewID": review_counter,
+                "Words": len(words),
+                "Sentiment": round(sentiment, 3),
+                "Subjectivity": round(subjectivity, 3),
+                "Snippet": snippet + ("..." if len(review) > 500 else "")
+            })
+            review_counter += 1
 
-    # --- Explanation ---
-    st.markdown("""
-    **What these metrics mean:**
-    - **Sentiment**: ranges from -1 (negative) to +1 (positive).  
-    - **Subjectivity**: ranges from 0 (objective) to 1 (subjective/opinionated).  
-    - **Snippet**: first 500 characters of the review.  
-    """)
+        df_reviews = pd.DataFrame(review_records)
+        df_reviews.reset_index(drop=True, inplace=True)
+        df_reviews['ReviewID'] = df_reviews.index + 1
 
-    # --- Full reviews in collapsible block ---
-    st.markdown("---")
-    with st.expander("Full Reviews (click to expand)"):
-        for r in reviews:
-            if len(r.split()) >= 5:
-                st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
+        # --- Display results only after button click ---
+        st.subheader("Reviews Overview")
+        st.dataframe(df_reviews, width="stretch", height=400)
 
+        st.subheader("Aggregate Insights")
+        st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
+        st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
+
+        st.markdown("""
+        **What these metrics mean:**
+        - **Sentiment**: ranges from -1 (negative) to +1 (positive).  
+        - **Subjectivity**: ranges from 0 (objective) to 1 (subjective/opinionated).  
+        - **Snippet**: first 500 characters of the review.  
+        """)
+
+        # --- Full reviews ---
+        st.markdown("---")
+        with st.expander("Full Reviews (click to expand)"):
+            for r in reviews:
+                if len(r.split()) >= 5:
+                    st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
 
 
 # --- Scenario 8---
