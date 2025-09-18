@@ -458,7 +458,6 @@ I have never watch a movie about it :).Dont try to learn something about the fil
 from textblob import TextBlob
 import pandas as pd
 
-# Convert multi-line text to list of reviews
 reviews = [r.strip() for r in reviews_text.split("\\n\\n") if r.strip()]
 
 review_records = []
@@ -485,7 +484,6 @@ for review in reviews:
     })
     review_counter += 1
 
-# Create DataFrame
 df_reviews = pd.DataFrame(review_records)
 df_reviews.reset_index(drop=True, inplace=True)
 df_reviews['ReviewID'] = df_reviews.index + 1
@@ -520,7 +518,6 @@ df_reviews['ReviewID'] = df_reviews.index + 1
         df_reviews.reset_index(drop=True, inplace=True)
         df_reviews['ReviewID'] = df_reviews.index + 1
 
-        # --- Display results only after button click ---
         st.subheader("Reviews Overview")
         st.dataframe(df_reviews, width="stretch", height=400)
 
