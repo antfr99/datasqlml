@@ -196,16 +196,16 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-# Merge IMDb and My Ratings
+
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-# Features
+
 categorical_features = ['Genre', 'Director']
 numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-# Preprocessing + Model
+
 preprocessor = ColumnTransformer(
     transformers=[
         ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
@@ -218,7 +218,7 @@ model = Pipeline([
     ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
 ])
 
-# Train & predict
+
 X_train = train_df[categorical_features + numerical_features]
 y_train = train_df['Your Rating']
 model.fit(X_train, y_train)
@@ -260,18 +260,15 @@ if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement %)":
     """)
 
     stats_code = '''
-# Merge IMDb and My Ratings
 df_compare = IMDB_Ratings.merge(
     My_Ratings[['Movie ID','Your Rating']],
     on='Movie ID', how='inner'
 )
 
-# Calculate agreement (±1 tolerance)
 df_compare['Agreement'] = (
     (df_compare['Your Rating'] - df_compare['IMDb Rating']).abs() <= 1
 )
 
-# Aggregate per genre
 genre_agreement = (
     df_compare.groupby('Genre')
     .agg(
@@ -281,7 +278,6 @@ genre_agreement = (
     .reset_index()
 )
 
-# Add disagreements and percentages
 genre_agreement['Disagreements'] = (
     genre_agreement['Total_Movies'] - genre_agreement['Agreements']
 )
@@ -289,7 +285,6 @@ genre_agreement['Agreement_%'] = (
     genre_agreement['Agreements'] / genre_agreement['Total_Movies'] * 100
 ).round(2)
 
-# Final result
 genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
@@ -319,8 +314,12 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 if scenario == "Scenario 6 - Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
     st.write("""
-This analysis examines how my ratings compare with IMDb ratings for each director using a **paired t-test**.  
-Directors with too few movies are ignored.
+This analysis compares my ratings with IMDb ratings on a director-by-director basis using a **paired t-test**.  
+The test checks whether the differences between my ratings and IMDb’s are statistically significant for each director.  
+
+- **t-statistic**: shows the size and direction of the difference (positive = I rate higher than IMDb, negative = I rate lower).  
+- **p-value**: shows whether the difference is statistically significant or could be due to chance.  
+- Directors with very few movies are excluded to avoid unreliable results.
 """)
 
     # Sidebar slider for minimum movies per director
