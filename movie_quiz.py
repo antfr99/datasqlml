@@ -943,16 +943,16 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             # --- Explanation of predicted rating changes ---
             st.write("### Why Predicted Ratings Change")
             st.markdown(f"""
-            The predicted ratings change when you modify the selected features because the model learns patterns from your past ratings.  
+            The predicted ratings change when you modify the selected features because the model learns patterns from IMDb ratings.  
 
             **Current features used:** {', '.join(result['selected_features'])}  
 
-            - **Director:** captures your preferences for specific directors.  
-            - **Genre:** captures your preferences for specific types of films.  
-            - **Year:** considers how your ratings vary over time.  
+            - **Director:** captures preferences for specific directors.  
+            - **Genre:** captures preferences for specific types of films.  
+            - **Year:** considers how ratings vary over time.  
             - **IMDb Rating & Num Votes:** reflect general popularity and consensus quality.  
 
-            When features are added or removed, the model adjusts the predictions based on the patterns it learned from your historical ratings.
+            When features are added or removed, the model adjusts the predictions based on the patterns it learned from IMDb historical ratings.
             """)
         else:
             st.warning("No unseen movies available for prediction.")
@@ -975,13 +975,13 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         **Scenario 1: Baseline Model (Numeric Features Only)**
         - Uses only `IMDb Rating` and `Num Votes`.
         - Captures general popularity and average rating information.
-        - Higher RMSE → predictions deviate more from your actual ratings.
+        - Higher RMSE → predictions deviate more from IMDb ratings.
         - Wide spread → inconsistent performance across movies.
 
         **Scenario 2: Feature-Added Model (Selected Features Included)**
         - Includes additional features such as `Director`, `Genre`, `Year`.
-        - Provides context about your personal preferences.
-        - Lower RMSE → predictions closer to your actual ratings.
+        - Provides context about personal preferences.
+        - Lower RMSE → predictions closer to IMDb ratings.
         - Tighter spread → more consistent performance.
 
         **Takeaway**
