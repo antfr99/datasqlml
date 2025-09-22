@@ -12,7 +12,7 @@ import numpy as np
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Lightgbm  ), SQL, OMDb API , AI and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn ), SQL, OMDb API , AI and GitHub.
 """)
 
 st.markdown("""
@@ -22,7 +22,7 @@ This project is designed to combine **SQL** and **Pandas** to explore film data 
 
 I’m approaching this from two angles:  
 1. **Film Exploration** – Using IMDb ratings, my personal ratings, and vote data to highlight agreements, disagreements, and recommendations.  
-2. **Technical Exploration** – Demonstrating how different analytical tools (SQL queries, statistical tests, machine learning models, and sentiment analysis) can be applied to the same dataset to uncover new perspectives.  
+2. **Technical Exploration** – Demonstrating how different analytical tools (SQL queries, statistical tests, machine learning models, sentiment analysis , poster image analysis ) can be applied to the same dataset to uncover new perspectives.  
  
 """)
 
@@ -838,7 +838,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
-        y = train_df['Your Rating']  # Target: your ratings
+        y = train_df['Your Rating']  # Target variable: your ratings
 
         # --- Baseline model (numeric only) ---
         baseline_features = ['Num Votes','IMDb Rating']
@@ -892,24 +892,24 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             else:
                 pred_df = pd.DataFrame()
 
-            # --- RMSE summary ---
+            # --- RMSE summary & automatic interpretation ---
             rmse_base_mean = np.mean(scores_base)
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
 
-            # --- Automatic statistical explanation ---
-            if rmse_diff > 0 and p_val < 0.05:
-                stat_explanation = (
-                    f"✅ Adding {', '.join(selected_features)} improved the model.\n"
-                    f"- Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant improvement."
-                )
-            elif rmse_diff < 0 and p_val < 0.05:
-                stat_explanation = (
-                    f"❌ Adding {', '.join(selected_features)} worsened the model.\n"
-                    f"- Average RMSE increased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant deterioration."
-                )
+            if p_val < 0.05:
+                if rmse_diff > 0:
+                    stat_explanation = (
+                        f"✅ Adding {', '.join(selected_features)} improved the model.\n"
+                        f"- Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                        f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant improvement."
+                    )
+                else:
+                    stat_explanation = (
+                        f"❌ Adding {', '.join(selected_features)} worsened the model.\n"
+                        f"- Average RMSE increased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                        f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant deterioration."
+                    )
             else:
                 stat_explanation = (
                     f"ℹ️ Adding {', '.join(selected_features)} did NOT meaningfully change the model.\n"
@@ -973,18 +973,16 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         **Interpretation of RMSE Boxplot and Model Comparison**
 
         **Scenario 1: Baseline Model (Numeric Features Only)**
-        - Uses only the numeric features: `IMDb Rating` and `Num Votes`.
+        - Uses only `IMDb Rating` and `Num Votes`.
         - Captures general popularity and average rating information.
         - Higher RMSE → predictions deviate more from your actual ratings.
         - Wide spread → inconsistent performance across movies.
-        - Outliers → some movies are poorly predicted due to missing contextual info.
 
         **Scenario 2: Feature-Added Model (Selected Features Included)**
         - Includes additional features such as `Director`, `Genre`, `Year`.
         - Provides context about your personal preferences.
         - Lower RMSE → predictions closer to your actual ratings.
         - Tighter spread → more consistent performance.
-        - Fewer outliers → fewer poorly predicted movies.
 
         **Takeaway**
         - RMSE decrease + p-value < 0.05 → features improve model accuracy.
