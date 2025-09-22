@@ -868,12 +868,12 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             # --- Retrain model for predictions ---
             model_test.fit(X_test, y)
 
-            # --- Predict first 5 unseen movies ---
+            # --- Predict all unseen movies ---
             unseen_df = df_ml[df_ml['Your Rating'].isna()]
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
-                pred_df = unseen_df[['Movie ID','Title','IMDb Rating']].copy()
+                pred_df = unseen_df[['Movie ID','Title','Year','IMDb Rating']].copy()  # Added Year
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
                 # Add list of features considered per movie
@@ -882,6 +882,9 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                     feature_values = {f: row.get(f,'?') for f in selected_features}
                     features_list.append(", ".join([f"{k}={v}" for k,v in feature_values.items()]))
                 pred_df['Features Considered'] = features_list
+
+                # Sort descending by Year
+                pred_df = pred_df.sort_values(by='Year', ascending=False)
             else:
                 pred_df = pd.DataFrame()
 
@@ -915,7 +918,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
     if st.session_state['scenario10_result']:
         result = st.session_state['scenario10_result']
 
-        # --- Predictions table with features considered ---
+        # --- Predictions table ---
         st.write("### Example Predictions with Features Considered")
         if not result['predictions'].empty:
             st.dataframe(result['predictions'])
@@ -925,10 +928,15 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             st.write(f"Paired t-test comparing baseline vs. feature-added model RMSE:")
             st.write(f"- t = {result['t_stat']:.3f}")
             st.write(f"- p = {result['p_val']:.4f}")
+
+            # Detailed plain-language explanation
             st.info(
-                f"✅ Adding {', '.join(selected_features)} improved the model.\n"
-                f"Average RMSE decreased from {np.mean(result['scores_base']):.2f} → {np.mean(result['scores_test']):.2f}.\n"
-                "This confirms that the improvement is statistically significant (p < 0.05)."
+                f"✅ Interpretation:\n"
+                f"- The t-value ({result['t_stat']:.3f}) indicates the improvement in RMSE is large relative to variability.\n"
+                f"- The p-value ({result['p_val']:.4f}) is < 0.05, meaning the improvement is statistically significant.\n"
+                f"- Adding {', '.join(selected_features)} reduces errors in predicted ratings and makes predictions more reliable.\n"
+                f"- Average RMSE decreased from {np.mean(result['scores_base']):.2f} → {np.mean(result['scores_test']):.2f}.\n"
+                f"- You can consider this a clear indication that these features meaningfully improve your model."
             )
         else:
             st.warning("No unseen movies available for prediction.")
