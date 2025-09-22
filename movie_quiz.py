@@ -816,7 +816,11 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
 
     # --- Feature selection ---
     candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
-    selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=candidate_features)
+    selected_features = st.multiselect(
+        "Select feature(s) to test", 
+        candidate_features, 
+        default=candidate_features  # Default all features selected
+    )
 
     if 'scenario10_result' not in st.session_state:
         st.session_state['scenario10_result'] = None
@@ -834,16 +838,16 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
-        y = train_df['Your Rating']
+        y = train_df['Your Rating']  # Target: your ratings
 
         # --- Baseline model (numeric only) ---
-        baseline_features = ['Num Votes', 'IMDb Rating']
+        baseline_features = ['Num Votes','IMDb Rating']
         X_base = train_df[baseline_features]
         model_base = RandomForestRegressor(n_estimators=100, random_state=42)
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         scores_base = -cross_val_score(model_base, X_base, y, cv=cv, scoring='neg_root_mean_squared_error')
 
-        # --- Test model with selected features ---
+        # --- Feature-added model ---
         categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
         numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
         features_to_use = categorical_features + numerical_features
@@ -862,10 +866,10 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             ])
             scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
 
-            # --- Hypothesis test ---
+            # --- Paired t-test ---
             t_stat, p_val = ttest_rel(scores_base, scores_test)
 
-            # --- Retrain model for predictions ---
+            # --- Retrain for predictions ---
             model_test.fit(X_test, y)
 
             # --- Predict all unseen movies ---
@@ -876,24 +880,24 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                 pred_df = unseen_df[['Movie ID','Title','Year','IMDb Rating']].copy()
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
-                # Add list of features considered per movie
+                # --- Features considered per movie ---
                 features_list = []
                 for idx, row in unseen_df.iterrows():
                     feature_values = {f: row.get(f,'?') for f in selected_features}
                     features_list.append(", ".join([f"{k}={v}" for k,v in feature_values.items()]))
                 pred_df['Features Considered'] = features_list
 
-                # Sort descending by Year
+                # --- Sort by Year descending ---
                 pred_df = pred_df.sort_values(by='Year', ascending=False)
             else:
                 pred_df = pd.DataFrame()
 
-            # --- RMSE averages ---
+            # --- RMSE summary ---
             rmse_base_mean = np.mean(scores_base)
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
 
-            # --- Prepare automatic explanation based on RMSE, t, p ---
+            # --- Automatic statistical explanation ---
             if rmse_diff > 0 and p_val < 0.05:
                 stat_explanation = (
                     f"✅ Adding {', '.join(selected_features)} improved the model.\n"
@@ -919,7 +923,8 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                 'stat_explanation': stat_explanation,
                 'predictions': pred_df,
                 'scores_base': scores_base,
-                'scores_test': scores_test
+                'scores_test': scores_test,
+                'selected_features': selected_features
             }
 
     # --- Display results ---
@@ -934,6 +939,21 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             # --- Statistical significance explanation ---
             st.write("### Statistical Significance of Improvement")
             st.info(result['stat_explanation'])
+
+            # --- Explanation of predicted rating changes ---
+            st.write("### Why Predicted Ratings Change")
+            st.markdown(f"""
+            The predicted ratings change when you modify the selected features because the model learns patterns from your past ratings.  
+
+            **Current features used:** {', '.join(result['selected_features'])}  
+
+            - **Director:** captures your preferences for specific directors.  
+            - **Genre:** captures your preferences for specific types of films.  
+            - **Year:** considers how your ratings vary over time.  
+            - **IMDb Rating & Num Votes:** reflect general popularity and consensus quality.  
+
+            When features are added or removed, the model adjusts the predictions based on the patterns it learned from your historical ratings.
+            """)
         else:
             st.warning("No unseen movies available for prediction.")
 
@@ -948,28 +968,26 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
 
-        # --- RMSE explanation for baseline vs feature-added ---
+        # --- RMSE interpretation ---
         st.write("""
         **Interpretation of RMSE Boxplot and Model Comparison**
 
         **Scenario 1: Baseline Model (Numeric Features Only)**
         - Uses only the numeric features: `IMDb Rating` and `Num Votes`.
         - Captures general popularity and average rating information.
-        - Typical behavior:
-            - Higher RMSE → predictions deviate more from your actual ratings.
-            - Wide spread → inconsistent performance across movies.
-            - Outliers → some movies are poorly predicted due to missing contextual info.
+        - Higher RMSE → predictions deviate more from your actual ratings.
+        - Wide spread → inconsistent performance across movies.
+        - Outliers → some movies are poorly predicted due to missing contextual info.
 
         **Scenario 2: Feature-Added Model (Selected Features Included)**
-        - Includes selected additional features such as `Director`, `Genre`, `Year` plus numeric features.
-        - Provides more context, allowing the model to capture patterns beyond simple popularity.
-        - Typical behavior:
-            - Lower RMSE → predictions are closer to your actual ratings.
-            - Tighter spread → more consistent performance across movies.
-            - Fewer outliers → fewer movies are poorly predicted.
+        - Includes additional features such as `Director`, `Genre`, `Year`.
+        - Provides context about your personal preferences.
+        - Lower RMSE → predictions closer to your actual ratings.
+        - Tighter spread → more consistent performance.
+        - Fewer outliers → fewer poorly predicted movies.
 
-        **Comparison & Takeaway**
-        - If the RMSE decreases and p-value < 0.05 → features meaningfully improve the model.
-        - If RMSE increases and p-value < 0.05 → features significantly worsen predictions.
-        - If p-value ≥ 0.05 → no statistically significant change, model performance is essentially unchanged.
+        **Takeaway**
+        - RMSE decrease + p-value < 0.05 → features improve model accuracy.
+        - RMSE increase + p-value < 0.05 → features worsen predictions.
+        - p-value ≥ 0.05 → no significant change.
         """)
