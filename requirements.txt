@@ -10,3 +10,4 @@ python-docx
 openpyxl
 matplotlib
 seaborn
+lightgbm
