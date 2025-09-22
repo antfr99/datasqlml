@@ -805,11 +805,13 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
     st.write("""
     Select features to test if they **improve model predictions** for your ratings.
     After running, you'll see:
-    1. A statistical test result (t-test)
-    2. A dynamic explanation of the result
-    3. Example predicted ratings for movies
+    1. Statistical test results
+    2. A detailed explanation of feature impact
+    3. Example predicted ratings for unseen movies with reasoning
+    4. Annotated RMSE comparison
     """)
 
+    # --- Feature selection ---
     candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
     selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=['Director'])
 
@@ -817,19 +819,21 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         st.session_state['scenario10_result'] = None
 
     if st.button("Run Test & Show Predictions"):
+        import numpy as np
         from sklearn.model_selection import cross_val_score, KFold
         from sklearn.preprocessing import OneHotEncoder
         from sklearn.compose import ColumnTransformer
         from sklearn.pipeline import Pipeline
         from sklearn.ensemble import RandomForestRegressor
         from scipy.stats import ttest_rel
-        import numpy as np
+        import matplotlib.pyplot as plt
 
+        # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
         y = train_df['Your Rating']
 
-        # --- Baseline model ---
+        # --- Baseline model (numeric only) ---
         baseline_features = ['Num Votes', 'IMDb Rating']
         X_base = train_df[baseline_features]
         model_base = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -858,24 +862,61 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             # --- Hypothesis test ---
             t_stat, p_val = ttest_rel(scores_base, scores_test)
 
-            # --- Dynamic explanation ---
-            if p_val < 0.05:
-                explanation = f"✅ Adding the selected feature(s) {', '.join(selected_features)} significantly improves model predictions."
-            else:
-                explanation = f"ℹ️ Adding the selected feature(s) {', '.join(selected_features)} does not significantly improve predictive accuracy."
-
-            # --- Retrain model for predictions ---
+            # --- Retrain on full data for predictions ---
             model_test.fit(X_test, y)
+
+            # --- Predict first 5 unseen movies ---
             unseen_df = df_ml[df_ml['Your Rating'].isna()].head(5)
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
                 pred_df = unseen_df[['Movie ID','Title']].copy()
-                pred_df['Predicted Rating'] = np.round(preds, 1)
+                pred_df['Predicted Rating'] = np.round(preds,1)
+
+                # --- Generate reasoning for each prediction ---
+                reasons = []
+                for i, row in unseen_df.iterrows():
+                    reason_list = []
+                    if 'Director' in selected_features:
+                        reason_list.append(f"Director: {row.get('Director','Unknown')}")
+                    if 'Genre' in selected_features:
+                        reason_list.append(f"Genre: {row.get('Genre','Unknown')}")
+                    if 'Year' in selected_features:
+                        reason_list.append(f"Year: {row.get('Year','Unknown')}")
+                    if 'Num Votes' in selected_features:
+                        reason_list.append(f"Num Votes: {row.get('Num Votes','?')}")
+                    if 'IMDb Rating' in selected_features:
+                        reason_list.append(f"IMDb Rating: {row.get('IMDb Rating','?')}")
+                    reasons.append("; ".join(reason_list))
+                pred_df['Reason for Prediction'] = reasons
             else:
                 pred_df = pd.DataFrame()
 
-            # --- Store results in session state ---
+            # --- Store results ---
+            rmse_base_mean = np.mean(scores_base)
+            rmse_test_mean = np.mean(scores_test)
+            rmse_diff = rmse_base_mean - rmse_test_mean
+
+            # Rich explanation
+            if rmse_diff > 0 and p_val < 0.05:
+                explanation = (
+                    f"✅ Adding the selected feature(s) {', '.join(selected_features)} improved the model.\n"
+                    f"Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                    "This indicates these features influence your ratings. Insights:\n"
+                )
+                if 'Director' in selected_features:
+                    explanation += "- Director: Your rating behavior varies by director.\n"
+                if 'Genre' in selected_features:
+                    explanation += "- Genre: Some genres are rated more consistently by you.\n"
+                if 'Year' in selected_features:
+                    explanation += "- Year: Movies from certain years affect your ratings.\n"
+            else:
+                explanation = (
+                    f"ℹ️ Adding the selected feature(s) {', '.join(selected_features)} did not meaningfully improve predictions.\n"
+                    f"Average RMSE changed from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                    "These features may not strongly impact your rating behavior."
+                )
+
             st.session_state['scenario10_result'] = {
                 't_stat': t_stat,
                 'p_val': p_val,
@@ -892,14 +933,19 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         st.write(f"Paired t-test: t = {result['t_stat']:.3f}, p = {result['p_val']:.4f}")
         st.info(result['explanation'])
 
-        st.write("### Example Predictions")
+        st.write("### Example Predictions with Reasoning")
         if not result['predictions'].empty:
             st.dataframe(result['predictions'])
         else:
             st.warning("No unseen movies available for prediction.")
 
-        import matplotlib.pyplot as plt
+        # Annotated RMSE plot
+        plt.figure(figsize=(6,4))
+        rmse_base_mean = np.mean(result['scores_base'])
+        rmse_test_mean = np.mean(result['scores_test'])
         plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
+        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
+        plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
