@@ -23,11 +23,13 @@ I’m approaching this from two angles::
 # --- Load Excel files ---
 try:
     IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
+    IMDB_Ratings_2019 = pd.read_excel("imdbratings2019onwards.xlsx")  # New workbook
     My_Ratings = pd.read_excel("myratings.xlsx")
     Votes = pd.read_excel("votes.xlsx")  # Optional votes source
 except Exception as e:
     st.error(f"Error loading Excel files: {e}")
     IMDB_Ratings = pd.DataFrame()
+    IMDB_Ratings_2019 = pd.DataFrame()
     My_Ratings = pd.DataFrame()
     Votes = pd.DataFrame()
 
@@ -36,8 +38,14 @@ def clean_unnamed_columns(df):
     return df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
 IMDB_Ratings = clean_unnamed_columns(IMDB_Ratings)
+IMDB_Ratings_2019 = clean_unnamed_columns(IMDB_Ratings_2019)
 My_Ratings = clean_unnamed_columns(My_Ratings)
 Votes = clean_unnamed_columns(Votes)
+
+# --- Append and remove duplicates ---
+if not IMDB_Ratings_2019.empty:
+    IMDB_Ratings = pd.concat([IMDB_Ratings, IMDB_Ratings_2019], ignore_index=True)
+    IMDB_Ratings = IMDB_Ratings.drop_duplicates(subset=["Movie ID"], keep="last")
 
 # --- Merge votes ---
 if not Votes.empty:
