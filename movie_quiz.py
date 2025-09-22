@@ -205,12 +205,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+import streamlit as st
+import pandas as pd
+import numpy as np
+
 # --- Scenario 4: Random Forest standard features ---
 if scenario == "Scenario 4 – Predict My Ratings (ML)":
     st.markdown('<h3 style="color:green;">Scenario 4 (Random Forest – Standard Features)</h3>', unsafe_allow_html=True)
-    st.write("""
-    Predict my ratings for unseen movies using a Random Forest model with standard features.
-    """)
+    st.write("Predict ratings using Random Forest with standard features.")
 
     ml_code_4 = '''
 from sklearn.preprocessing import OneHotEncoder
@@ -245,9 +247,7 @@ predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
 
-    st.subheader("Scenario 4 Code")
     st.code(ml_code_4, language="python")
-
     if st.button("Run Scenario 4"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
@@ -300,9 +300,8 @@ X_pred = predict_df[categorical_features + numerical_features]
 predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
-    st.subheader("Scenario 4b Code")
-    st.code(ml_code_4b, language="python")
 
+    st.code(ml_code_4b, language="python")
     if st.button("Run Scenario 4b"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
@@ -342,12 +341,10 @@ predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
 predict_df
 '''
 
-    st.subheader("Scenario 4c Code")
     st.code(ml_code_4c, language="python")
-
     if st.button("Run Scenario 4c"):
         try:
-            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings, "pd": pd}
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings, "pd": pd, "lgb": lgb}
             exec(ml_code_4c, {}, local_vars)
             st.session_state['predict_df_4c'] = local_vars['predict_df'].copy()
             st.dataframe(
@@ -389,9 +386,7 @@ predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
 predict_df
 '''
 
-    st.subheader("Scenario 4d Code")
     st.code(ml_code_4d, language="python")
-
     if st.button("Run Scenario 4d"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings, "pd": pd, "lgb": lgb}
@@ -414,8 +409,8 @@ if scenario == "Scenario 4e – Compare Predictions (All Models)":
 
     if st.button("Show Combined Predictions"):
         try:
-            # Start from 4d predictions if available
-            combined_df = st.session_state.get('predict_df_4d', None)
+            # Use 4d predictions as base
+            combined_df = st.session_state.get('predict_df_4d')
             if combined_df is None:
                 st.warning("Run Scenario 4d first to start combining predictions.")
             else:
