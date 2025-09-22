@@ -888,27 +888,29 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             else:
                 pred_df = pd.DataFrame()
 
-            # --- RMSE explanation ---
+            # --- RMSE averages ---
             rmse_base_mean = np.mean(scores_base)
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
 
+            # --- Prepare explanation ---
             if rmse_diff > 0 and p_val < 0.05:
-                explanation = (
+                stat_explanation = (
                     f"✅ Adding {', '.join(selected_features)} improved the model.\n"
-                    f"Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    "The RMSE boxplot shows that the feature-added model is both more accurate and consistent."
+                    f"- Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant improvement."
                 )
             else:
-                explanation = (
-                    f"ℹ️ Adding {', '.join(selected_features)} did not meaningfully improve predictions.\n"
-                    f"Average RMSE changed from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}."
+                stat_explanation = (
+                    f"ℹ️ Adding {', '.join(selected_features)} did NOT meaningfully improve the model.\n"
+                    f"- Average RMSE changed from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → no statistically significant improvement."
                 )
 
             st.session_state['scenario10_result'] = {
                 't_stat': t_stat,
                 'p_val': p_val,
-                'explanation': explanation,
+                'stat_explanation': stat_explanation,
                 'predictions': pred_df,
                 'scores_base': scores_base,
                 'scores_test': scores_test
@@ -919,25 +921,13 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         result = st.session_state['scenario10_result']
 
         # --- Predictions table ---
-        st.write("### Example Predictions with Features Considered")
+        st.write("### Predictions Table (All Unrated Movies)")
         if not result['predictions'].empty:
             st.dataframe(result['predictions'])
 
-            # --- Paired t-test explanation under table ---
+            # --- Statistical significance explanation ---
             st.write("### Statistical Significance of Improvement")
-            st.write(f"Paired t-test comparing baseline vs. feature-added model RMSE:")
-            st.write(f"- t = {result['t_stat']:.3f}")
-            st.write(f"- p = {result['p_val']:.4f}")
-
-            # Detailed plain-language explanation
-            st.info(
-                f"✅ Interpretation:\n"
-                f"- The t-value ({result['t_stat']:.3f}) indicates the improvement in RMSE is large relative to variability.\n"
-                f"- The p-value ({result['p_val']:.4f}) is < 0.05, meaning the improvement is statistically significant.\n"
-                f"- Adding {', '.join(selected_features)} reduces errors in predicted ratings and makes predictions more reliable.\n"
-                f"- Average RMSE decreased from {np.mean(result['scores_base']):.2f} → {np.mean(result['scores_test']):.2f}.\n"
-                f"- You can consider this a clear indication that these features meaningfully improve your model."
-            )
+            st.info(result['stat_explanation'])
         else:
             st.warning("No unseen movies available for prediction.")
 
