@@ -84,8 +84,9 @@ scenario = st.radio(
         "Scenario 5 – Statistical Insights by Genre (Agreement %)",
         "Scenario 6 - Statistical Insights by Director (t-test)",
         "Scenario 7 — Review Analysis (Sentiment, Subjectivity)",
-        "Scenario 8 – Model Evaluation (Feature Importance)"
-        ,"Scenario 9 – Poster Image Analysis (API)"
+        "Scenario 8 – Model Evaluation (Feature Importance)",
+        "Scenario 9 – Poster Image Analysis (API)",
+        "Scenario 10 – Feature Hypothesis Testing"
     ]
 )
 
@@ -795,3 +796,71 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
                 )
             else:
                 st.warning("Poster not found.")
+
+# --- Scenario 10:  ---
+
+if scenario == "Scenario 10 – Feature Hypothesis Testing":
+    st.header("Scenario 10 – Feature Hypothesis Testing")
+
+    st.write("""
+    We test whether adding certain features significantly improves the predictive accuracy of my ratings.
+    """)
+
+    # --- Select feature(s) to test ---
+    candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
+    selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=['Director'])
+
+    if st.button("Run Hypothesis Test"):
+        from sklearn.model_selection import cross_val_score, KFold
+        from scipy.stats import ttest_rel
+        from sklearn.preprocessing import OneHotEncoder
+        from sklearn.compose import ColumnTransformer
+        from sklearn.pipeline import Pipeline
+        from sklearn.ensemble import RandomForestRegressor
+        import numpy as np
+
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+        train_df = df_ml[df_ml['Your Rating'].notna()]
+
+        # Baseline: only numeric features
+        baseline_features = ['Num Votes', 'IMDb Rating']
+        X_base = train_df[baseline_features]
+        y = train_df['Your Rating']
+
+        model_base = RandomForestRegressor(n_estimators=100, random_state=42)
+        cv = KFold(n_splits=5, shuffle=True, random_state=42)
+        scores_base = -cross_val_score(model_base, X_base, y, cv=cv, scoring='neg_root_mean_squared_error')
+
+        # Test: add selected features
+        categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
+        numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                ('num', 'passthrough', numerical_features)
+            ]
+        )
+        X_test = train_df[categorical_features + numerical_features] if categorical_features + numerical_features else X_base
+
+        model_test = Pipeline([
+            ('prep', preprocessor),
+            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+        ])
+        scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
+
+        # Paired t-test
+        t_stat, p_val = ttest_rel(scores_base, scores_test)
+        st.write(f"**Paired t-test result:** t={t_stat:.3f}, p={p_val:.4f}")
+
+        if p_val < 0.05:
+            st.success("Adding the selected feature(s) **significantly improves** model performance!")
+        else:
+            st.info("No significant improvement observed by adding these feature(s).")
+
+        # Visualization
+        import matplotlib.pyplot as plt
+        plt.boxplot([scores_base, scores_test], labels=['Baseline', 'With Feature(s)'])
+        plt.ylabel("RMSE")
+        plt.title("Cross-Validated RMSE Comparison")
+        st.pyplot(plt)
