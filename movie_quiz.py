@@ -869,7 +869,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             model_test.fit(X_test, y)
 
             # --- Predict first 5 unseen movies ---
-            unseen_df = df_ml[df_ml['Your Rating'].isna()].head(5)
+            unseen_df = df_ml[df_ml['Your Rating'].isna()]
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
