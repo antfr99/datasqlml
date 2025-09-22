@@ -726,7 +726,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 if scenario == "Scenario 9 – Poster Image Analysis":
     st.markdown("### Scenario 9 – Poster Image & Features")
     st.write("""
-    Select a movie, fetch its poster, and display the corresponding numerical features (embeddings) below the image.
+    Select a movie, then click **Fetch Poster** to display the image and its features.
     """)
 
     # --- Hidden API key ---
@@ -736,25 +736,27 @@ if scenario == "Scenario 9 – Poster Image Analysis":
     film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
     selected_film = st.selectbox("Select a movie to analyze poster:", film_list)
 
-    if selected_film:
-        # Get IMDb ID for the selected film
-        imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'IMDb ID'].values[0]
+    # --- Button ---
+    if st.button("Fetch Poster & Features"):
+        if selected_film:
+            # Get IMDb ID
+            imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'IMDb ID'].values[0]
 
-        # Fetch poster from OMDb
-        url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
-        response = requests.get(url).json()
-        poster_url = response.get('Poster')
+            # Fetch poster from OMDb
+            import requests
+            url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+            response = requests.get(url).json()
+            poster_url = response.get('Poster')
 
-        if poster_url and poster_url != "N/A":
-            st.image(poster_url, width=300)
-        else:
-            st.warning("Poster not found.")
+            if poster_url and poster_url != "N/A":
+                st.image(poster_url, width=300)
+            else:
+                st.warning("Poster not found.")
 
-        # --- Poster features / embeddings ---
-        # Replace this with real embeddings if you have them
-        embeddings = [-3.9648, -1.7082, 1.6638, -0.3432, 0.5133,
-                      2.4109, 0.6639, 0.0226, -1.9516, 0.6711]
+            # --- Poster features / embeddings ---
+            embeddings = [-3.9648, -1.7082, 1.6638, -0.3432, 0.5133,
+                          2.4109, 0.6639, 0.0226, -1.9516, 0.6711]
 
-        df_features = pd.DataFrame([embeddings], columns=[f'feat_{i}' for i in range(10)])
-        st.write("Poster features / embeddings:")
-        st.dataframe(df_features)
+            df_features = pd.DataFrame([embeddings], columns=[f'feat_{i}' for i in range(10)])
+            st.write("Poster features / embeddings:")
+            st.dataframe(df_features)
