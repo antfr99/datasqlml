@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import pandasql as ps
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+import lightgbm as lgb
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
