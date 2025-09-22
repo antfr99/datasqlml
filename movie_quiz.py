@@ -740,7 +740,7 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
     if st.button("Fetch Poster & Features"):
         if selected_film:
             # Get IMDb ID
-            imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'IMDb ID'].values[0]
+            imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Film ID'].values[0]
 
             # Fetch poster from OMDb
             import requests
