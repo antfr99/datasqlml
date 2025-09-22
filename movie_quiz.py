@@ -723,7 +723,7 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
 
 
 # --- Scenario 9: Poster Analysis ---
-if scenario == "Scenario 9 – Poster Image Analysis":
+if scenario == "Scenario 9 – Poster Image Analysis (API)":
     st.markdown("### Scenario 9 – Poster Image & Features")
     st.write("""
     Select a movie, then click **Fetch Poster** to display the image and its features.
