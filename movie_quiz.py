@@ -893,18 +893,24 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
 
-            # --- Prepare explanation ---
+            # --- Prepare automatic explanation based on RMSE, t, p ---
             if rmse_diff > 0 and p_val < 0.05:
                 stat_explanation = (
                     f"✅ Adding {', '.join(selected_features)} improved the model.\n"
                     f"- Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
                     f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant improvement."
                 )
+            elif rmse_diff < 0 and p_val < 0.05:
+                stat_explanation = (
+                    f"❌ Adding {', '.join(selected_features)} worsened the model.\n"
+                    f"- Average RMSE increased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
+                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → statistically significant deterioration."
+                )
             else:
                 stat_explanation = (
-                    f"ℹ️ Adding {', '.join(selected_features)} did NOT meaningfully improve the model.\n"
+                    f"ℹ️ Adding {', '.join(selected_features)} did NOT meaningfully change the model.\n"
                     f"- Average RMSE changed from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → no statistically significant improvement."
+                    f"- t-value = {t_stat:.3f}, p-value = {p_val:.4f} → no statistically significant difference."
                 )
 
             st.session_state['scenario10_result'] = {
@@ -942,7 +948,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
 
-        # --- Updated RMSE explanation without dartboard analogy ---
+        # --- RMSE explanation for baseline vs feature-added ---
         st.write("""
         **Interpretation of RMSE Boxplot and Model Comparison**
 
@@ -952,7 +958,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         - Typical behavior:
             - Higher RMSE → predictions deviate more from your actual ratings.
             - Wide spread → inconsistent performance across movies.
-            - Outliers → some movies are poorly predicted due to missing contextual info (e.g., director, genre).
+            - Outliers → some movies are poorly predicted due to missing contextual info.
 
         **Scenario 2: Feature-Added Model (Selected Features Included)**
         - Includes selected additional features such as `Director`, `Genre`, `Year` plus numeric features.
@@ -963,6 +969,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             - Fewer outliers → fewer movies are poorly predicted.
 
         **Comparison & Takeaway**
-        - If the RMSE decreases and p-value < 0.05, the additional features meaningfully improve the model.
-        - If RMSE remains similar and p-value > 0.05, the features do not provide significant improvement.
+        - If the RMSE decreases and p-value < 0.05 → features meaningfully improve the model.
+        - If RMSE increases and p-value < 0.05 → features significantly worsen predictions.
+        - If p-value ≥ 0.05 → no statistically significant change, model performance is essentially unchanged.
         """)
