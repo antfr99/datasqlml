@@ -800,67 +800,106 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
 # --- Scenario 10:  ---
 
 if scenario == "Scenario 10 – Feature Hypothesis Testing":
-    st.header("Scenario 10 – Feature Hypothesis Testing")
+    st.header("Scenario 10 – Feature Hypothesis Testing & Predictions")
 
     st.write("""
-    We test whether adding certain features significantly improves the predictive accuracy of my ratings.
+    Select features to test if they **improve model predictions** for your ratings.
+    After running, you'll see:
+    1. A statistical test result (t-test)
+    2. A dynamic explanation of the result
+    3. Example predicted ratings for movies
     """)
 
-    # --- Select feature(s) to test ---
     candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
     selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=['Director'])
 
-    if st.button("Run Hypothesis Test"):
+    if 'scenario10_result' not in st.session_state:
+        st.session_state['scenario10_result'] = None
+
+    if st.button("Run Test & Show Predictions"):
         from sklearn.model_selection import cross_val_score, KFold
-        from scipy.stats import ttest_rel
         from sklearn.preprocessing import OneHotEncoder
         from sklearn.compose import ColumnTransformer
         from sklearn.pipeline import Pipeline
         from sklearn.ensemble import RandomForestRegressor
+        from scipy.stats import ttest_rel
         import numpy as np
 
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
-
-        # Baseline: only numeric features
-        baseline_features = ['Num Votes', 'IMDb Rating']
-        X_base = train_df[baseline_features]
         y = train_df['Your Rating']
 
+        # --- Baseline model ---
+        baseline_features = ['Num Votes', 'IMDb Rating']
+        X_base = train_df[baseline_features]
         model_base = RandomForestRegressor(n_estimators=100, random_state=42)
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         scores_base = -cross_val_score(model_base, X_base, y, cv=cv, scoring='neg_root_mean_squared_error')
 
-        # Test: add selected features
+        # --- Test model with selected features ---
         categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
         numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
+        features_to_use = categorical_features + numerical_features
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-                ('num', 'passthrough', numerical_features)
-            ]
-        )
-        X_test = train_df[categorical_features + numerical_features] if categorical_features + numerical_features else X_base
+        if features_to_use:
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                    ('num', 'passthrough', numerical_features)
+                ]
+            )
+            X_test = train_df[features_to_use]
+            model_test = Pipeline([
+                ('prep', preprocessor),
+                ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+            ])
+            scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
 
-        model_test = Pipeline([
-            ('prep', preprocessor),
-            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-        ])
-        scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
+            # --- Hypothesis test ---
+            t_stat, p_val = ttest_rel(scores_base, scores_test)
 
-        # Paired t-test
-        t_stat, p_val = ttest_rel(scores_base, scores_test)
-        st.write(f"**Paired t-test result:** t={t_stat:.3f}, p={p_val:.4f}")
+            # --- Dynamic explanation ---
+            if p_val < 0.05:
+                explanation = f"✅ Adding the selected feature(s) {', '.join(selected_features)} significantly improves model predictions."
+            else:
+                explanation = f"ℹ️ Adding the selected feature(s) {', '.join(selected_features)} does not significantly improve predictive accuracy."
 
-        if p_val < 0.05:
-            st.success("Adding the selected feature(s) **significantly improves** model performance!")
+            # --- Retrain model for predictions ---
+            model_test.fit(X_test, y)
+            unseen_df = df_ml[df_ml['Your Rating'].isna()].head(5)
+            if not unseen_df.empty:
+                X_unseen = unseen_df[features_to_use]
+                preds = model_test.predict(X_unseen)
+                pred_df = unseen_df[['Movie ID','Title']].copy()
+                pred_df['Predicted Rating'] = np.round(preds, 1)
+            else:
+                pred_df = pd.DataFrame()
+
+            # --- Store results in session state ---
+            st.session_state['scenario10_result'] = {
+                't_stat': t_stat,
+                'p_val': p_val,
+                'explanation': explanation,
+                'predictions': pred_df,
+                'scores_base': scores_base,
+                'scores_test': scores_test
+            }
+
+    # --- Display results if available ---
+    if st.session_state['scenario10_result']:
+        result = st.session_state['scenario10_result']
+        st.write("### Statistical Test Result")
+        st.write(f"Paired t-test: t = {result['t_stat']:.3f}, p = {result['p_val']:.4f}")
+        st.info(result['explanation'])
+
+        st.write("### Example Predictions")
+        if not result['predictions'].empty:
+            st.dataframe(result['predictions'])
         else:
-            st.info("No significant improvement observed by adding these feature(s).")
+            st.warning("No unseen movies available for prediction.")
 
-        # Visualization
         import matplotlib.pyplot as plt
-        plt.boxplot([scores_base, scores_test], labels=['Baseline', 'With Feature(s)'])
+        plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
         st.pyplot(plt)
