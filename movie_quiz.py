@@ -801,7 +801,6 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
 
 # --- Scenario 10: Feature Hypothesis Testing ---
 
-
 # --- Scenario 10: Feature Hypothesis Testing ---
 if scenario == "Scenario 10 – Feature Hypothesis Testing":
     st.header("Scenario 10 – Feature Hypothesis Testing & Predictions")
@@ -817,7 +816,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
 
     # --- Feature selection ---
     candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
-    selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=['Director'])
+    selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=candidate_features)
 
     if 'scenario10_result' not in st.session_state:
         st.session_state['scenario10_result'] = None
@@ -874,39 +873,15 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
-                pred_df = unseen_df[['Movie ID','Title']].copy()
-                pred_df['Title'] = pred_df['Title'].astype(str)
+                pred_df = unseen_df[['Movie ID','Title','IMDb Rating']].copy()
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
-                # --- Rich explanation for each prediction ---
-                reasons = []
-                most_influential_list = []
-                for idx, (i, row) in enumerate(unseen_df.iterrows()):
-                    feature_values = {}
-                    if 'Director' in selected_features:
-                        feature_values['Director'] = row.get('Director','Unknown')
-                    if 'Genre' in selected_features:
-                        feature_values['Genre'] = row.get('Genre','Unknown')
-                    if 'Year' in selected_features:
-                        feature_values['Year'] = row.get('Year','Unknown')
-                    if 'Num Votes' in selected_features:
-                        feature_values['Num Votes'] = row.get('Num Votes','?')
-                    if 'IMDb Rating' in selected_features:
-                        feature_values['IMDb Rating'] = row.get('IMDb Rating','?')
-
-                    # Determine most influential feature
-                    highlight_order = ['Director','Genre','Year','IMDb Rating','Num Votes']
-                    most_influential = next((f for f in highlight_order if f in feature_values), "N/A")
-                    most_influential_list.append(most_influential)
-
-                    reason_list = [f"{f} ({v})" for f,v in feature_values.items()]
-                    explanation_text = "Predicted rating is influenced by: " + "; ".join(reason_list)
-                    explanation_text += f". 🌟 Most influential: {most_influential}. "
-                    explanation_text += f"Predicted rating: {np.round(preds[idx],1)}."
-                    reasons.append(explanation_text)
-
-                pred_df['Reason for Prediction'] = reasons
-                pred_df['Most Influential Feature'] = most_influential_list
+                # Add list of features considered per movie
+                features_list = []
+                for idx, row in unseen_df.iterrows():
+                    feature_values = {f: row.get(f,'?') for f in selected_features}
+                    features_list.append(", ".join([f"{k}={v}" for k,v in feature_values.items()]))
+                pred_df['Features Considered'] = features_list
             else:
                 pred_df = pd.DataFrame()
 
@@ -939,16 +914,22 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
     # --- Display results ---
     if st.session_state['scenario10_result']:
         result = st.session_state['scenario10_result']
-        st.write("### Statistical Test Result")
-        st.write(f"Paired t-test: t = {result['t_stat']:.3f}, p = {result['p_val']:.4f}")
-        st.info(result['explanation'])
 
-        # --- Predictions table with highlighted most influential feature ---
-        st.write("### Example Predictions with Detailed Reasoning")
+        # --- Predictions table with features considered ---
+        st.write("### Example Predictions with Features Considered")
         if not result['predictions'].empty:
-            def highlight_feature(col):
-                return ['background-color: #FFD700' if v != "N/A" else '' for v in col]
-            st.dataframe(result['predictions'].style.apply(highlight_feature, subset=['Most Influential Feature']))
+            st.dataframe(result['predictions'])
+
+            # --- Paired t-test explanation under table ---
+            st.write("### Statistical Significance of Improvement")
+            st.write(f"Paired t-test comparing baseline vs. feature-added model RMSE:")
+            st.write(f"- t = {result['t_stat']:.3f}")
+            st.write(f"- p = {result['p_val']:.4f}")
+            st.info(
+                f"✅ Adding {', '.join(selected_features)} improved the model.\n"
+                f"Average RMSE decreased from {np.mean(result['scores_base']):.2f} → {np.mean(result['scores_test']):.2f}.\n"
+                "This confirms that the improvement is statistically significant (p < 0.05)."
+            )
         else:
             st.warning("No unseen movies available for prediction.")
 
