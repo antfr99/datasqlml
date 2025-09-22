@@ -819,9 +819,9 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
     selected_features = st.multiselect(
         "Select feature(s) to test", 
         candidate_features, 
-        default=candidate_features  # Default all features selected
-    )
+        default=['IMDb Rating'] 
 
+    )
     if 'scenario10_result' not in st.session_state:
         st.session_state['scenario10_result'] = None
 
