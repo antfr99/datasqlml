@@ -560,6 +560,23 @@ df_reviews['ReviewID'] = df_reviews.index + 1
         - **Snippet**: first 500 characters of the review.  
         """)
 
+        st.markdown("""
+        ---
+        **How TextBlob works (in simple terms):**  
+        - TextBlob uses a built-in **lexicon** (a dictionary of words) where each word has a sentiment score  
+          (e.g., *"great"* → +0.8, *"boring"* → -0.6).  
+        - When it processes a review, it breaks the text into words and phrases, looks them up in the lexicon,  
+          and then averages the scores to estimate overall **sentiment**.  
+        - For **subjectivity**, it checks how opinion-based the words are. Words like *"amazing"* or *"terrible"*  
+          are subjective, while factual words like *"movie length"* are objective.  
+        - The result is a quick, automated way of measuring tone and bias without needing manual labeling.  
+
+        ⚠️ **Note:** TextBlob is rule-based and doesn’t “understand” context deeply.  
+        For example, sarcasm or irony might confuse it (e.g., *"What a masterpiece..."* said negatively will still be read as **positive**). 
+        """)
+
+
+
         # --- Full reviews ---
         st.markdown("---")
         with st.expander("Full Reviews (click to expand)"):
