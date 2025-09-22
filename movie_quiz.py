@@ -12,7 +12,7 @@ import numpy as np
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn ), SQL, OMDB Api and GitHub.
+This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn ), SQL, OMDb API and GitHub.
 """)
 
 st.markdown("""
