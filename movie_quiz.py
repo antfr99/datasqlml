@@ -950,7 +950,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             - **Director:** captures preferences for specific directors.  
             - **Genre:** captures preferences for specific types of films.  
             - **Year:** considers how ratings vary over time.  
-            - **IMDb Rating & Num Votes:** reflect general popularity and consensus quality. My ratings are used as the target variable (the thing the model learns to predict). They are not included as input features, but rather guide the model to learn my taste and apply it to.
+            - **IMDb Rating & Num Votes:** reflect general popularity and consensus quality. My ratings are used as the target variable. They are not included as input features, but rather guide the model to learn my taste and apply it to.
             """)
         else:
             st.warning("No unseen movies available for prediction.")
