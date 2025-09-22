@@ -730,7 +730,7 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
     """)
 
     # --- Hidden API key ---
-    OMDB_API_KEY = "pbcf17f38"  # hard-coded, hidden
+    OMDB_API_KEY = "bcf17f38"  # hard-coded, hidden
 
     # --- Select a movie ---
     film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
