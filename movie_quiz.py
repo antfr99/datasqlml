@@ -801,6 +801,7 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
 
 # --- Scenario 10: Feature Hypothesis Testing ---
 
+
 # --- Scenario 10: Feature Hypothesis Testing ---
 if scenario == "Scenario 10 – Feature Hypothesis Testing":
     st.header("Scenario 10 – Feature Hypothesis Testing & Predictions")
@@ -958,4 +959,38 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
-        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center',
+        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
+        plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
+        st.pyplot(plt)
+
+        # --- RMSE analogy + detailed explanation ---
+        st.write("""
+        **Interpretation of RMSE Boxplot (Dart Analogy + Detailed Comparison):**
+
+        🎯 **Think of it like aiming darts at a bullseye:**
+        - Each dart = a predicted movie rating
+        - Bullseye = your actual rating
+        - RMSE measures how far off the darts land on average
+
+        **Baseline Model (Numeric Only)**
+        - Uses only IMDb Rating & Num Votes
+        - Like a beginner throwing darts: higher median, taller box, more outliers
+        - Predictions are less accurate and inconsistent
+
+        **Feature-Added Model (Selected Features Included)**
+        - Includes Director, Genre, Year, etc.
+        - Like an experienced player adjusting aim: lower median, narrower box, fewer outliers
+        - Predictions are more accurate and consistent
+
+        **Boxplot Elements Explained**
+        - Median line (orange) = middle RMSE value
+        - Box height = interquartile range (consistency)
+        - Whiskers = range of most RMSE values
+        - Outliers = movies that were hard to predict
+        - Numbers above box = average RMSE
+
+        **Comparison & Takeaway**
+        - Lower median + tighter spread in feature-added model → features meaningfully improve predictions
+        - High baseline median or tall box → baseline model struggles without features
+        - T-test p-value < 0.05 confirms improvement is statistically significant
+        """)
