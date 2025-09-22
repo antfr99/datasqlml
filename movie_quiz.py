@@ -879,6 +879,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
 
                 # --- Rich explanation for each prediction ---
                 reasons = []
+                most_influential_list = []
                 for idx, (i, row) in enumerate(unseen_df.iterrows()):
                     feature_values = {}
                     if 'Director' in selected_features:
@@ -892,17 +893,19 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                     if 'IMDb Rating' in selected_features:
                         feature_values['IMDb Rating'] = row.get('IMDb Rating','?')
 
-                    reason_list = [f"{f} ({v})" for f,v in feature_values.items()]
+                    # Determine most influential feature
                     highlight_order = ['Director','Genre','Year','IMDb Rating','Num Votes']
                     most_influential = next((f for f in highlight_order if f in feature_values), "N/A")
+                    most_influential_list.append(most_influential)
 
+                    reason_list = [f"{f} ({v})" for f,v in feature_values.items()]
                     explanation_text = "Predicted rating is influenced by: " + "; ".join(reason_list)
                     explanation_text += f". 🌟 Most influential: {most_influential}. "
                     explanation_text += f"Predicted rating: {np.round(preds[idx],1)}."
-
                     reasons.append(explanation_text)
 
                 pred_df['Reason for Prediction'] = reasons
+                pred_df['Most Influential Feature'] = most_influential_list
             else:
                 pred_df = pd.DataFrame()
 
@@ -939,9 +942,12 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         st.write(f"Paired t-test: t = {result['t_stat']:.3f}, p = {result['p_val']:.4f}")
         st.info(result['explanation'])
 
+        # --- Predictions table with highlighted most influential feature ---
         st.write("### Example Predictions with Detailed Reasoning")
         if not result['predictions'].empty:
-            st.dataframe(result['predictions'])
+            def highlight_feature(col):
+                return ['background-color: #FFD700' if v != "N/A" else '' for v in col]
+            st.dataframe(result['predictions'].style.apply(highlight_feature, subset=['Most Influential Feature']))
         else:
             st.warning("No unseen movies available for prediction.")
 
@@ -952,39 +958,4 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
-        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
-        plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
-        st.pyplot(plt)
-
-        # --- RMSE analogy + detailed explanation ---
-        st.write("""
-        **Interpretation of RMSE Boxplot (Dart Analogy + Detailed Comparison):**
-
-        🎯 **Think of it like aiming darts at a bullseye:**
-        - Each dart = a predicted movie rating
-        - Bullseye = your actual rating
-        - RMSE measures how far off the darts land on average
-
-        **Baseline Model (Numeric Only)**
-        - Uses only IMDb Rating & Num Votes
-        - Like a beginner throwing darts: higher median, taller box, more outliers
-        - Predictions are less accurate and inconsistent
-
-        **Feature-Added Model (Selected Features Included)**
-        - Includes Director, Genre, Year, etc.
-        - Like an experienced player adjusting aim: lower median, narrower box, fewer outliers
-        - Predictions are more accurate and consistent
-
-        **Boxplot Elements Explained**
-        - Median line (orange) = middle RMSE value
-        - Box height = interquartile range (consistency)
-        - Whiskers = range of most RMSE values
-        - Outliers = movies that were hard to predict
-        - Numbers above box = average RMSE
-
-        **Comparison & Takeaway**
-        - Lower median + tighter spread in feature-added model → features meaningfully improve predictions
-        - High baseline median or tall box → baseline model struggles without features
-        - T-test p-value < 0.05 confirms improvement is statistically significant
-        """)
-
+        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center',
