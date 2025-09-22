@@ -799,16 +799,28 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
 
 # --- Scenario 10:  ---
 
+# --- Scenario 10: Feature Hypothesis Testing ---
 if scenario == "Scenario 10 – Feature Hypothesis Testing":
     st.header("Scenario 10 – Feature Hypothesis Testing & Predictions")
 
-    st.write("""
+    st.markdown("""
     Select features to test if they **improve model predictions** for your ratings.
     After running, you'll see:
     1. Statistical test results
-    2. A detailed explanation of feature impact
+    2. Detailed explanation of feature impact
     3. Example predicted ratings for unseen movies with reasoning
-    4. Annotated RMSE comparison
+    4. Annotated RMSE comparison with interpretation
+    """)
+
+    # --- Cookie analogy ---
+    st.markdown("""
+    ### 🍪 Analogy: Baking Your Perfect Cookies
+    Think of predicting your movie ratings like **baking cookies exactly to your taste**.  
+    - The **baseline recipe** (just flour & sugar) is like using only basic numeric features (IMDb rating, votes).  
+    - Adding **ingredients** (Director, Genre, Year) is like including extra features in your model. If the cookies consistently taste closer to perfect, these ingredients truly matter — just like features that improve predictive accuracy.  
+    - **Tasting multiple batches** is like running the t-test: it tells you if the new ingredients actually make a meaningful difference.  
+    - The **prediction table** explains why each “cookie” tastes that way — just like the model explains why a predicted rating was assigned.  
+    - The **RMSE boxplot** shows the consistency and overall quality of your cookies: narrower and lower boxes mean predictions are more accurate and reliable.
     """)
 
     # --- Feature selection ---
@@ -862,7 +874,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             # --- Hypothesis test ---
             t_stat, p_val = ttest_rel(scores_base, scores_test)
 
-            # --- Retrain on full data for predictions ---
+            # --- Retrain model for predictions ---
             model_test.fit(X_test, y)
 
             # --- Predict first 5 unseen movies ---
@@ -873,48 +885,59 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                 pred_df = unseen_df[['Movie ID','Title']].copy()
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
-                # --- Generate reasoning for each prediction ---
+                # --- Rich explanation for each prediction ---
                 reasons = []
                 for i, row in unseen_df.iterrows():
-                    reason_list = []
+                    feature_values = {}
                     if 'Director' in selected_features:
-                        reason_list.append(f"Director: {row.get('Director','Unknown')}")
+                        feature_values['Director'] = row.get('Director','Unknown')
                     if 'Genre' in selected_features:
-                        reason_list.append(f"Genre: {row.get('Genre','Unknown')}")
+                        feature_values['Genre'] = row.get('Genre','Unknown')
                     if 'Year' in selected_features:
-                        reason_list.append(f"Year: {row.get('Year','Unknown')}")
+                        feature_values['Year'] = row.get('Year','Unknown')
                     if 'Num Votes' in selected_features:
-                        reason_list.append(f"Num Votes: {row.get('Num Votes','?')}")
+                        feature_values['Num Votes'] = row.get('Num Votes','?')
                     if 'IMDb Rating' in selected_features:
-                        reason_list.append(f"IMDb Rating: {row.get('IMDb Rating','?')}")
-                    reasons.append("; ".join(reason_list))
+                        feature_values['IMDb Rating'] = row.get('IMDb Rating','?')
+
+                    reason_list = [f"{f} ({v})" for f,v in feature_values.items()]
+                    # Highlight most influential
+                    highlight_order = ['Director','Genre','Year','IMDb Rating','Num Votes']
+                    most_influential = next((f for f in highlight_order if f in feature_values), "N/A")
+
+                    explanation_text = "Predicted rating is influenced by: " + "; ".join(reason_list)
+                    explanation_text += f". 🌟 Most influential: {most_influential}. "
+                    explanation_text += f"Predicted rating: {np.round(preds[i - unseen_df.index[0]],1)}."
+                    reasons.append(explanation_text)
+
                 pred_df['Reason for Prediction'] = reasons
             else:
                 pred_df = pd.DataFrame()
 
-            # --- Store results ---
+            # --- RMSE and explanation ---
             rmse_base_mean = np.mean(scores_base)
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
 
-            # Rich explanation
             if rmse_diff > 0 and p_val < 0.05:
                 explanation = (
                     f"✅ Adding the selected feature(s) {', '.join(selected_features)} improved the model.\n"
                     f"Average RMSE decreased from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    "This indicates these features influence your ratings. Insights:\n"
+                    "The RMSE boxplot below shows the distribution of errors for each model. "
+                    "Notice that the 'With Feature(s)' model not only has a lower median RMSE "
+                    "but also less spread, meaning predictions are consistently closer to your actual ratings."
                 )
                 if 'Director' in selected_features:
-                    explanation += "- Director: Your rating behavior varies by director.\n"
+                    explanation += " Director plays a strong role: your ratings vary by director."
                 if 'Genre' in selected_features:
-                    explanation += "- Genre: Some genres are rated more consistently by you.\n"
+                    explanation += " Genre preferences influence the model predictions."
                 if 'Year' in selected_features:
-                    explanation += "- Year: Movies from certain years affect your ratings.\n"
+                    explanation += " Year affects your rating tendencies."
             else:
                 explanation = (
                     f"ℹ️ Adding the selected feature(s) {', '.join(selected_features)} did not meaningfully improve predictions.\n"
                     f"Average RMSE changed from {rmse_base_mean:.2f} → {rmse_test_mean:.2f}.\n"
-                    "These features may not strongly impact your rating behavior."
+                    "The RMSE boxplot illustrates that the error distribution remains similar between models."
                 )
 
             st.session_state['scenario10_result'] = {
@@ -926,21 +949,21 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                 'scores_test': scores_test
             }
 
-    # --- Display results if available ---
+    # --- Display results ---
     if st.session_state['scenario10_result']:
         result = st.session_state['scenario10_result']
         st.write("### Statistical Test Result")
         st.write(f"Paired t-test: t = {result['t_stat']:.3f}, p = {result['p_val']:.4f}")
         st.info(result['explanation'])
 
-        st.write("### Example Predictions with Reasoning")
+        st.write("### Example Predictions with Detailed Reasoning")
         if not result['predictions'].empty:
             st.dataframe(result['predictions'])
         else:
             st.warning("No unseen movies available for prediction.")
 
-        # Annotated RMSE plot
-        plt.figure(figsize=(6,4))
+        # --- Annotated RMSE boxplot ---
+        plt.figure(figsize=(7,4))
         rmse_base_mean = np.mean(result['scores_base'])
         rmse_test_mean = np.mean(result['scores_test'])
         plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
@@ -949,3 +972,11 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
         plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
+
+        st.write("""
+        **Interpretation of RMSE Graph:**  
+        - The boxplot shows the distribution of cross-validated RMSE for baseline and feature-added models.  
+        - Median RMSE values are displayed above each box. Lower RMSE = more accurate predictions.  
+        - Spread (height of the box) indicates consistency: narrower boxes = predictions consistently close to actual ratings.  
+        - If the feature-added model has lower median and narrower spread, the selected features significantly improve predictions.
+        """)
