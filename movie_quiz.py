@@ -6,6 +6,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 import lightgbm as lgb
+import numpy as np
 
 # --- Page Config ---
 st.set_page_config(layout="wide")
@@ -199,40 +200,30 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
         except Exception as e:
             st.error(f"Error in SQL query: {e}")
 
-# --- Scenario 4: Python ML ---
+
+import streamlit as st
+import pandas as pd
+import numpy as np
+
+# --- Scenario 4: Random Forest standard features ---
 if scenario == "Scenario 4 – Predict My Ratings (ML)":
-    st.markdown('<h3 style="color:green;">Scenario 4 (Predict My Ratings – ML):</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="color:green;">Scenario 4 (Random Forest – Standard Features)</h3>', unsafe_allow_html=True)
     st.write("""
-    Predict my ratings for unseen movies using a machine learning model.
-
-    **How it works:**
-    1. The model uses my existing ratings (`My_Ratings`) as training data.
-    2. Features used include:  
-       - IMDb Rating  
-       - Genre  
-       - Director  
-       - Year of release  
-       - Number of votes
-    3. A Random Forest Regressor learns patterns from the movies I've already rated.
-    4. The model predicts how I might rate movies I haven't seen yet (`Predicted Rating`).
-
+    Predict my ratings for unseen movies using a Random Forest model with standard features.
     """)
-    
-    ml_code = '''
+
+    ml_code_4 = '''
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
-
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-
 categorical_features = ['Genre', 'Director']
 numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
-
 
 preprocessor = ColumnTransformer(
     transformers=[
@@ -246,7 +237,6 @@ model = Pipeline([
     ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
 ])
 
-
 X_train = train_df[categorical_features + numerical_features]
 y_train = train_df['Your Rating']
 model.fit(X_train, y_train)
@@ -255,191 +245,196 @@ predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
 
-    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=1000)
+    st.subheader("Scenario 4 Code")
+    st.code(ml_code_4, language="python")
 
-    st.sidebar.header("ML Options")
-    min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
-    top_n = st.sidebar.slider("Number of Top Predictions", 5, 50, 30, step=5)
-
-    if st.button("Run Python ML Code", key="run_ml"):
+    if st.button("Run Scenario 4"):
         try:
             local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
-            exec(user_ml_code, {}, local_vars)
-            predict_df = local_vars['predict_df']
-            predict_df = predict_df[predict_df['Num Votes'] >= min_votes]
+            exec(ml_code_4, {}, local_vars)
+            st.session_state['predict_df_4'] = local_vars['predict_df'].copy()
             st.dataframe(
-                predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+                st.session_state['predict_df_4'][['Title','IMDb Rating','Genre','Director','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
-                .head(top_n)
+                .head(30)
                 .reset_index(drop=True)
             )
         except Exception as e:
-            st.error(f"Error running ML code: {e}")
+            st.error(f"Error: {e}")
 
 
-# --- Scenario 4b: Random Forest, alternative features ---
+# --- Scenario 4b: Random Forest alternative features ---
 if scenario == "Scenario 4b – Predict Ratings (Random Forest, alternative features)":
     st.markdown('<h3 style="color:green;">Scenario 4b (Random Forest – Alternative Features)</h3>', unsafe_allow_html=True)
-    st.write("""
-    This scenario uses **Random Forest** with alternative features including:
-    - Runtime
-    - Weighted vote score (IMDb Rating × Num Votes)
-    - Year
-    - Genre
-    - Director
-    """)
 
-    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-    df_ml['Weighted Votes'] = df_ml['IMDb Rating'] * df_ml['Num Votes']
-    train_df = df_ml[df_ml['Your Rating'].notna()]
-    predict_df = df_ml[df_ml['Your Rating'].isna()]
+    ml_code_4b = '''
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
-    categorical_features = ['Genre', 'Director']
-    numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes']
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+df_ml['Weighted Votes'] = df_ml['IMDb Rating'] * df_ml['Num Votes']
+train_df = df_ml[df_ml['Your Rating'].notna()]
+predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-            ('num', 'passthrough', numerical_features)
-        ]
-    )
+categorical_features = ['Genre', 'Director']
+numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes']
 
-    model = Pipeline([
-        ('prep', preprocessor),
-        ('reg', RandomForestRegressor(n_estimators=150, random_state=42))
-    ])
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+        ('num', 'passthrough', numerical_features)
+    ]
+)
 
-    X_train = train_df[categorical_features + numerical_features]
-    y_train = train_df['Your Rating']
-    model.fit(X_train, y_train)
-    X_pred = predict_df[categorical_features + numerical_features]
-    predict_df['Predicted Rating'] = model.predict(X_pred)
+model = Pipeline([
+    ('prep', preprocessor),
+    ('reg', RandomForestRegressor(n_estimators=150, random_state=42))
+])
 
-    st.dataframe(
-        predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .head(30)
-        .reset_index(drop=True)
-    )
+X_train = train_df[categorical_features + numerical_features]
+y_train = train_df['Your Rating']
+model.fit(X_train, y_train)
+X_pred = predict_df[categorical_features + numerical_features]
+predict_df['Predicted Rating'] = model.predict(X_pred)
+predict_df
+'''
+    st.subheader("Scenario 4b Code")
+    st.code(ml_code_4b, language="python")
+
+    if st.button("Run Scenario 4b"):
+        try:
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings}
+            exec(ml_code_4b, {}, local_vars)
+            st.session_state['predict_df_4b'] = local_vars['predict_df'].copy()
+            st.dataframe(
+                st.session_state['predict_df_4b'][['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .head(30)
+                .reset_index(drop=True)
+            )
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 
 # --- Scenario 4c: LightGBM standard features ---
 if scenario == "Scenario 4c – Predict Ratings (LightGBM)":
     st.markdown('<h3 style="color:green;">Scenario 4c (LightGBM – Standard Features)</h3>', unsafe_allow_html=True)
-    st.write("""
-    This scenario uses **LightGBM** to predict ratings using the standard features:
-    - IMDb Rating
-    - Genre
-    - Director
-    - Year
-    - Num Votes
-    """)
-
     import lightgbm as lgb
-    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-    train_df = df_ml[df_ml['Your Rating'].notna()]
-    predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    categorical_features = ['Genre', 'Director']
-    numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+    ml_code_4c = '''
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+train_df = df_ml[df_ml['Your Rating'].notna()]
+predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    X_train = pd.get_dummies(train_df[categorical_features + numerical_features], drop_first=True)
-    y_train = train_df['Your Rating']
-    X_pred = pd.get_dummies(predict_df[categorical_features + numerical_features], drop_first=True)
-    X_pred = X_pred.reindex(columns=X_train.columns, fill_value=0)
+categorical_features = ['Genre', 'Director']
+numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-    lgb_model = lgb.LGBMRegressor(n_estimators=200, random_state=42)
-    lgb_model.fit(X_train, y_train)
-    predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
+X_train = pd.get_dummies(train_df[categorical_features + numerical_features], drop_first=True)
+y_train = train_df['Your Rating']
+X_pred = pd.get_dummies(predict_df[categorical_features + numerical_features], drop_first=True)
+X_pred = X_pred.reindex(columns=X_train.columns, fill_value=0)
 
-    st.dataframe(
-        predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .head(30)
-        .reset_index(drop=True)
-    )
+lgb_model = lgb.LGBMRegressor(n_estimators=200, random_state=42)
+lgb_model.fit(X_train, y_train)
+predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
+predict_df
+'''
+
+    st.subheader("Scenario 4c Code")
+    st.code(ml_code_4c, language="python")
+
+    if st.button("Run Scenario 4c"):
+        try:
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings, "pd": pd}
+            exec(ml_code_4c, {}, local_vars)
+            st.session_state['predict_df_4c'] = local_vars['predict_df'].copy()
+            st.dataframe(
+                st.session_state['predict_df_4c'][['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .head(30)
+                .reset_index(drop=True)
+            )
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 
 # --- Scenario 4d: LightGBM alternative features + engineered ---
 if scenario == "Scenario 4d – Predict Ratings (LightGBM, alternative features)":
     st.markdown('<h3 style="color:green;">Scenario 4d (LightGBM – Alternative Features + Engineered)</h3>', unsafe_allow_html=True)
-    st.write("""
-    This scenario uses **LightGBM** with **engineered features**:
-    - Runtime
-    - Weighted Votes
-    - Sentiment score (from reviews, if available)
-    - Year
-    - Genre
-    - Director
-    """)
 
-    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-    df_ml['Weighted Votes'] = df_ml['IMDb Rating'] * df_ml['Num Votes']
+    ml_code_4d = '''
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+df_ml['Weighted Votes'] = df_ml['IMDb Rating'] * df_ml['Num Votes']
 
-    # Optional: Sentiment score if reviews exist
-    if 'Sentiment' in df_ml.columns:
-        numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes', 'Sentiment']
-    else:
-        numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes']
+if 'Sentiment' in df_ml.columns:
+    numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes', 'Sentiment']
+else:
+    numerical_features = ['IMDb Rating', 'Num Votes', 'Year', 'Runtime (mins)', 'Weighted Votes']
 
-    categorical_features = ['Genre', 'Director']
+categorical_features = ['Genre', 'Director']
 
-    train_df = df_ml[df_ml['Your Rating'].notna()]
-    predict_df = df_ml[df_ml['Your Rating'].isna()]
+train_df = df_ml[df_ml['Your Rating'].notna()]
+predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-    X_train = pd.get_dummies(train_df[categorical_features + numerical_features], drop_first=True)
-    y_train = train_df['Your Rating']
-    X_pred = pd.get_dummies(predict_df[categorical_features + numerical_features], drop_first=True)
-    X_pred = X_pred.reindex(columns=X_train.columns, fill_value=0)
+X_train = pd.get_dummies(train_df[categorical_features + numerical_features], drop_first=True)
+y_train = train_df['Your Rating']
+X_pred = pd.get_dummies(predict_df[categorical_features + numerical_features], drop_first=True)
+X_pred = X_pred.reindex(columns=X_train.columns, fill_value=0)
 
-    lgb_model = lgb.LGBMRegressor(n_estimators=250, learning_rate=0.05, random_state=42)
-    lgb_model.fit(X_train, y_train)
-    predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
+lgb_model = lgb.LGBMRegressor(n_estimators=250, learning_rate=0.05, random_state=42)
+lgb_model.fit(X_train, y_train)
+predict_df['Predicted Rating'] = lgb_model.predict(X_pred)
+predict_df
+'''
 
-    st.dataframe(
-        predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
-        .sort_values(by='Predicted Rating', ascending=False)
-        .head(30)
-        .reset_index(drop=True)
-    )
+    st.subheader("Scenario 4d Code")
+    st.code(ml_code_4d, language="python")
+
+    if st.button("Run Scenario 4d"):
+        try:
+            local_vars = {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings, "pd": pd, "lgb": lgb}
+            exec(ml_code_4d, {}, local_vars)
+            st.session_state['predict_df_4d'] = local_vars['predict_df'].copy()
+            st.dataframe(
+                st.session_state['predict_df_4d'][['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .head(30)
+                .reset_index(drop=True)
+            )
+        except Exception as e:
+            st.error(f"Error: {e}")
+
 
 # --- Scenario 4e: Compare all predictions ---
 if scenario == "Scenario 4e – Compare Predictions (All Models)":
-    st.markdown('<h3 style="color:green;">Scenario 4e (Compare All Predictions)</h3>', unsafe_allow_html=True)
-    st.write("""
-    This scenario compares the **Predicted Ratings** from all previous models:
-    - Scenario 4 (Random Forest, standard features)
-    - Scenario 4b (Random Forest, alternative features)
-    - Scenario 4c (LightGBM, standard features)
-    - Scenario 4d (LightGBM, alternative features + engineered)
-    
-    The table shows how each model predicts my rating for movies I haven't seen yet.
-    """)
+    st.markdown('<h3 style="color:green;">Scenario 4e – Compare All Predictions</h3>', unsafe_allow_html=True)
+    st.write("Compare predicted ratings across all previous ML scenarios.")
 
-    # Ensure all prediction DataFrames exist
-    try:
-        combined_df = predict_df.copy()  # 4d predictions as base
-        # Merge previous predictions if stored in session_state
-        for sc, label in [('4', 'RF_Std'), ('4b', 'RF_Alt'), ('4c', 'LGBM_Std'), ('4d', 'LGBM_Alt')]:
-            if f'predict_df_{sc}' in st.session_state:
-                combined_df = combined_df.merge(
-                    st.session_state[f'predict_df_{sc}'][['Movie ID','Predicted Rating']],
-                    on='Movie ID', how='left', suffixes=('', f'_{label}')
-                )
+    if st.button("Show Combined Predictions"):
+        try:
+            # Start from 4d predictions if available
+            combined_df = st.session_state.get('predict_df_4d', None)
+            if combined_df is None:
+                st.warning("Run Scenario 4d first to start combining predictions.")
             else:
-                st.warning(f"Predictions for Scenario {sc} not found. Run that scenario first.")
-        
-        st.dataframe(
-            combined_df[['Title','IMDb Rating','Genre','Director',
-                         'Predicted Rating', 'Predicted Rating_RF_Alt',
-                         'Predicted Rating_LGBM_Std', 'Predicted Rating_LGBM_Alt']]
-            .sort_values(by='Predicted Rating', ascending=False)
-            .head(30)
-            .reset_index(drop=True)
-        )
-        
-    except Exception as e:
-        st.error(f"Error combining predictions: {e}")
+                for sc, label in [('4', 'RF_Std'), ('4b', 'RF_Alt'), ('4c', 'LGBM_Std'), ('4d', 'LGBM_Alt')]:
+                    if f'predict_df_{sc}' in st.session_state:
+                        combined_df = combined_df.merge(
+                            st.session_state[f'predict_df_{sc}'][['Movie ID','Predicted Rating']],
+                            on='Movie ID', how='left', suffixes=('', f'_{label}')
+                        )
+                st.dataframe(
+                    combined_df[['Title','IMDb Rating','Genre','Director',
+                                 'Predicted Rating', 'Predicted Rating_RF_Alt',
+                                 'Predicted Rating_LGBM_Std', 'Predicted Rating_LGBM_Alt']]
+                    .sort_values(by='Predicted Rating', ascending=False)
+                    .head(30)
+                    .reset_index(drop=True)
+                )
+        except Exception as e:
+            st.error(f"Error combining predictions: {e}")
 
 
 # --- Scenario 5: Statistical Insights ---
