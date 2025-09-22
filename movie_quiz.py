@@ -814,18 +814,6 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
     4. Annotated RMSE comparison with interpretation
     """)
 
-    # --- Cookie analogy ---
-    st.markdown("""
-    ### 🍪 Analogy: Baking Your Perfect Cookies
-    Predicting your movie ratings is like **baking cookies to your taste**.  
-    - Baseline recipe (just flour & sugar) = using only numeric features (IMDb rating, votes).  
-    - Adding ingredients (Director, Genre, Year) = extra features in your model.  
-    - Better tasting cookies = improved predictive accuracy.  
-    - Multiple batches = t-test for meaningful improvement.  
-    - Prediction table = explains why each “cookie” tastes that way.  
-    - RMSE boxplot = shows consistency and overall quality of predictions.
-    """)
-
     # --- Feature selection ---
     candidate_features = ['Director', 'Genre', 'Year', 'Num Votes', 'IMDb Rating']
     selected_features = st.multiselect("Select feature(s) to test", candidate_features, default=['Director'])
@@ -886,12 +874,12 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
                 pred_df = unseen_df[['Movie ID','Title']].copy()
-                pred_df['Title'] = pred_df['Title'].astype(str)  # ensure string
+                pred_df['Title'] = pred_df['Title'].astype(str)
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
                 # --- Rich explanation for each prediction ---
                 reasons = []
-                for idx, (i, row) in enumerate(unseen_df.iterrows()):  # use idx safely
+                for idx, (i, row) in enumerate(unseen_df.iterrows()):
                     feature_values = {}
                     if 'Director' in selected_features:
                         feature_values['Director'] = row.get('Director','Unknown')
@@ -968,9 +956,35 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
 
+        # --- RMSE analogy + detailed explanation ---
         st.write("""
-        **Interpretation of RMSE Graph:**  
-        - The boxplot shows RMSE distributions for baseline vs. feature-added models.  
-        - Lower median and narrower spread = better accuracy & consistency.  
-        - Significant improvement = features selected are meaningful predictors of your ratings.
+        **Interpretation of RMSE Boxplot (Dart Analogy + Detailed Comparison):**
+
+        🎯 **Think of it like aiming darts at a bullseye:**
+        - Each dart = a predicted movie rating
+        - Bullseye = your actual rating
+        - RMSE measures how far off the darts land on average
+
+        **Baseline Model (Numeric Only)**
+        - Uses only IMDb Rating & Num Votes
+        - Like a beginner throwing darts: higher median, taller box, more outliers
+        - Predictions are less accurate and inconsistent
+
+        **Feature-Added Model (Selected Features Included)**
+        - Includes Director, Genre, Year, etc.
+        - Like an experienced player adjusting aim: lower median, narrower box, fewer outliers
+        - Predictions are more accurate and consistent
+
+        **Boxplot Elements Explained**
+        - Median line (orange) = middle RMSE value
+        - Box height = interquartile range (consistency)
+        - Whiskers = range of most RMSE values
+        - Outliers = movies that were hard to predict
+        - Numbers above box = average RMSE
+
+        **Comparison & Takeaway**
+        - Lower median + tighter spread in feature-added model → features meaningfully improve predictions
+        - High baseline median or tall box → baseline model struggles without features
+        - T-test p-value < 0.05 confirms improvement is statistically significant
         """)
+
