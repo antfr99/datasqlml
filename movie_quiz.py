@@ -14,7 +14,7 @@ st.markdown("""
 
 This project is designed to combine **SQL** and **Pandas** to explore film data in a structured way, while also branching into **machine learning** models for deeper insights.  
 
-I’m approaching this from two angles::  
+I’m approaching this from two angles:  
 1. **Film Exploration** – Using IMDb ratings, my personal ratings, and vote data to highlight agreements, disagreements, and recommendations.  
 2. **Technical Exploration** – Demonstrating how different analytical tools (SQL queries, statistical tests, machine learning models, and sentiment analysis) can be applied to the same dataset to uncover new perspectives.  
  
