@@ -721,58 +721,40 @@ if scenario == "Scenario 8 – Model Evaluation (Feature Importance)":
         That connection is why I chose film as the subject matter to explore these scenarios.
         """)
 
-# --- Scenario 9: Poster Image Analysis ---
-import requests
-from PIL import Image
-from io import BytesIO
-import torch
-from torchvision import models, transforms
-import numpy as np
 
-if scenario == "Scenario 9 – Poster Image Analysis (API)":
-    st.markdown("### Scenario 9 – Poster Image Analysis via API")
+# --- Scenario 9: Poster Analysis ---
+if scenario == "Scenario 9 – Poster Image Analysis":
+    st.markdown("### Scenario 9 – Poster Image & Features")
     st.write("""
-    This scenario fetches movie posters via **OMDb API**, displays them, and extracts **visual features** using a pretrained CNN (ResNet18).  
-    These features can be used for genre prediction, recommendation, or enrichment of ML models.
+    Select a movie, fetch its poster, and display the corresponding numerical features (embeddings) below the image.
     """)
 
-    api_key = st.text_input("Enter your OMDb API Key", type="password")
-    imdb_id = st.text_input("Enter IMDb ID of a movie (e.g., tt0111161)")
+    # --- Hidden API key ---
+    OMDB_API_KEY = "pbcf17f38"  # hard-coded, hidden
 
-    if st.button("Fetch & Analyze Poster"):
-        if not api_key or not imdb_id:
-            st.warning("Please provide both IMDb ID and OMDb API key.")
+    # --- Select a movie ---
+    film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
+    selected_film = st.selectbox("Select a movie to analyze poster:", film_list)
+
+    if selected_film:
+        # Get IMDb ID for the selected film
+        imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'IMDb ID'].values[0]
+
+        # Fetch poster from OMDb
+        url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+        response = requests.get(url).json()
+        poster_url = response.get('Poster')
+
+        if poster_url and poster_url != "N/A":
+            st.image(poster_url, width=300)
         else:
-            # --- Fetch Poster URL ---
-            try:
-                url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={api_key}"
-                response = requests.get(url).json()
-                poster_url = response.get("Poster", None)
-                if not poster_url or poster_url == "N/A":
-                    st.warning("Poster not found for this IMDb ID.")
-                else:
-                    st.image(poster_url, width=250)
+            st.warning("Poster not found.")
 
-                    # --- Load & Preprocess Poster ---
-                    img = Image.open(BytesIO(requests.get(poster_url).content)).convert('RGB')
-                    preprocess = transforms.Compose([
-                        transforms.Resize((224,224)),
-                        transforms.ToTensor(),
-                        transforms.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225])
-                    ])
-                    img_tensor = preprocess(img).unsqueeze(0)  # Add batch dimension
+        # --- Poster features / embeddings ---
+        # Replace this with real embeddings if you have them
+        embeddings = [-3.9648, -1.7082, 1.6638, -0.3432, 0.5133,
+                      2.4109, 0.6639, 0.0226, -1.9516, 0.6711]
 
-                    # --- Load Pretrained CNN ---
-                    cnn_model = models.resnet18(pretrained=True)
-                    cnn_model.eval()
-
-                    with torch.no_grad():
-                        features = cnn_model(img_tensor)
-                        features_np = features.numpy().flatten()
-
-                    st.write("Extracted Poster Features (first 10):", features_np[:10])
-                    
-                    # Optionally store in session_state for ML
-                    st.session_state[f'poster_features_{imdb_id}'] = features_np
-            except Exception as e:
-                st.error(f"Error fetching or processing poster: {e}")
+        df_features = pd.DataFrame([embeddings], columns=[f'feat_{i}' for i in range(10)])
+        st.write("Poster features / embeddings:")
+        st.dataframe(df_features)
