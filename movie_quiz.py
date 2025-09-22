@@ -873,7 +873,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
-                pred_df = unseen_df[['Movie ID','Title','Year','IMDb Rating']].copy()  # Added Year
+                pred_df = unseen_df[['Movie ID','Title','Year','IMDb Rating']].copy()
                 pred_df['Predicted Rating'] = np.round(preds,1)
 
                 # Add list of features considered per movie
@@ -942,34 +942,27 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
 
-        # --- RMSE analogy + detailed explanation ---
+        # --- Updated RMSE explanation without dartboard analogy ---
         st.write("""
-        **Interpretation of RMSE Boxplot (Dart Analogy + Detailed Comparison):**
+        **Interpretation of RMSE Boxplot and Model Comparison**
 
-        🎯 **Think of it like aiming darts at a bullseye:**
-        - Each dart = a predicted movie rating
-        - Bullseye = your actual rating
-        - RMSE measures how far off the darts land on average
+        **Scenario 1: Baseline Model (Numeric Features Only)**
+        - Uses only the numeric features: `IMDb Rating` and `Num Votes`.
+        - Captures general popularity and average rating information.
+        - Typical behavior:
+            - Higher RMSE → predictions deviate more from your actual ratings.
+            - Wide spread → inconsistent performance across movies.
+            - Outliers → some movies are poorly predicted due to missing contextual info (e.g., director, genre).
 
-        **Baseline Model (Numeric Only)**
-        - Uses only IMDb Rating & Num Votes
-        - Like a beginner throwing darts: higher median, taller box, more outliers
-        - Predictions are less accurate and inconsistent
-
-        **Feature-Added Model (Selected Features Included)**
-        - Includes Director, Genre, Year, etc.
-        - Like an experienced player adjusting aim: lower median, narrower box, fewer outliers
-        - Predictions are more accurate and consistent
-
-        **Boxplot Elements Explained**
-        - Median line (orange) = middle RMSE value
-        - Box height = interquartile range (consistency)
-        - Whiskers = range of most RMSE values
-        - Outliers = movies that were hard to predict
-        - Numbers above box = average RMSE
+        **Scenario 2: Feature-Added Model (Selected Features Included)**
+        - Includes selected additional features such as `Director`, `Genre`, `Year` plus numeric features.
+        - Provides more context, allowing the model to capture patterns beyond simple popularity.
+        - Typical behavior:
+            - Lower RMSE → predictions are closer to your actual ratings.
+            - Tighter spread → more consistent performance across movies.
+            - Fewer outliers → fewer movies are poorly predicted.
 
         **Comparison & Takeaway**
-        - Lower median + tighter spread in feature-added model → features meaningfully improve predictions
-        - High baseline median or tall box → baseline model struggles without features
-        - T-test p-value < 0.05 confirms improvement is statistically significant
+        - If the RMSE decreases and p-value < 0.05, the additional features meaningfully improve the model.
+        - If RMSE remains similar and p-value > 0.05, the features do not provide significant improvement.
         """)
