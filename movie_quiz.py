@@ -282,7 +282,7 @@ predict_df
 
 
 # --- Scenario 5: Statistical Insights ---
-if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement %)":
+if scenario == "Scenario 5 – Statistical Insights by Genre (Agreement)":
     st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
     st.write("""
     This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
