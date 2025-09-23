@@ -1134,150 +1134,107 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
         except Exception as e:
             st.error(f"Error running Graph Analysis code: {e}")
 
+# --- Scenario 11: Graph-Based Movie Relationships ---
+if scenario == "Scenario 11 – Graph Based Movie Relationships":
+    st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
+    st.write("""
+    This scenario models the dataset as a **graph**:
+    - **Nodes**: Movies, Directors, Genres  
+    - **Edges**: Relationships between them (e.g., a director created a movie, a movie belongs to a genre).  
+    
+    Use the filters below to narrow down by **Year**, **Director(s)**, and **Genre**, then run the graph builder.
+    """)
 
+    # --- Filters ---
+    directors = sorted(IMDB_Ratings["Director"].dropna().unique()) if not IMDB_Ratings.empty else []
+    genres = []
+    if "Genre" in IMDB_Ratings.columns:
+        genres = sorted({g.strip() for sublist in IMDB_Ratings["Genre"].dropna().str.split(",") for g in sublist})
+
+    years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
+
+    selected_year = st.selectbox("Filter by Year", ["All"] + [str(y) for y in years])
+    selected_directors = st.multiselect("Filter by Director(s)", directors)
+    selected_genre = st.selectbox("Filter by Genre", ["All"] + genres)
+
+    # --- Editable code template ---
+    graph_code = '''
 import networkx as nx
 import matplotlib.pyplot as plt
-import seaborn as sns
-import shap
+import pandas as pd
 
-# --- Clean column names ---
-IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+df_graph = IMDB_Ratings.copy()
 
-# --- Identify rating and votes columns ---
-rating_col = None
-votes_col = None
-for col in IMDB_Ratings.columns:
-    if "rating" in col.lower():
-        rating_col = col
-    if "vote" in col.lower():
-        votes_col = col
+# Apply filters
+if selected_year != "All":
+    df_graph = df_graph[df_graph["Year"] == int(selected_year)]
+if selected_directors:
+    df_graph = df_graph[df_graph["Director"].isin(selected_directors)]
+if selected_genre != "All":
+    df_graph = df_graph[df_graph["Genre"].str.contains(selected_genre, na=False)]
 
-# ---------------------------
-# Scenario 12 – Network Influence Analysis
-# ---------------------------
-if scenario == "Scenario 12 – Network Influence Analysis":
-    st.header("Scenario 12 – Network Influence Analysis 🎬")
-    st.markdown("""
-    Explore influence of **actors, directors, and genres**.  
-    Find central/influential nodes: directors who consistently produce high-rated movies, popular genres, etc.
-    """)
+# Build graph
+G = nx.Graph()
+for _, row in df_graph.iterrows():
+    movie = row.get("Title")
+    director = row.get("Director")
+    genre = row.get("Genre")
 
-    if IMDB_Ratings.empty:
-        st.warning("IMDb Ratings table is empty.")
+    if pd.notna(movie):
+        G.add_node(movie, type="movie")
+    if pd.notna(director):
+        G.add_node(director, type="director")
+        G.add_edge(director, movie)
+    if pd.notna(genre):
+        for g in str(genre).split(", "):
+            G.add_node(g, type="genre")
+            G.add_edge(movie, g)
+
+fig, ax = plt.subplots(figsize=(12, 8))
+pos = nx.spring_layout(G, k=0.3, iterations=25)
+color_map = []
+for node, data in G.nodes(data=True):
+    if data["type"] == "movie":
+        color_map.append("skyblue")
+    elif data["type"] == "director":
+        color_map.append("lightgreen")
     else:
-        G = nx.Graph()
+        color_map.append("salmon")
 
-        # Add directors
-        if 'Director' in IMDB_Ratings.columns:
-            for _, row in IMDB_Ratings.iterrows():
-                G.add_node(row['Director'], type='Director')
-                G.add_node(row['Title'], type='Movie')
-                G.add_edge(row['Director'], row['Title'])
+nx.draw(G, pos, with_labels=True, node_size=800, node_color=color_map, font_size=8, edge_color="gray", ax=ax)
+st.pyplot(fig)
+st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges**.")
+'''
 
-        # Add genres
-        if 'Genre' in IMDB_Ratings.columns:
-            for _, row in IMDB_Ratings.iterrows():
-                genres = str(row['Genre']).split(',')
-                for g in genres:
-                    g = g.strip()
-                    G.add_node(g, type='Genre')
-                    G.add_edge(row['Title'], g)
+    user_graph_code = st.text_area("Python Graph Code (editable)", graph_code, height=600)
 
-        # Compute centrality
-        centrality = nx.degree_centrality(G)
-        top_nodes = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:10]
-        st.write("### Top Influential Nodes")
-        st.dataframe(pd.DataFrame(top_nodes, columns=['Node', 'Centrality']))
+    if st.button("Run Graph Analysis", key="run_graph11"):
+        try:
+            local_vars = {
+                "IMDB_Ratings": IMDB_Ratings,
+                "selected_year": selected_year,
+                "selected_directors": selected_directors,
+                "selected_genre": selected_genre,
+                "st": st,
+                "pd": pd
+            }
+            exec(user_graph_code, {}, local_vars)
 
-        # Draw network
-        st.write("### Network Graph (simplified)")
-        plt.figure(figsize=(12,6))
-        pos = nx.spring_layout(G, k=0.5)
-        nx.draw_networkx_nodes(G, pos, node_size=50)
-        nx.draw_networkx_edges(G, pos, alpha=0.3)
-        nx.draw_networkx_labels(G, pos, font_size=8)
-        plt.axis('off')
-        st.pyplot(plt)
+            st.info("""
+            **Interpretation of Graph**  
+            - **Blue nodes** = Movies  
+            - **Green nodes** = Directors  
+            - **Red nodes** = Genres  
 
-# ---------------------------
-# Scenario 13 – Counterfactual / “What If?” Analysis
-# ---------------------------
-if scenario == "Scenario 13 – Counterfactual Analysis":
-    st.header("Scenario 13 – Counterfactual / “What If?” 🎭")
-    st.markdown("""
-    Simulate hypothetical scenarios to see how changing features affects ratings.  
-    Example: “What if Inception had a different director?”
-    """)
+            **Deeper Insights with Filters:**  
+            - **Year filter** → See only one year’s network.  
+            - **Multi-director filter** → Compare multiple directors’ works in the same view.  
+            - **Genre filter** → Focus on just one genre cluster.  
 
-    if IMDB_Ratings.empty:
-        st.warning("IMDb Ratings table is empty.")
-    else:
-        # Select movie
-        movie_choice = st.selectbox("Select a movie:", IMDB_Ratings['Title'].unique())
-        feature_to_change = st.selectbox("Select feature to change:", ['Director', 'Genre', 'Year'])
-        new_value = st.text_input(f"New value for {feature_to_change}:")
-
-        if st.button("Run Counterfactual"):
-            df_cf = IMDB_Ratings.copy()
-            mask = df_cf['Title'] == movie_choice
-            df_cf.loc[mask, feature_to_change] = new_value
-
-            st.write(f"Simulated change for **{movie_choice}**: {feature_to_change} → {new_value}")
-            st.write("You can now feed this dataset to your ML model to predict new ratings.")
-
-# ---------------------------
-# Scenario 14 – Explainable AI for Movie Ratings
-# ---------------------------
-if scenario == "Scenario 14 – Explainable AI":
-    st.header("Scenario 14 – Explainable AI for Movie Ratings 🤖")
-    st.markdown("""
-    Understand why the model predicts a certain rating.  
-    Feature contributions are shown using SHAP values.
-    """)
-
-    if IMDB_Ratings.empty or rating_col is None:
-        st.warning("IMDb Ratings table is empty or missing rating column.")
-    else:
-        # Select numeric columns for model
-        numeric_cols = IMDB_Ratings.select_dtypes(include=np.number).columns.tolist()
-        if len(numeric_cols) < 2:
-            st.warning("Not enough numeric features for model explanation.")
-        else:
-            X = IMDB_Ratings[numeric_cols]
-            y = IMDB_Ratings[rating_col]
-
-            # Train RandomForest
-            model = RandomForestRegressor(n_estimators=50, random_state=42)
-            model.fit(X, y)
-
-            # SHAP explainer
-            explainer = shap.Explainer(model, X)
-            shap_values = explainer(X)
-
-            # Select movie
-            movie_choice = st.selectbox("Select a movie for SHAP explanation:", IMDB_Ratings['Title'].unique())
-            idx = IMDB_Ratings[IMDB_Ratings['Title'] == movie_choice].index[0]
-
-            st.write(f"Predicted rating for **{movie_choice}**: {model.predict(X.iloc[[idx]])[0]:.2f}")
-            st.write("### Feature contributions:")
-            shap.initjs()
-            st_shap_plot = shap.plots.force(shap_values[idx])
-            st.pyplot(st_shap_plot)
-
-import networkx as nx
-import matplotlib.pyplot as plt
-import seaborn as sns
-import shap
-
-# --- Clean column names ---
-IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
-
-# --- Identify rating and votes columns ---
-rating_col = None
-votes_col = None
-for col in IMDB_Ratings.columns:
-    if "rating" in col.lower():
-        rating_col = col
-    if "vote" in col.lower():
-        votes_col = col
-
+            **Analogy:** This is like zooming into different parts of a social network:  
+            - Filter by **Year** = seeing one "graduating class" of movies.  
+            - Filter by **Director(s)** = focusing on a set of creators.  
+            - Filter by **Genre** = following one interest group (like only "horror clubs").  
+            """)
+        except Exception as e:
+            st.error(f"Error running Graph Analysis code: {e}")
