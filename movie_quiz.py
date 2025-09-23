@@ -16,7 +16,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Pyvis), SQL, OMDb API , AI , GitHub and IMDb.
+This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx ), SQL, OMDb API , AI , GitHub and IMDb.
 """)
 
 st.markdown("""
@@ -1054,7 +1054,7 @@ import pandas as pd
 
 df_graph = IMDB_Ratings.copy()
 
-# Apply filters
+
 if selected_year != "All":
     df_graph = df_graph[df_graph["Year"] == int(selected_year)]
 if selected_directors:
@@ -1062,7 +1062,7 @@ if selected_directors:
 if selected_genre != "All":
     df_graph = df_graph[df_graph["Genre"].str.contains(selected_genre, na=False)]
 
-# Build graph
+
 G = nx.Graph()
 for _, row in df_graph.iterrows():
     movie = row.get("Title")
