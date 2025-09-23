@@ -892,7 +892,7 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
         # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
-        y = train_df['Your Rating']  # Target variable
+        y = train_df['Your Rating']
 
         # --- Baseline model ---
         baseline_features = ['Num Votes','IMDb Rating']
@@ -970,14 +970,63 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
     if st.session_state['scenario10_result']:
         result = st.session_state['scenario10_result']
 
+        # --- Predictions table ---
+        st.write("### Predictions Table (All Unrated Movies)")
         if not result['predictions'].empty:
-            st.write("### Predictions Table (All Unrated Movies)")
             st.dataframe(result['predictions'])
             st.write("### Statistical Significance of Improvement")
             st.info(result['stat_explanation'])
+
+            # --- Explanation of predicted rating changes ---
+            st.write("### Why Predicted Ratings Change")
+            st.markdown(f"""
+The predicted ratings change when you modify the selected features because the model learns patterns from your past ratings.  
+
+**Current features used:** {', '.join(result['selected_features'])}  
+
+- **Director:** captures your preferences for specific directors.  
+- **Genre:** captures your preferences for specific types of films.  
+- **Year:** considers how your ratings vary over time.  
+- **IMDb Rating & Num Votes:** reflect general popularity and consensus quality.  
+
+When features are added or removed, the model adjusts the predictions based on the patterns it learned from your historical ratings.
+""")
+
+            # --- Annotated RMSE boxplot ---
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(7,4))
+            rmse_base_mean = np.mean(result['scores_base'])
+            rmse_test_mean = np.mean(result['scores_test'])
+            plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
+            plt.ylabel("RMSE")
+            plt.title("Cross-Validated RMSE Comparison")
+            plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
+            plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
+            st.pyplot(plt)
+
+            # --- RMSE interpretation ---
+            st.write("""
+**Interpretation of RMSE Boxplot and Model Comparison**
+
+**Scenario 1: Baseline Model (Numeric Features Only)**
+- Uses only `IMDb Rating` and `Num Votes`.
+- Captures general popularity and average rating information.
+- Higher RMSE → predictions deviate more from your actual ratings.
+- Wide spread → inconsistent performance across movies.
+
+**Scenario 2: Feature-Added Model (Selected Features Included)**
+- Includes additional features such as `Director`, `Genre`, `Year`.
+- Provides context about your personal preferences.
+- Lower RMSE → predictions closer to your actual ratings.
+- Tighter spread → more consistent performance.
+
+**Takeaway**
+- RMSE decrease + p-value < 0.05 → features improve model accuracy.
+- RMSE increase + p-value < 0.05 → features worsen predictions.
+- p-value ≥ 0.05 → no significant change.
+""")
         else:
             st.warning("No unseen movies available for prediction.")
-
 
 
 # --- Scenario 11: Graph-Based Movie Relationships ---
