@@ -847,19 +847,19 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
 
     # --- Grey code block for users to view ---
     scenario10_code = '''
-# Prepare data
+
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 y = train_df['Your Rating']
 
-# Baseline model (numeric only)
+
 baseline_features = ['Num Votes','IMDb Rating']
 X_base = train_df[baseline_features]
 model_base = RandomForestRegressor(n_estimators=100, random_state=42)
 scores_base = -cross_val_score(model_base, X_base, y, cv=KFold(n_splits=5, shuffle=True, random_state=42),
                                 scoring='neg_root_mean_squared_error')
 
-# Feature-added model
+
 categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
 numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
 features_to_use = categorical_features + numerical_features
@@ -986,13 +986,14 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
     if st.session_state['scenario10_result']:
         result = st.session_state['scenario10_result']
 
+        # --- Predictions table ---
         if not result['predictions'].empty:
             st.write("### Predictions Table (All Unrated Movies)")
             st.dataframe(result['predictions'])
         else:
             st.warning("No unseen movies available for prediction.")
 
-        # --- Statistical significance box ---
+        # --- Statistical significance ---
         st.write("### Statistical Significance of Improvement")
         st.info(result['stat_explanation'])
 
@@ -1004,6 +1005,29 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
         plt.text(1, np.mean(result['scores_base']) + 0.02, f"{np.mean(result['scores_base']):.2f}", ha='center', color='blue')
         plt.text(2, np.mean(result['scores_test']) + 0.02, f"{np.mean(result['scores_test']):.2f}", ha='center', color='green')
         st.pyplot(plt)
+
+        # --- Explanation below the boxplot ---
+        st.markdown("""
+        **Interpretation of RMSE Boxplot and Model Comparison**
+
+        **Scenario 1: Baseline Model (Numeric Features Only)**
+        - Uses only `IMDb Rating` and `Num Votes`.
+        - Captures general popularity and average rating information.
+        - Higher RMSE → predictions deviate more from your actual ratings.
+        - Wide spread → inconsistent performance across movies.
+
+        **Scenario 2: Feature-Added Model (Selected Features Included)**
+        - Includes additional features such as `Director`, `Genre`, `Year`.
+        - Provides context about your personal preferences.
+        - Lower RMSE → predictions closer to your actual ratings.
+        - Tighter spread → more consistent performance.
+
+        **Takeaway**
+        - RMSE decrease + p-value < 0.05 → features improve model accuracy.
+        - RMSE increase + p-value < 0.05 → features worsen predictions.
+        - p-value ≥ 0.05 → no significant change.
+        """)
+
 
 
 # --- Scenario 11: Graph-Based Movie Relationships ---
