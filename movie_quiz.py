@@ -1028,8 +1028,9 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         """)
 
 
-# --- Scenario 11: Graph-Based Movie Relationships ---
 
+
+# --- Scenario 11: Graph-Based Movie Relationships ---
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
     st.write("""
@@ -1049,12 +1050,21 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
 
     # --- Default Selections ---
-    default_year = "1955" if 1955 in years else "All"
-    default_genre = "Drama" if "Drama" in genres else "All"
+    default_year = "All"
+    default_genre = "All"
+    default_director = ["John Carpenter"] if "John Carpenter" in directors else []
 
-    selected_year = st.selectbox("Filter by Year", ["All"] + [str(y) for y in years], index=(["All"] + [str(y) for y in years]).index(default_year))
-    selected_directors = st.multiselect("Filter by Director(s)", directors, default=[])  # none selected
-    selected_genre = st.selectbox("Filter by Genre", ["All"] + genres, index=(["All"] + genres).index(default_genre))
+    selected_year = st.selectbox(
+        "Filter by Year",
+        ["All"] + [str(y) for y in years],
+        index=(["All"] + [str(y) for y in years]).index(default_year)
+    )
+    selected_directors = st.multiselect("Filter by Director(s)", directors, default=default_director)
+    selected_genre = st.selectbox(
+        "Filter by Genre",
+        ["All"] + genres,
+        index=(["All"] + genres).index(default_genre)
+    )
 
     # --- Editable code template ---
     graph_code = '''
