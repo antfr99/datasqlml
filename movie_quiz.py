@@ -91,8 +91,7 @@ scenario = st.radio(
         "Scenario 8 – Model Evaluation (Feature Importance)",
         "Scenario 9 – Poster Image Analysis (API)",
         "Scenario 10 – Feature Hypothesis Testing",
-        "Scenario 11 – Graph Based Movie Relationships",
-        "Scenario 12 – Anomaly Detection"
+        "Scenario 11 – Graph Based Movie Relationships"        
     ]
 )
 
@@ -1136,77 +1135,3 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
             st.error(f"Error running Graph Analysis code: {e}")
 
 
-
-# --- Scenario 12: Anomaly Detection ---
-
-if scenario == "Scenario 12 – Anomaly Detection":
-    st.header("Scenario 12 – Anomaly Detection ⚠️")
-    st.markdown("""
-    This scenario highlights movies that are unusual compared to the rest of the dataset.  
-    You can **edit the code below** to change the anomaly detection logic, then click **Run**.
-    """)
-
-    if IMDB_Ratings.empty:
-        st.warning("IMDb Ratings table is empty or failed to load.")
-    elif not rating_col or not votes_col:
-        st.error("Could not find Rating or Votes column. Please check your data.")
-    else:
-        # --- Default code as string ---
-        default_code = f"""
-
-# Change thresholds as needed
-threshold_rating = 5
-threshold_votes = 20000
-
-IMDB_Ratings['Anomaly'] = IMDB_Ratings.apply(
-    lambda row: 'Anomaly' if (row['{rating_col}'] < threshold_rating and row['{votes_col}'] > threshold_votes) else '', axis=1
-)
-anomaly_df = IMDB_Ratings[IMDB_Ratings['Anomaly'] == 'Anomaly']
-
-
-anomaly_display = anomaly_df[['Title', '{rating_col}', '{votes_col}']].copy()
-anomaly_display['Why Anomaly?'] = anomaly_display.apply(
-    lambda row: f"Low rating ({{row['{rating_col}']}}) vs high votes ({{row['{votes_col}']}})", axis=1
-)
-"""
-
-        # --- Editable text area instead of st.code ---
-        edited_code = st.text_area("Edit anomaly detection code here:", default_code, height=300)
-
-        if st.button("Run Anomaly Detection"):
-            local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "pd": pd}
-            try:
-                exec(edited_code, globals(), local_vars)
-                anomaly_display = local_vars['anomaly_display']
-                anomaly_df = local_vars['anomaly_df']
-
-                # --- Display table ---
-                st.write("### ⚠️ Anomalies Detected")
-                st.dataframe(anomaly_display, width="stretch", height=200)
-
-                # --- Scatter plot ---
-                st.write("### Scatter Plot: Rating vs Votes (Anomalies Highlighted)")
-                plt.figure(figsize=(10,5))
-                sns.scatterplot(
-                    data=IMDB_Ratings,
-                    x=votes_col,
-                    y=rating_col,
-                    label='Normal',
-                    alpha=0.5
-                )
-                sns.scatterplot(
-                    data=anomaly_df,
-                    x=votes_col,
-                    y=rating_col,
-                    color='red',
-                    s=100,
-                    label='Anomaly'
-                )
-                plt.xlabel("Votes")
-                plt.ylabel("Rating")
-                plt.title("Ratings vs Votes (Anomalies Highlighted)")
-                plt.legend()
-                st.pyplot(plt)
-
-            except Exception as e:
-                st.error(f"Error running code: {e}")
