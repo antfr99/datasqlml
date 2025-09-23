@@ -1288,77 +1288,97 @@ for col in IMDB_Ratings.columns:
 # ---------------------------
 # Scenario 12 – Network Influence Analysis
 
-# --- Scenario 12: Interactive Network Influence Analysis ---
+# --- Scenario 12: Network Influence Analysis (Safe + Editable) ---
 import networkx as nx
 import matplotlib.pyplot as plt
-from pyvis.network import Network
-import streamlit.components.v1 as components
 
-st.header("Scenario 12 – Interactive Network Influence Analysis 🎬")
+st.header("Scenario 12 – Network Influence Analysis 🎬")
 st.markdown("""
-Explore influence of **actors, directors, and genres** in your movie dataset.  
-Use filters to focus on top influential nodes or specific types.
+Explore influence of **actors, directors, and genres**.  
+Use filters and code to customize what relationships to include.
 """)
 
-# --- User Inputs ---
-top_n = st.slider("Top N influential nodes to display", min_value=5, max_value=50, value=10)
-min_centrality = st.slider("Minimum centrality threshold", min_value=0.0, max_value=1.0, value=0.05)
-node_types = st.multiselect(
-    "Node types to include",
-    options=["Director", "Movie", "Genre"],
-    default=["Director", "Movie", "Genre"]
-)
+# --- Editable code box for advanced users ---
+default_code = """
+# Example: customize which edges/nodes to include
+for _, row in IMDB_Ratings.iterrows():
+    title = row['Title']
+    director = row['Director']
+    genres = str(row.get('Genre') or '').split(',')
+
+    if "Movie" in node_types:
+        G.add_node(title, type='Movie')
+    if director and "Director" in node_types:
+        G.add_node(director, type='Director')
+        G.add_edge(director, title)
+    for g in genres:
+        g = g.strip()
+        if g and "Genre" in node_types:
+            G.add_node(g, type='Genre')
+            G.add_edge(title, g)
+"""
+
+code_area = st.text_area("Editable Network Code", default_code, height=200)
+
+# --- User filters ---
+top_n = st.slider("Top N influential nodes", 5, 50, 10)
+min_centrality = st.slider("Minimum centrality threshold", 0.0, 1.0, 0.05)
+node_types = st.multiselect("Node types to include", ["Director","Movie","Genre"], default=["Director","Movie","Genre"])
 
 if st.button("Run Network Analysis"):
     try:
         G = nx.Graph()
+        local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "node_types": node_types, "G": G}
+        exec(code_area, globals(), local_vars)
+        G = local_vars["G"]
 
-        # Build graph
-        for _, row in IMDB_Ratings.iterrows():
-            title = row['Title']
-            director = row['Director']
-            genres = str(row.get('Genre') or '').split(',')
-
-            if "Movie" in node_types:
-                G.add_node(title, type='Movie')
-            if director and "Director" in node_types:
-                G.add_node(director, type='Director')
-                G.add_edge(director, title)
-            for g in genres:
-                g = g.strip()
-                if g and "Genre" in node_types:
-                    G.add_node(g, type='Genre')
-                    G.add_edge(title, g)
-
-        # Centrality
+        # Compute centrality
         centrality = nx.degree_centrality(G)
-        filtered_nodes = {n: c for n, c in centrality.items() if c >= min_centrality}
-        top_nodes = sorted(filtered_nodes.items(), key=lambda x: x[1], reverse=True)[:top_n]
+
+        # Prepare table with more info
+        table_data = []
+        for node, cent in centrality.items():
+            if cent >= min_centrality:
+                neighbors = list(G.neighbors(node))
+                node_type = G.nodes[node].get("type", "")
+                degree = G.degree[node]
+                table_data.append({
+                    "Node": node,
+                    "Type": node_type,
+                    "Degree": degree,
+                    "Centrality": cent,
+                    "Connected Nodes": ", ".join(neighbors[:5]) + ("..." if len(neighbors) > 5 else "")
+                })
+
+        df_table = pd.DataFrame(table_data)
+        df_table = df_table.sort_values("Centrality", ascending=False).head(top_n)
 
         st.write("### Top Influential Nodes")
-        st.dataframe(pd.DataFrame(top_nodes, columns=['Node', 'Centrality']))
+        st.dataframe(df_table)
 
-        # --- Interactive Network with PyVis ---
-        net = Network(height="600px", width="100%", notebook=False)
-        for node, c in top_nodes:
-            node_type = G.nodes[node].get('type', '')
-            size = max(10, int(c*100))
-            color = {"Director":"red","Movie":"blue","Genre":"green"}.get(node_type, "gray")
-            net.add_node(node, label=node, size=size, color=color, title=f"{node} ({node_type})\nCentrality: {c:.3f}")
+        # --- Lightweight Matplotlib plot ---
+        plt.figure(figsize=(10,6))
+        pos = nx.spring_layout(G.subgraph(df_table["Node"]), seed=42, k=0.5)
+        node_colors = ['red' if n in df_table["Node"].values else 'lightgray' for n in G.nodes()]
+        nx.draw_networkx_nodes(G.subgraph(df_table["Node"]), pos, node_size=100, node_color='skyblue', alpha=0.8)
+        nx.draw_networkx_edges(G.subgraph(df_table["Node"]), pos, alpha=0.3)
+        labels = {n:n for n in df_table["Node"]}
+        nx.draw_networkx_labels(G.subgraph(df_table["Node"]), pos, labels=labels, font_size=8)
+        plt.axis('off')
+        st.pyplot(plt.gcf())
+        plt.clf()
 
-        for source, target in G.edges():
-            if source in dict(top_nodes) and target in dict(top_nodes):
-                net.add_edge(source, target)
-
-        net.show_buttons(filter_=['physics'])
-        net.save_graph('network.html')
-        components.html(open('network.html', 'r', encoding='utf-8').read(), height=650)
-
-        st.info("Hover over nodes to see type and centrality. Colors: red=Director, blue=Movie, green=Genre.")
+        st.info("""
+        **Explanation:**  
+        - Red nodes in the table and plot are the top influencers based on centrality.  
+        - Degree = number of direct connections.  
+        - Centrality = how central this node is in the network.  
+        - Connected Nodes shows some of the neighbors (limited for readability).  
+        - You can edit the code above to change which edges or nodes to include.
+        """)
 
     except Exception as e:
         st.error(f"Error running network analysis: {e}")
-
 
 
 
@@ -1423,50 +1443,56 @@ if scenario == "Scenario 13 – Counterfactual Analysis / “What If?”":
             else:
                 st.info("Not enough numeric features to run ML prediction. Only showing simulated change.")
 
+# --- Scenario 14: Explainable AI for Movie Ratings ---
+import matplotlib.pyplot as plt
 
+st.header("Scenario 14 – Explainable AI for Movie Ratings 🎬")
+st.markdown("""
+This scenario explains which features influence the predicted movie ratings the most.
+We use a trained ML model (RandomForest or LightGBM) to generate **feature importance** plots and compare predicted vs actual ratings.
+""")
 
-if scenario == "Scenario 14 – Explainable AI for Movie Ratings":
-    st.header("Scenario 14 – Explainable AI 🤖")
-    st.markdown("Understand why the model predicts a rating using numeric and engineered features.")
+# --- Select model ---
+model_choice = st.selectbox("Choose model for explainability:", ["RandomForest", "LightGBM"])
 
-    if IMDB_Ratings.empty or rating_col is None:
-        st.warning("IMDb Ratings table is empty or missing rating column.")
-    else:
-        df = IMDB_Ratings.copy()
-
-        # --- Feature engineering ---
-        df['Decade'] = (df['Year'] // 10) * 10
-        df = pd.get_dummies(df, columns=['Decade'], drop_first=True)
-
-        numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-        if rating_col in numeric_cols:
-            numeric_cols.remove(rating_col)
-
-        X = df[numeric_cols]
-        y = df[rating_col]
-
-        # --- Train model ---
+# Dummy pipeline for demonstration
+# Replace this with your actual trained model
+# X_train, y_train should come from your preprocessing pipeline
+try:
+    if model_choice == "RandomForest":
         model = RandomForestRegressor(n_estimators=100, random_state=42)
+    else:
+        model = lgb.LGBMRegressor(n_estimators=100, random_state=42)
+
+    # Train model if needed
+    if not My_Ratings.empty and not IMDB_Ratings.empty:
+        # Merge features (example: IMDb rating, Num Votes)
+        df = IMDB_Ratings.merge(My_Ratings, on="Movie ID", how="inner")
+        features = ["IMDb Rating", "Num Votes"]  # customize features
+        X = df[features]
+        y = df["My Rating"]
         model.fit(X, y)
 
-        # --- Select movie ---
-        movie_choice = st.selectbox("Select a movie to explain:", df['Title'].unique())
-        idx = df[df['Title'] == movie_choice].index[0]
+        # --- Feature Importance ---
+        importance = model.feature_importances_
+        feat_df = pd.DataFrame({"Feature": features, "Importance": importance})
+        feat_df = feat_df.sort_values("Importance", ascending=True)
 
-        # --- Prediction and contributions ---
-        pred = model.predict(X.iloc[[idx]])[0]
-        contributions = pd.Series(model.feature_importances_, index=X.columns).sort_values(ascending=False).head(10)
+        st.write("### Feature Importance")
+        plt.figure(figsize=(6,4))
+        plt.barh(feat_df["Feature"], feat_df["Importance"], color="skyblue")
+        plt.xlabel("Importance")
+        plt.title(f"{model_choice} Feature Importance")
+        st.pyplot(plt.gcf())
+        plt.clf()
 
-        st.write(f"**Predicted rating for {movie_choice}: {pred:.2f}**")
-        st.bar_chart(contributions)
+        # --- Predicted vs Actual ---
+        st.write("### Predicted vs Actual Ratings (Sample)")
+        df["Predicted"] = model.predict(X)
+        st.dataframe(df[["Title", "My Rating", "Predicted"]].head(10))
 
-        # --- Textual explanation ---
-        explanation = []
-        for feat, val in contributions.items():
-            actual_val = X.loc[idx, feat]
-            explanation.append(f"{feat}: {actual_val} → contributes {val:.3f} to prediction")
-        st.markdown("### Feature Contributions for this movie")
-        for line in explanation:
-            st.write("•", line)
+    else:
+        st.warning("Rating data not loaded. Please check your Excel files.")
 
-        st.info("Bars show top features influencing the rating. The list below gives the actual feature value and its relative contribution, helping you understand why this movie was predicted this way.")
+except Exception as e:
+    st.error(f"Error running Explainable AI scenario: {e}")
