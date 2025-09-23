@@ -14,6 +14,26 @@ st.set_page_config(
     page_title="IMDb/SQL/PYTHON Data Project 🎬"
 )
 
+# --- Custom CSS for Top Right Block ---
+st.markdown("""
+    <style>
+    .update-note {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        background-color: #f0f2f6;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #333;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+    }
+    </style>
+    <div class="update-note">
+        📅 Last Updated: September 2025
+    </div>
+""", unsafe_allow_html=True)
+
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
 This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx ), SQL, OMDb API , AI , GitHub and IMDb.
@@ -29,6 +49,7 @@ I’m approaching this from two angles:
 2. **Technical Exploration** – Demonstrating how different analytical tools (SQL queries, statistical tests, machine learning models, sentiment analysis , poster image analysis ) can be applied to the same dataset to uncover new perspectives.  
  
 """)
+
 
 # --- Load Excel files ---
 try:
