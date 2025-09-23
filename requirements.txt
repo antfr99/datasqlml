@@ -11,4 +11,5 @@ openpyxl
 matplotlib
 seaborn
 lightgbm
-networkx 
+networkx
+shap
