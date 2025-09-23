@@ -82,7 +82,7 @@ scenario = st.radio(
     "Choose a scenario:",
     [
         "Scenario 1 – Highlight Disagreements (SQL)",
-        "Scenario 2 – Hybrid Recommendation (SQL)",
+        "Scenario 2 – Hybrid Recommendations (SQL)",
         "Scenario 3 – Top Unseen Films by Decade (SQL)",
         "Scenario 4 – Predict My Ratings (ML)",
         "Scenario 5 – Statistical Insights by Genre (Agreement)",
@@ -127,7 +127,7 @@ LIMIT 1000;"""
             st.error(f"Error in SQL query: {e}")
 
 # --- Scenario 2: SQL Playground ---
-if scenario == "Scenario 2 – Hybrid Recommendation (SQL)":
+if scenario == "Scenario 2 – Hybrid Recommendations (SQL)":
     st.markdown('<h3 style="color:green;">Scenario 2 (Recommend Unseen Movies)</h3>', unsafe_allow_html=True)
     st.write("""
     Recommend movies I haven't seen yet with a bonus point system:  
