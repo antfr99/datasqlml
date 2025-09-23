@@ -1050,7 +1050,7 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
 
     # --- Default Selections ---
     default_year = "1955" if 1955 in years else "All"
-    default_genre = "Comedy" if "Comedy" in genres else "All"
+    default_genre = "Drama" if "Drama" in genres else "All"
 
     selected_year = st.selectbox("Filter by Year", ["All"] + [str(y) for y in years], index=(["All"] + [str(y) for y in years]).index(default_year))
     selected_directors = st.multiselect("Filter by Director(s)", directors, default=[])  # none selected
