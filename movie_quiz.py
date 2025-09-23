@@ -92,6 +92,7 @@ scenario = st.radio(
         "Scenario 9 – Poster Image Analysis (API)",
         "Scenario 10 – Feature Hypothesis Testing",
         "Scenario 11 – Graph Based Movie Relationships",
+        "Scenario 12 – Anomaly Detection"
     ]
 )
 
@@ -1134,3 +1135,32 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
         except Exception as e:
             st.error(f"Error running Graph Analysis code: {e}")
 
+# --- Scenario 12 Implementation ---
+if scenario == "Scenario 12 – Anomaly Detection":
+    from sklearn.ensemble import IsolationForest
+    st.header("Scenario 12 – Anomaly Detection 🎯")
+    st.markdown("""
+    Detect unusual or unexpected movie entries in your dataset based on **IMDb ratings** and **vote counts**.  
+    This helps highlight:
+    - Outlier movies that are unusually popular or unpopular
+    - Potential data entry errors
+    - Hidden gems or cult classics that deviate from typical trends
+    """)
+
+    # Use merged IMDb_Ratings table (replace missing columns with zeros if necessary)
+    df = IMDB_Ratings.copy()
+    if 'Num_Votes' not in df.columns:
+        df['Num_Votes'] = 0
+    if 'IMDb Rating' not in df.columns:
+        st.error("IMDb Rating column missing in dataset.")
+    else:
+        # Apply Isolation Forest
+        iso_forest = IsolationForest(contamination=0.05, random_state=42)
+        df['Anomaly'] = iso_forest.fit_predict(df[['IMDb Rating', 'Num_Votes']])
+        df['Anomaly'] = df['Anomaly'].map({1: 'Normal', -1: 'Anomaly'})
+
+        st.subheader("Movies with Anomaly Detection")
+        st.dataframe(df)
+
+        st.subheader("Only Anomalies")
+        st.dataframe(df[df['Anomaly'] == 'Anomaly'])
