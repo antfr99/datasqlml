@@ -732,7 +732,7 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
 
     # --- Show code in grey block ---
     poster_code = '''
-# Fetch poster from OMDb and analyze colors
+
 import requests
 from PIL import Image
 import numpy as np
