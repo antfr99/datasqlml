@@ -91,7 +91,10 @@ scenario = st.radio(
         "Scenario 8 – Model Evaluation (Feature Importance)",
         "Scenario 9 – Poster Image Analysis (API)",
         "Scenario 10 – Feature Hypothesis Testing",
-        "Scenario 11 – Graph Based Movie Relationships"        
+        "Scenario 11 – Graph Based Movie Relationships",
+        "Scenario 12 – Network Influence Analysis",
+        "Scenario 13 – Counterfactual Analysis / “What If?”",
+        "Scenario 14 – Explainable AI for Movie Ratings"
     ]
 )
 
@@ -1135,3 +1138,294 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
             st.error(f"Error running Graph Analysis code: {e}")
 
 
+import networkx as nx
+import matplotlib.pyplot as plt
+import seaborn as sns
+import shap
+
+# --- Clean column names ---
+IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+
+# --- Identify rating and votes columns ---
+rating_col = None
+votes_col = None
+for col in IMDB_Ratings.columns:
+    if "rating" in col.lower():
+        rating_col = col
+    if "vote" in col.lower():
+        votes_col = col
+
+# ---------------------------
+# Scenario 12 – Network Influence Analysis
+# ---------------------------
+if scenario == "Scenario 12 – Network Influence Analysis":
+    st.header("Scenario 12 – Network Influence Analysis 🎬")
+    st.markdown("""
+    Explore influence of **actors, directors, and genres**.  
+    Find central/influential nodes: directors who consistently produce high-rated movies, popular genres, etc.
+    """)
+
+    if IMDB_Ratings.empty:
+        st.warning("IMDb Ratings table is empty.")
+    else:
+        G = nx.Graph()
+
+        # Add directors
+        if 'Director' in IMDB_Ratings.columns:
+            for _, row in IMDB_Ratings.iterrows():
+                G.add_node(row['Director'], type='Director')
+                G.add_node(row['Title'], type='Movie')
+                G.add_edge(row['Director'], row['Title'])
+
+        # Add genres
+        if 'Genre' in IMDB_Ratings.columns:
+            for _, row in IMDB_Ratings.iterrows():
+                genres = str(row['Genre']).split(',')
+                for g in genres:
+                    g = g.strip()
+                    G.add_node(g, type='Genre')
+                    G.add_edge(row['Title'], g)
+
+        # Compute centrality
+        centrality = nx.degree_centrality(G)
+        top_nodes = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:10]
+        st.write("### Top Influential Nodes")
+        st.dataframe(pd.DataFrame(top_nodes, columns=['Node', 'Centrality']))
+
+        # Draw network
+        st.write("### Network Graph (simplified)")
+        plt.figure(figsize=(12,6))
+        pos = nx.spring_layout(G, k=0.5)
+        nx.draw_networkx_nodes(G, pos, node_size=50)
+        nx.draw_networkx_edges(G, pos, alpha=0.3)
+        nx.draw_networkx_labels(G, pos, font_size=8)
+        plt.axis('off')
+        st.pyplot(plt)
+
+# ---------------------------
+# Scenario 13 – Counterfactual / “What If?” Analysis
+# ---------------------------
+if scenario == "Scenario 13 – Counterfactual Analysis":
+    st.header("Scenario 13 – Counterfactual / “What If?” 🎭")
+    st.markdown("""
+    Simulate hypothetical scenarios to see how changing features affects ratings.  
+    Example: “What if Inception had a different director?”
+    """)
+
+    if IMDB_Ratings.empty:
+        st.warning("IMDb Ratings table is empty.")
+    else:
+        # Select movie
+        movie_choice = st.selectbox("Select a movie:", IMDB_Ratings['Title'].unique())
+        feature_to_change = st.selectbox("Select feature to change:", ['Director', 'Genre', 'Year'])
+        new_value = st.text_input(f"New value for {feature_to_change}:")
+
+        if st.button("Run Counterfactual"):
+            df_cf = IMDB_Ratings.copy()
+            mask = df_cf['Title'] == movie_choice
+            df_cf.loc[mask, feature_to_change] = new_value
+
+            st.write(f"Simulated change for **{movie_choice}**: {feature_to_change} → {new_value}")
+            st.write("You can now feed this dataset to your ML model to predict new ratings.")
+
+# ---------------------------
+# Scenario 14 – Explainable AI for Movie Ratings
+# ---------------------------
+if scenario == "Scenario 14 – Explainable AI":
+    st.header("Scenario 14 – Explainable AI for Movie Ratings 🤖")
+    st.markdown("""
+    Understand why the model predicts a certain rating.  
+    Feature contributions are shown using SHAP values.
+    """)
+
+    if IMDB_Ratings.empty or rating_col is None:
+        st.warning("IMDb Ratings table is empty or missing rating column.")
+    else:
+        # Select numeric columns for model
+        numeric_cols = IMDB_Ratings.select_dtypes(include=np.number).columns.tolist()
+        if len(numeric_cols) < 2:
+            st.warning("Not enough numeric features for model explanation.")
+        else:
+            X = IMDB_Ratings[numeric_cols]
+            y = IMDB_Ratings[rating_col]
+
+            # Train RandomForest
+            model = RandomForestRegressor(n_estimators=50, random_state=42)
+            model.fit(X, y)
+
+            # SHAP explainer
+            explainer = shap.Explainer(model, X)
+            shap_values = explainer(X)
+
+            # Select movie
+            movie_choice = st.selectbox("Select a movie for SHAP explanation:", IMDB_Ratings['Title'].unique())
+            idx = IMDB_Ratings[IMDB_Ratings['Title'] == movie_choice].index[0]
+
+            st.write(f"Predicted rating for **{movie_choice}**: {model.predict(X.iloc[[idx]])[0]:.2f}")
+            st.write("### Feature contributions:")
+            shap.initjs()
+            st_shap_plot = shap.plots.force(shap_values[idx])
+            st.pyplot(st_shap_plot)
+
+import networkx as nx
+import matplotlib.pyplot as plt
+import seaborn as sns
+import shap
+
+# --- Clean column names ---
+IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+
+# --- Identify rating and votes columns ---
+rating_col = None
+votes_col = None
+for col in IMDB_Ratings.columns:
+    if "rating" in col.lower():
+        rating_col = col
+    if "vote" in col.lower():
+        votes_col = col
+
+
+# ---------------------------
+# Scenario 12 – Network Influence Analysis
+# ---------------------------
+if scenario == "Scenario 12 – Network Influence Analysis":
+    st.header("Scenario 12 – Network Influence Analysis 🎬")
+    st.markdown("""
+    Explore influence of **actors, directors, and genres**.  
+    Edit the code below to include/exclude relationships or set thresholds for centrality.
+    """)
+
+    default_code_12 = """
+# Build network graph
+G = nx.Graph()
+
+# Example: add directors
+if 'Director' in IMDB_Ratings.columns:
+    for _, row in IMDB_Ratings.iterrows():
+        G.add_node(row['Director'], type='Director')
+        G.add_node(row['Title'], type='Movie')
+        G.add_edge(row['Director'], row['Title'])
+
+# Example: add genres
+if 'Genre' in IMDB_Ratings.columns:
+    for _, row in IMDB_Ratings.iterrows():
+        genres = str(row['Genre']).split(',')
+        for g in genres:
+            g = g.strip()
+            G.add_node(g, type='Genre')
+            G.add_edge(row['Title'], g)
+
+# Compute centrality and top nodes
+centrality = nx.degree_centrality(G)
+top_nodes = sorted(centrality.items(), key=lambda x: x[1], reverse=True)[:10]
+"""
+
+    code_12 = st.text_area("Edit Network Analysis code here:", default_code_12, height=300)
+
+    if st.button("Run Network Analysis"):
+        local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "nx": nx}
+        try:
+            exec(code_12, globals(), local_vars)
+            G = local_vars['G']
+            top_nodes = local_vars['top_nodes']
+
+            st.write("### Top Influential Nodes")
+            st.dataframe(pd.DataFrame(top_nodes, columns=['Node', 'Centrality']))
+
+            st.write("### Network Graph (simplified)")
+            plt.figure(figsize=(12,6))
+            pos = nx.spring_layout(G, k=0.5)
+            nx.draw_networkx_nodes(G, pos, node_size=50)
+            nx.draw_networkx_edges(G, pos, alpha=0.3)
+            nx.draw_networkx_labels(G, pos, font_size=8)
+            plt.axis('off')
+            st.pyplot(plt)
+
+            st.info("Directors with high centrality produce multiple highly-rated movies. Genres with high centrality appear in most popular films.")
+        except Exception as e:
+            st.error(f"Error running code: {e}")
+
+# ---------------------------
+# Scenario 13 – Counterfactual Analysis / “What If?”
+# ---------------------------
+if scenario == "Scenario 13 – Counterfactual Analysis / “What If?”":
+    st.header("Scenario 13 – Counterfactual / “What If?” 🎭")
+    st.markdown("Simulate hypothetical changes to movie features and see how predicted ratings would change.")
+
+    default_code_13 = """
+# Select movie and feature to change
+movie_choice = 'Inception'  # change default
+feature_to_change = 'Director'
+new_value = 'New Director'
+
+df_cf = IMDB_Ratings.copy()
+mask = df_cf['Title'] == movie_choice
+df_cf.loc[mask, feature_to_change] = new_value
+
+# Example: print simulated change
+sim_result = df_cf.loc[mask, ['Title', feature_to_change]]
+"""
+
+    code_13 = st.text_area("Edit Counterfactual code here:", default_code_13, height=300)
+
+    if st.button("Run Counterfactual Analysis"):
+        local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "pd": pd}
+        try:
+            exec(code_13, globals(), local_vars)
+            sim_result = local_vars['sim_result']
+
+            st.write("### Simulated Changes")
+            st.dataframe(sim_result)
+
+            st.info("You can now feed this dataset to your ML model to predict new ratings. "
+                    "Example: Changing the director of a movie may change its predicted rating.")
+        except Exception as e:
+            st.error(f"Error running code: {e}")
+
+# ---------------------------
+# Scenario 14 – Explainable AI for Movie Ratings
+# ---------------------------
+if scenario == "Scenario 14 – Explainable AI for Movie Ratings":
+    st.header("Scenario 14 – Explainable AI 🤖")
+    st.markdown("""
+    Understand why a model predicts a certain rating.  
+    Edit the code below to change model or select movie to explain.
+    """)
+
+    default_code_14 = """
+# Train simple RandomForest model
+numeric_cols = IMDB_Ratings.select_dtypes(include=np.number).columns.tolist()
+X = IMDB_Ratings[numeric_cols]
+y = IMDB_Ratings['IMDb Rating']  # change if different
+
+model = RandomForestRegressor(n_estimators=50, random_state=42)
+model.fit(X, y)
+
+# SHAP explanation
+explainer = shap.Explainer(model, X)
+shap_values = explainer(X)
+
+# Select a movie
+movie_choice = IMDB_Ratings['Title'].iloc[0]  # default first movie
+idx = IMDB_Ratings[IMDB_Ratings['Title'] == movie_choice].index[0]
+"""
+
+    code_14 = st.text_area("Edit Explainable AI code here:", default_code_14, height=300)
+
+    if st.button("Run Explainable AI"):
+        local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "RandomForestRegressor": RandomForestRegressor,
+                      "shap": shap, "np": np}
+        try:
+            exec(code_14, globals(), local_vars)
+            shap_values = local_vars['shap_values']
+            idx = local_vars['idx']
+
+            st.write(f"Predicted rating for **{local_vars['movie_choice']}**: {local_vars['model'].predict(local_vars['X'].iloc[[idx]])[0]:.2f}")
+            st.write("### Feature contributions (SHAP):")
+            shap.initjs()
+            st_shap_plot = shap.plots.force(shap_values[idx])
+            st.pyplot(st_shap_plot)
+
+            st.info("Top features contributing to the prediction are shown above. Positive values increase predicted rating; negative decrease it.")
+        except Exception as e:
+            st.error(f"Error running code: {e}")
