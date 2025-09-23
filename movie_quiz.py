@@ -1138,58 +1138,91 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
 
 
 # --- Scenario 12: Anomaly Detection ---
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# --- Clean column names (strip spaces) ---
+IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
+
+# --- Identify rating and votes columns automatically ---
+rating_col = None
+votes_col = None
+
+for col in IMDB_Ratings.columns:
+    if "rating" in col.lower():
+        rating_col = col
+    if "vote" in col.lower():
+        votes_col = col
+
 if scenario == "Scenario 12 – Anomaly Detection":
     st.header("Scenario 12 – Anomaly Detection ⚠️")
     st.markdown("""
     This scenario highlights movies that are unusual compared to the rest of the dataset.  
-    Example rule: **Low IMDb rating (<5) but many votes (>20,000)**.  
+    You can **edit the code below** to change the anomaly detection logic, then click **Run**.
     """)
 
-    if not IMDB_Ratings.empty:
-        # --- Detect anomalies ---
-        IMDB_Ratings['Anomaly'] = IMDB_Ratings.apply(
-            lambda row: 'Anomaly' if (row['IMDb Rating'] < 5 and row['Votes'] > 20000) else '', axis=1
-        )
-
-        # --- Filter anomaly dataframe ---
-        anomaly_df = IMDB_Ratings[IMDB_Ratings['Anomaly'] == 'Anomaly']
-
-        if not anomaly_df.empty:
-            st.write("### ⚠️ Anomalies Detected")
-            
-            # --- Focused table ---
-            anomaly_display = anomaly_df[['Title', 'IMDb Rating', 'Votes']].copy()
-            anomaly_display['Why Anomaly?'] = anomaly_display.apply(
-                lambda row: f"Low rating ({row['IMDb Rating']}) vs high votes ({row['Votes']})", axis=1
-            )
-            st.dataframe(anomaly_display, width="stretch", height=200)
-
-            # --- Scatter plot highlighting anomalies ---
-            st.write("### Scatter Plot: IMDb Rating vs Votes (Anomalies Highlighted)")
-            plt.figure(figsize=(10,5))
-            sns.scatterplot(
-                data=IMDB_Ratings,
-                x='Votes',
-                y='IMDb Rating',
-                label='Normal',
-                alpha=0.5
-            )
-            sns.scatterplot(
-                data=anomaly_df,
-                x='Votes',
-                y='IMDb Rating',
-                color='red',
-                s=100,
-                label='Anomaly'
-            )
-            plt.xlabel("Votes")
-            plt.ylabel("IMDb Rating")
-            plt.title("IMDb Ratings vs Votes (Anomalies Highlighted)")
-            plt.legend()
-            st.pyplot(plt)
-
-        else:
-            st.info("No anomalies detected based on current rules.")
-    else:
+    if IMDB_Ratings.empty:
         st.warning("IMDb Ratings table is empty or failed to load.")
+    elif not rating_col or not votes_col:
+        st.error("Could not find Rating or Votes column. Please check your data.")
+    else:
+        # --- Default code as string ---
+        default_code = f"""
+# Example anomaly detection logic
+# Change thresholds as needed
+threshold_rating = 5
+threshold_votes = 20000
 
+IMDB_Ratings['Anomaly'] = IMDB_Ratings.apply(
+    lambda row: 'Anomaly' if (row['{rating_col}'] < threshold_rating and row['{votes_col}'] > threshold_votes) else '', axis=1
+)
+anomaly_df = IMDB_Ratings[IMDB_Ratings['Anomaly'] == 'Anomaly']
+
+# Create display table
+anomaly_display = anomaly_df[['Title', '{rating_col}', '{votes_col}']].copy()
+anomaly_display['Why Anomaly?'] = anomaly_display.apply(
+    lambda row: f"Low rating ({{row['{rating_col}']}}) vs high votes ({{row['{votes_col}']}})", axis=1
+)
+"""
+
+        # --- Editable code box ---
+        edited_code = st.code(default_code, language="python", line_numbers=True)
+
+        if st.button("Run Anomaly Detection"):
+            local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "pd": pd}
+            try:
+                exec(edited_code, globals(), local_vars)
+                anomaly_display = local_vars['anomaly_display']
+                anomaly_df = local_vars['anomaly_df']
+
+                # --- Display table ---
+                st.write("### ⚠️ Anomalies Detected")
+                st.dataframe(anomaly_display, width="stretch", height=200)
+
+                # --- Scatter plot ---
+                st.write("### Scatter Plot: Rating vs Votes (Anomalies Highlighted)")
+                plt.figure(figsize=(10,5))
+                sns.scatterplot(
+                    data=IMDB_Ratings,
+                    x=votes_col,
+                    y=rating_col,
+                    label='Normal',
+                    alpha=0.5
+                )
+                sns.scatterplot(
+                    data=anomaly_df,
+                    x=votes_col,
+                    y=rating_col,
+                    color='red',
+                    s=100,
+                    label='Anomaly'
+                )
+                plt.xlabel("Votes")
+                plt.ylabel("Rating")
+                plt.title("Ratings vs Votes (Anomalies Highlighted)")
+                plt.legend()
+                st.pyplot(plt)
+
+            except Exception as e:
+                st.error(f"Error running code: {e}")
