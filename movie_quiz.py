@@ -77,19 +77,20 @@ else:
 scenario = st.radio(
     "Choose a scenario:",
     [
-        "Scenario 1 - Highlight Disagreements (SQL)",
-        "Scenario 2 - Hybrid Recommendation (SQL)",
-        "Scenario 3 - Top Unseen Films by Decade (SQL)",
-        "Scenario 4 - Predict My Ratings (ML)",
-        "Scenario 5 - Statistical Insights by Genre (Agreement)",
-        "Scenario 6 - Statistical Insights by Director (t-test)",
-        "Scenario 7 - Review Analysis (Sentiment, Subjectivity)",
-        "Scenario 8 - Model Evaluation (Feature Importance)",
-        "Scenario 9 - Poster Image Analysis (API)",
-        "Scenario 10 - Feature Hypothesis Testing",
+        "Scenario 1 – Highlight Disagreements (SQL)",
+        "Scenario 2 – Hybrid Recommendation (SQL)",
+        "Scenario 3 – Top Unseen Films by Decade (SQL)",
+        "Scenario 4 – Predict My Ratings (ML)",
+        "Scenario 5 – Statistical Insights by Genre (Agreement)",
+        "Scenario 6 – Statistical Insights by Director (t-test)",
+        "Scenario 7 – Review Analysis (Sentiment, Subjectivity)",
+        "Scenario 8 – Model Evaluation (Feature Importance)",
+        "Scenario 9 – Poster Image Analysis (API)",
+        "Scenario 10 – Feature Hypothesis Testing",
         "Scenario 11 – Graph Based Movie Relationships",
     ]
 )
+
 
 
 # --- Scenario 1: SQL Playground ---
@@ -341,7 +342,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
 
 # --- Scenario 6: Statistical Insights (t-test per Director) ---
-if scenario == "Scenario 6 - Statistical Insights by Director (t-test)":
+if scenario == "Scenario 6 – Statistical Insights by Director (t-test)":
     st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
     st.write("""
 This analysis compares my ratings with IMDb ratings on a director-by-director basis using a **paired t-test**.  
