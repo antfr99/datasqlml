@@ -16,7 +16,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx ), SQL, OMDb API , AI , GitHub and IMDb.   
+This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx ), SQL, OMDb API , AI , GitHub and IMDb.
 """)
 
 st.markdown("""
