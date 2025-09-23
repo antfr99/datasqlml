@@ -730,6 +730,28 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
     st.markdown("### Scenario 9 – Poster Image & Mood Analysis")
     st.write("Select a movie, then click **Fetch Poster** to display the poster and an easy-to-understand analysis.")
 
+    # --- Show code in grey block ---
+    poster_code = '''
+# Fetch poster from OMDb and analyze colors
+import requests
+from PIL import Image
+import numpy as np
+from sklearn.cluster import KMeans
+
+imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
+url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+response = requests.get(url).json()
+poster_url = response.get('Poster')
+
+img = Image.open(requests.get(poster_url, stream=True).raw).convert("RGB")
+img_small = img.resize((150, 150))
+img_array = np.array(img_small).reshape(-1, 3)
+
+kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
+dominant_colors = kmeans.cluster_centers_
+'''
+    st.code(poster_code, language="python")
+
     # --- Hidden API key ---
     OMDB_API_KEY = "bcf17f38"  # hard-coded, hidden
 
@@ -798,7 +820,6 @@ if scenario == "Scenario 9 – Poster Image Analysis (API)":
                 )
             else:
                 st.warning("Poster not found.")
-
 
 
 # --- Scenario 10: Feature Hypothesis Testing ---
