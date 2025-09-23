@@ -12,7 +12,7 @@ import numpy as np
 st.set_page_config(layout="wide")
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small IMDb data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn ), SQL, OMDb API , AI and GitHub.
+This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn ), SQL, OMDb API , AI and GitHub.
 """)
 
 st.markdown("""
@@ -993,6 +993,8 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
 
 
 # --- Scenario 11: Graph-Based Movie Relationships ---
+
+# --- Scenario 11: Graph-Based Movie Relationships ---
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
     st.write("""
@@ -1019,7 +1021,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Apply filters
 df_graph = IMDB_Ratings.copy()
 if selected_director != "All":
     df_graph = df_graph[df_graph["Director"] == selected_director]
@@ -1027,7 +1028,6 @@ if selected_decade != "All":
     decade = int(selected_decade)
     df_graph = df_graph[(df_graph["Year"] >= decade) & (df_graph["Year"] < decade + 10)]
 
-# Build graph
 G = nx.Graph()
 for _, row in df_graph.iterrows():
     movie = row.get("Title")
@@ -1044,7 +1044,6 @@ for _, row in df_graph.iterrows():
             G.add_node(g, type="genre")
             G.add_edge(movie, g)
 
-# Draw graph
 fig, ax = plt.subplots(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.3, iterations=25)
 color_map = []
@@ -1084,6 +1083,30 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
             - Directors with many movies → many edges.  
             - Genres connecting multiple movies → hub nodes.  
             - Filtering by decade shows changes over time.
+            """)
+
+            # --- Explanation with analogy ---
+            st.write("""
+            ### Understanding the Graph: Analogy & Insights
+
+            Think of this graph like a **social network for movies**:
+
+            - **Movies** = people in the network (blue nodes)  
+            - **Directors** = influencers or group leaders (green nodes)  
+            - **Genres** = clubs or interest groups (red nodes)
+
+            **How it works:**  
+            - If a director (green node) makes multiple movies (blue nodes), they become a hub connecting several movies.  
+            - If a genre (red node) includes multiple movies, it also becomes a hub linking movies across directors.  
+            - Movies connected to the same director or genre tend to form clusters, just like friends or interest groups in a social network.  
+
+            **Takeaway:**  
+            - Large clusters indicate popular directors or genres you like.  
+            - Sparse connections might show niche films or unique collaborations.  
+            - Filtering by decade lets you see how these “social circles” of movies evolve over time.
+
+            🎬 **Analogy:**  
+            Imagine each movie is a student in a school. Directors are teachers, genres are clubs. Students join clubs (genres) and interact with teachers (directors). The graph shows all these relationships—who’s in which club and whose teacher they have—making it easy to spot popular teachers, clubs, or students with multiple connections.
             """)
 
         except Exception as e:
