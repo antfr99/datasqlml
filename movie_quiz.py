@@ -1139,22 +1139,6 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
 
 # --- Scenario 12: Anomaly Detection ---
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# --- Clean column names (strip spaces) ---
-IMDB_Ratings.columns = IMDB_Ratings.columns.str.strip()
-
-# --- Identify rating and votes columns automatically ---
-rating_col = None
-votes_col = None
-
-for col in IMDB_Ratings.columns:
-    if "rating" in col.lower():
-        rating_col = col
-    if "vote" in col.lower():
-        votes_col = col
-
 if scenario == "Scenario 12 – Anomaly Detection":
     st.header("Scenario 12 – Anomaly Detection ⚠️")
     st.markdown("""
@@ -1169,7 +1153,7 @@ if scenario == "Scenario 12 – Anomaly Detection":
     else:
         # --- Default code as string ---
         default_code = f"""
-# Example anomaly detection logic
+
 # Change thresholds as needed
 threshold_rating = 5
 threshold_votes = 20000
@@ -1179,15 +1163,15 @@ IMDB_Ratings['Anomaly'] = IMDB_Ratings.apply(
 )
 anomaly_df = IMDB_Ratings[IMDB_Ratings['Anomaly'] == 'Anomaly']
 
-# Create display table
+
 anomaly_display = anomaly_df[['Title', '{rating_col}', '{votes_col}']].copy()
 anomaly_display['Why Anomaly?'] = anomaly_display.apply(
     lambda row: f"Low rating ({{row['{rating_col}']}}) vs high votes ({{row['{votes_col}']}})", axis=1
 )
 """
 
-        # --- Editable code box ---
-        edited_code = st.code(default_code, language="python", line_numbers=True)
+        # --- Editable text area instead of st.code ---
+        edited_code = st.text_area("Edit anomaly detection code here:", default_code, height=300)
 
         if st.button("Run Anomaly Detection"):
             local_vars = {"IMDB_Ratings": IMDB_Ratings.copy(), "pd": pd}
