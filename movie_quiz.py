@@ -431,7 +431,7 @@ import pandas as pd
 import streamlit as st
 
 
-if scenario == "Scenario 7 — Review Analysis (Sentiment, Subjectivity)":
+if scenario == "Scenario 7 – Review Analysis (Sentiment, Subjectivity)":
     st.header("Scenario 7 — Film Review Analysis - Mother! (2017)")
 
     # --- Short explanation ---
