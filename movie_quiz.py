@@ -1037,7 +1037,7 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     # Default to Stanley Kubrick
     default_index = 0
     if "Stanley Kubrick" in directors:
-        default_index = directors.index("Stanley Kubrick")
+        default_index = directors.index("Alfred Hitchcock")
 
     selected_director = st.selectbox(
         "Filter by Director",
