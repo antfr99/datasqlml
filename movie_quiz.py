@@ -1028,8 +1028,8 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         """)
 
 
-
 # --- Scenario 11: Graph-Based Movie Relationships ---
+
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
     st.write("""
@@ -1048,9 +1048,13 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
 
     years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
 
-    selected_year = st.selectbox("Filter by Year", ["All"] + [str(y) for y in years])
-    selected_directors = st.multiselect("Filter by Director(s)", directors)
-    selected_genre = st.selectbox("Filter by Genre", ["All"] + genres)
+    # --- Default Selections ---
+    default_year = "1955" if 1955 in years else "All"
+    default_genre = "Comedy" if "Comedy" in genres else "All"
+
+    selected_year = st.selectbox("Filter by Year", ["All"] + [str(y) for y in years], index=(["All"] + [str(y) for y in years]).index(default_year))
+    selected_directors = st.multiselect("Filter by Director(s)", directors, default=[])  # none selected
+    selected_genre = st.selectbox("Filter by Genre", ["All"] + genres, index=(["All"] + genres).index(default_genre))
 
     # --- Editable code template ---
     graph_code = '''
@@ -1060,14 +1064,12 @@ import pandas as pd
 
 df_graph = IMDB_Ratings.copy()
 
-
 if selected_year != "All":
     df_graph = df_graph[df_graph["Year"] == int(selected_year)]
 if selected_directors:
     df_graph = df_graph[df_graph["Director"].isin(selected_directors)]
 if selected_genre != "All":
     df_graph = df_graph[df_graph["Genre"].str.contains(selected_genre, na=False)]
-
 
 G = nx.Graph()
 for _, row in df_graph.iterrows():
