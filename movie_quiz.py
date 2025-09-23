@@ -824,6 +824,10 @@ dominant_colors = kmeans.cluster_centers_
 
 # --- Scenario 10: Feature Hypothesis Testing ---
 
+
+
+# --- Scenario 10: Feature Hypothesis Testing ---
+
 # --- Scenario 10: Feature Hypothesis Testing ---
 if scenario == "Scenario 10 – Feature Hypothesis Testing":
     st.header("Scenario 10 – Feature Hypothesis Testing & Predictions")
@@ -843,41 +847,8 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         "Select feature(s) to test", 
         candidate_features, 
         default=['Director'] 
+
     )
-
-    # --- Grey code block for users to view ---
-    scenario10_code = '''
-
-df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-train_df = df_ml[df_ml['Your Rating'].notna()]
-y = train_df['Your Rating']
-
-
-baseline_features = ['Num Votes','IMDb Rating']
-X_base = train_df[baseline_features]
-model_base = RandomForestRegressor(n_estimators=100, random_state=42)
-scores_base = -cross_val_score(model_base, X_base, y, cv=KFold(n_splits=5, shuffle=True, random_state=42),
-                                scoring='neg_root_mean_squared_error')
-
-
-categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
-numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
-features_to_use = categorical_features + numerical_features
-
-preprocessor = ColumnTransformer(transformers=[
-    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-    ('num', 'passthrough', numerical_features)
-])
-X_test = train_df[features_to_use]
-model_test = Pipeline([
-    ('prep', preprocessor),
-    ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-])
-scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuffle=True, random_state=42),
-                               scoring='neg_root_mean_squared_error')
-'''
-    st.code(scenario10_code, language="python")
-
     if 'scenario10_result' not in st.session_state:
         st.session_state['scenario10_result'] = None
 
@@ -894,9 +865,9 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
         # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
-        y = train_df['Your Rating']
+        y = train_df['Your Rating']  # Target variable: your ratings
 
-        # --- Baseline model ---
+        # --- Baseline model (numeric only) ---
         baseline_features = ['Num Votes','IMDb Rating']
         X_base = train_df[baseline_features]
         model_base = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -928,7 +899,7 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
             # --- Retrain for predictions ---
             model_test.fit(X_test, y)
 
-            # --- Predict unseen movies ---
+            # --- Predict all unseen movies ---
             unseen_df = df_ml[df_ml['Your Rating'].isna()]
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
@@ -943,11 +914,12 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
                     features_list.append(", ".join([f"{k}={v}" for k,v in feature_values.items()]))
                 pred_df['Features Considered'] = features_list
 
+                # --- Sort by Year descending ---
                 pred_df = pred_df.sort_values(by='Year', ascending=False)
             else:
                 pred_df = pd.DataFrame()
 
-            # --- RMSE & interpretation ---
+            # --- RMSE summary & automatic interpretation ---
             rmse_base_mean = np.mean(scores_base)
             rmse_test_mean = np.mean(scores_test)
             rmse_diff = rmse_base_mean - rmse_test_mean
@@ -973,13 +945,13 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
                 )
 
             st.session_state['scenario10_result'] = {
+                't_stat': t_stat,
+                'p_val': p_val,
                 'stat_explanation': stat_explanation,
                 'predictions': pred_df,
                 'scores_base': scores_base,
                 'scores_test': scores_test,
-                'selected_features': selected_features,
-                't_stat': t_stat,
-                'p_val': p_val
+                'selected_features': selected_features
             }
 
     # --- Display results ---
@@ -987,27 +959,44 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
         result = st.session_state['scenario10_result']
 
         # --- Predictions table ---
+        st.write("### Predictions Table (All Unrated Movies)")
         if not result['predictions'].empty:
-            st.write("### Predictions Table (All Unrated Movies)")
             st.dataframe(result['predictions'])
+
+            # --- Statistical significance explanation ---
+            st.write("### Statistical Significance of Improvement")
+            st.info(result['stat_explanation'])
+
+            # --- Explanation of predicted rating changes ---
+            st.write("### Why Predicted Ratings Change")
+            st.markdown(f"""
+            The predicted ratings change when you modify the selected features because the model learns patterns from your past ratings.  
+
+            **Current features used:** {', '.join(result['selected_features'])}  
+
+            - **Director:** captures your preferences for specific directors.  
+            - **Genre:** captures your preferences for specific types of films.  
+            - **Year:** considers how your ratings vary over time.  
+            - **IMDb Rating & Num Votes:** reflect general popularity and consensus quality.  
+
+            When features are added or removed, the model adjusts the predictions based on the patterns it learned from your historical ratings.
+            """)
         else:
             st.warning("No unseen movies available for prediction.")
 
-        # --- Statistical significance ---
-        st.write("### Statistical Significance of Improvement")
-        st.info(result['stat_explanation'])
-
         # --- Annotated RMSE boxplot ---
         plt.figure(figsize=(7,4))
+        rmse_base_mean = np.mean(result['scores_base'])
+        rmse_test_mean = np.mean(result['scores_test'])
         plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
-        plt.text(1, np.mean(result['scores_base']) + 0.02, f"{np.mean(result['scores_base']):.2f}", ha='center', color='blue')
-        plt.text(2, np.mean(result['scores_test']) + 0.02, f"{np.mean(result['scores_test']):.2f}", ha='center', color='green')
+        plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
+        plt.text(2, rmse_test_mean + 0.02, f"{rmse_test_mean:.2f}", ha='center', color='green')
         st.pyplot(plt)
 
-        # --- Explanation below the boxplot ---
-        st.markdown("""
+        # --- RMSE interpretation ---
+        st.write("""
         **Interpretation of RMSE Boxplot and Model Comparison**
 
         **Scenario 1: Baseline Model (Numeric Features Only)**
@@ -1027,7 +1016,6 @@ scores_test = -cross_val_score(model_test, X_test, y, cv=KFold(n_splits=5, shuff
         - RMSE increase + p-value < 0.05 → features worsen predictions.
         - p-value ≥ 0.05 → no significant change.
         """)
-
 
 
 # --- Scenario 11: Graph-Based Movie Relationships ---
