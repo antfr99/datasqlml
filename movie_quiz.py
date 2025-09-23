@@ -162,47 +162,53 @@ LIMIT 10000;"""
         except Exception as e:
             st.error(f"Error in SQL query: {e}")
 
+
+
 # --- Scenario 3: SQL Playground ---
 if scenario == "Scenario 3 – Top Unseen Films by Decade (SQL)":
     st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films)</h3>', unsafe_allow_html=True)
     st.write("""
-    Shows highest-rated unseen films grouped by decade.  
-    Removes duplicates and limits results to the top 20 per decade.
+    Shows the highest-rated unseen films grouped by decade.  
+    Uses Python deduplication and limits results to the top 20 per decade.
     """)
 
+    # Cleaner SQL – no redundant CTE
     default_query_3 = """
-WITH Deduped AS (
-    SELECT DISTINCT ir.[Movie ID], 
+SELECT *
+FROM (
+    SELECT ir.[Movie ID], 
            ir.Title,
            ir.[IMDb Rating],
            ir.[Num Votes],
            ir.Genre,
            ir.Director,
            ir.Year,
-           (ir.Year / 10) * 10 AS Decade
+           (ir.Year / 10) * 10 AS Decade,
+           ROW_NUMBER() OVER (
+               PARTITION BY (ir.Year / 10) * 10 
+               ORDER BY ir.[IMDb Rating] DESC, ir.[Num Votes] DESC
+           ) AS RankInDecade
     FROM IMDB_Ratings ir
-)
-SELECT *
-FROM (
-    SELECT d.*,
-           ROW_NUMBER() OVER (PARTITION BY d.Decade ORDER BY d.[IMDb Rating] DESC, d.[Num Votes] DESC) AS RankInDecade
-    FROM Deduped d
     LEFT JOIN My_Ratings pr
-        ON d.[Movie ID] = pr.[Movie ID]
+        ON ir.[Movie ID] = pr.[Movie ID]
     WHERE pr.[Your Rating] IS NULL
-      AND d.[Num Votes] > 50000
+      AND ir.[Num Votes] > 50000
 ) ranked
 WHERE RankInDecade <= 20
 ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 """
 
+    # Text area to allow user edits
     user_query = st.text_area("Enter SQL query:", default_query_3, height=600, key="sql3")
+
+    # Run button
     if st.button("Run SQL Query – Top unseen films", key="run_sql3"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
             st.dataframe(result, width="stretch", height=800)
         except Exception as e:
             st.error(f"Error in SQL query: {e}")
+
 
 
 # --- Scenario 4: Python ML ---
