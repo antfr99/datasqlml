@@ -1023,7 +1023,7 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         """)
 
 
-# --- Scenario 11: Graph-Based Movie Relationships ---
+
 
 # --- Scenario 11: Graph-Based Movie Relationships ---
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
@@ -1135,32 +1135,61 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
         except Exception as e:
             st.error(f"Error running Graph Analysis code: {e}")
 
-# --- Scenario 12 Implementation ---
+
+
+# --- Scenario 12: Anomaly Detection ---
 if scenario == "Scenario 12 – Anomaly Detection":
-    from sklearn.ensemble import IsolationForest
-    st.header("Scenario 12 – Anomaly Detection 🎯")
+    st.header("Scenario 12 – Anomaly Detection ⚠️")
     st.markdown("""
-    Detect unusual or unexpected movie entries in your dataset based on **IMDb ratings** and **vote counts**.  
-    This helps highlight:
-    - Outlier movies that are unusually popular or unpopular
-    - Potential data entry errors
-    - Hidden gems or cult classics that deviate from typical trends
+    This scenario highlights movies that are unusual compared to the rest of the dataset.  
+    Example rule: **Low IMDb rating (<5) but many votes (>20,000)**.  
     """)
 
-    # Use merged IMDb_Ratings table (replace missing columns with zeros if necessary)
-    df = IMDB_Ratings.copy()
-    if 'Num_Votes' not in df.columns:
-        df['Num_Votes'] = 0
-    if 'IMDb Rating' not in df.columns:
-        st.error("IMDb Rating column missing in dataset.")
+    if not IMDB_Ratings.empty:
+        # --- Detect anomalies ---
+        IMDB_Ratings['Anomaly'] = IMDB_Ratings.apply(
+            lambda row: 'Anomaly' if (row['IMDb Rating'] < 5 and row['Votes'] > 20000) else '', axis=1
+        )
+
+        # --- Filter anomaly dataframe ---
+        anomaly_df = IMDB_Ratings[IMDB_Ratings['Anomaly'] == 'Anomaly']
+
+        if not anomaly_df.empty:
+            st.write("### ⚠️ Anomalies Detected")
+            
+            # --- Focused table ---
+            anomaly_display = anomaly_df[['Title', 'IMDb Rating', 'Votes']].copy()
+            anomaly_display['Why Anomaly?'] = anomaly_display.apply(
+                lambda row: f"Low rating ({row['IMDb Rating']}) vs high votes ({row['Votes']})", axis=1
+            )
+            st.dataframe(anomaly_display, width="stretch", height=200)
+
+            # --- Scatter plot highlighting anomalies ---
+            st.write("### Scatter Plot: IMDb Rating vs Votes (Anomalies Highlighted)")
+            plt.figure(figsize=(10,5))
+            sns.scatterplot(
+                data=IMDB_Ratings,
+                x='Votes',
+                y='IMDb Rating',
+                label='Normal',
+                alpha=0.5
+            )
+            sns.scatterplot(
+                data=anomaly_df,
+                x='Votes',
+                y='IMDb Rating',
+                color='red',
+                s=100,
+                label='Anomaly'
+            )
+            plt.xlabel("Votes")
+            plt.ylabel("IMDb Rating")
+            plt.title("IMDb Ratings vs Votes (Anomalies Highlighted)")
+            plt.legend()
+            st.pyplot(plt)
+
+        else:
+            st.info("No anomalies detected based on current rules.")
     else:
-        # Apply Isolation Forest
-        iso_forest = IsolationForest(contamination=0.05, random_state=42)
-        df['Anomaly'] = iso_forest.fit_predict(df[['IMDb Rating', 'Num_Votes']])
-        df['Anomaly'] = df['Anomaly'].map({1: 'Normal', -1: 'Anomaly'})
+        st.warning("IMDb Ratings table is empty or failed to load.")
 
-        st.subheader("Movies with Anomaly Detection")
-        st.dataframe(df)
-
-        st.subheader("Only Anomalies")
-        st.dataframe(df[df['Anomaly'] == 'Anomaly'])
