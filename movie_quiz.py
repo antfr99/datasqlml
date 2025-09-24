@@ -1034,33 +1034,33 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.write("""
     This scenario models the dataset as a **graph**:
     - **Nodes**: Movies, Directors, Genres  
-    - **Edges**: Relationships between them (e.g., a director makes a movie, a movie belongs to a genre).  
+    - **Edges**: Relationships between them.  
+    
+    Use the filters below to narrow down by **Year**, **Director(s)**, and **Genre**, then run the graph builder.
     """)
 
     # --- Filters ---
     directors = sorted(IMDB_Ratings["Director"].dropna().unique()) if not IMDB_Ratings.empty else []
-    genres = sorted({g.strip() for sublist in IMDB_Ratings["Genre"].dropna().str.split(",") for g in sublist}) if "Genre" in IMDB_Ratings.columns else []
+    genres = []
+    if "Genre" in IMDB_Ratings.columns:
+        genres = sorted({g.strip() for sublist in IMDB_Ratings["Genre"].dropna().str.split(",") for g in sublist})
     years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
 
-    # --- Default selections ---
-    default_directors = [d for d in ["Alfred Hitchcock", "Stanley Kubrick", "Francis Ford Coppola"] if d in directors]
-    default_genres = ["Comedy"] if "Comedy" in genres else []
+    # --- Default Selections ---
+    default_year = "All"
+    default_genre = "Comedy"
+    default_director = [d for d in ["Alfred Hitchcock", "Stanley Kubrick", "Francis Ford Coppola"] if d in directors]
 
-    # --- Filters ---
     selected_year = st.selectbox(
         "Filter by Year",
         ["All"] + [str(y) for y in years],
-        index=0  # default = "All"
+        index=(["All"] + [str(y) for y in years]).index(default_year)
     )
-    selected_directors = st.multiselect(
-        "Filter by Director(s)",
-        ["All"] + directors,
-        default=default_directors
-    )
-    selected_genres = st.multiselect(
-        "Filter by Genre(s)",
+    selected_directors = st.multiselect("Filter by Director(s)", directors, default=default_director)
+    selected_genre = st.selectbox(
+        "Filter by Genre",
         ["All"] + genres,
-        default=default_genres
+        index=(["All"] + genres).index(default_genre) if default_genre in genres else 0
     )
 
     # --- Editable code template ---
@@ -1071,15 +1071,13 @@ import pandas as pd
 
 df_graph = IMDB_Ratings.copy()
 
-# --- Filters ---
 if selected_year != "All":
-    df_graph = df_graph[df_graph["Year"].astype(str) == selected_year]
-if "All" not in selected_directors:
+    df_graph = df_graph[df_graph["Year"] == int(selected_year)]
+if selected_directors:
     df_graph = df_graph[df_graph["Director"].isin(selected_directors)]
-if "All" not in selected_genres:
-    df_graph = df_graph[df_graph["Genre"].apply(lambda x: any(g in str(x) for g in selected_genres))]
+if selected_genre != "All":
+    df_graph = df_graph[df_graph["Genre"].str.contains(selected_genre, na=False)]
 
-# --- Build Graph ---
 G = nx.Graph()
 for _, row in df_graph.iterrows():
     movie = row.get("Title")
@@ -1096,7 +1094,6 @@ for _, row in df_graph.iterrows():
             G.add_node(g, type="genre")
             G.add_edge(movie, g)
 
-# --- Draw Graph ---
 fig, ax = plt.subplots(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.3, iterations=25)
 color_map = []
@@ -1121,20 +1118,26 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
                 "IMDB_Ratings": IMDB_Ratings,
                 "selected_year": selected_year,
                 "selected_directors": selected_directors,
-                "selected_genres": selected_genres,
+                "selected_genre": selected_genre,
                 "st": st,
                 "pd": pd
             }
             exec(user_graph_code, {}, local_vars)
 
             st.markdown("""
-            <span style="color:blue;">
-            **Understanding the Graph**:<br>
-            - **Nodes** represent Movies (blue), Directors (green), and Genres (red).<br>
-            - **Edges** represent relationships: Director → Movie, Movie → Genre.<br>
-            - Discovering connections helps identify patterns, such as directors who frequently work in certain genres or genre clusters shared across multiple movies.<br>
-            - Filtering allows focused exploration of specific years, directors, or genres while keeping relational context intact.
+            <span style='color:blue'>
+            **Understanding the Graph**  
+            - **Nodes** represent Movies, Directors, and Genres.  
+            - **Edges** represent relationships:  
+                - Director → Movie  
+                - Movie → Genre  
+            - Discovering these relationships helps identify:  
+                - Which directors specialize in which genres  
+                - Genre clusters with many movies  
+                - Connections between directors through shared genres or collaborations  
+            This approach allows you to explore the structure of the movie dataset visually and gain insights into patterns and relationships.
             </span>
             """, unsafe_allow_html=True)
+
         except Exception as e:
             st.error(f"Error running Graph Analysis code: {e}")
