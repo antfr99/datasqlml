@@ -1028,16 +1028,13 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         - p-value ≥ 0.05 → no significant change.
         """)
 
-
 # --- Scenario 11: Graph-Based Movie Relationships ---
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
     st.write("""
     This scenario models the dataset as a **graph**:
     - **Nodes**: Movies, Directors, Genres  
-    - **Edges**: Relationships between them.  
-    
-    Use the filters below to narrow down by **Year(s)**, **Director(s)**, and **Genre(s)**, then run the graph builder.
+    - **Edges**: Relationships between them (e.g., a director makes a movie, a movie belongs to a genre).  
     """)
 
     # --- Filters ---
@@ -1045,16 +1042,15 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     genres = sorted({g.strip() for sublist in IMDB_Ratings["Genre"].dropna().str.split(",") for g in sublist}) if "Genre" in IMDB_Ratings.columns else []
     years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
 
-    # --- Default Selections (without "All") ---
+    # --- Default selections ---
     default_directors = [d for d in ["Alfred Hitchcock", "Stanley Kubrick", "Francis Ford Coppola"] if d in directors]
     default_genres = ["Comedy"] if "Comedy" in genres else []
-    default_years = years  # select all years individually
 
-    # --- Multi-select Filters with "All" option (not default) ---
-    selected_years = st.multiselect(
-        "Filter by Year(s)",
+    # --- Filters ---
+    selected_year = st.selectbox(
+        "Filter by Year",
         ["All"] + [str(y) for y in years],
-        default=[str(y) for y in default_years]
+        index=0  # default = "All"
     )
     selected_directors = st.multiselect(
         "Filter by Director(s)",
@@ -1075,15 +1071,15 @@ import pandas as pd
 
 df_graph = IMDB_Ratings.copy()
 
-# Filter logic
-if "All" not in selected_years:
-    df_graph = df_graph[df_graph["Year"].astype(str).isin(selected_years)]
+# --- Filters ---
+if selected_year != "All":
+    df_graph = df_graph[df_graph["Year"].astype(str) == selected_year]
 if "All" not in selected_directors:
     df_graph = df_graph[df_graph["Director"].isin(selected_directors)]
 if "All" not in selected_genres:
     df_graph = df_graph[df_graph["Genre"].apply(lambda x: any(g in str(x) for g in selected_genres))]
 
-# Build graph
+# --- Build Graph ---
 G = nx.Graph()
 for _, row in df_graph.iterrows():
     movie = row.get("Title")
@@ -1100,7 +1096,7 @@ for _, row in df_graph.iterrows():
             G.add_node(g, type="genre")
             G.add_edge(movie, g)
 
-# Draw graph
+# --- Draw Graph ---
 fig, ax = plt.subplots(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.3, iterations=25)
 color_map = []
@@ -1123,7 +1119,7 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
         try:
             local_vars = {
                 "IMDB_Ratings": IMDB_Ratings,
-                "selected_years": selected_years,
+                "selected_year": selected_year,
                 "selected_directors": selected_directors,
                 "selected_genres": selected_genres,
                 "st": st,
