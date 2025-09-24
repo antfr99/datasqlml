@@ -1035,9 +1035,9 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.write("""
     This scenario models the dataset as a **graph**:
     - **Nodes**: Movies, Directors, Genres  
-    - **Edges**: Relationships between them (e.g., a director makes a movie, a movie belongs to a genre).  
+    - **Edges**: Relationships between them.  
     
-    Use the filters below to narrow down by **Year**, **Director(s)**, and **Genre(s)**, then run the graph builder.
+    Use the filters below to narrow down by **Year(s)**, **Director(s)**, and **Genre(s)**, then run the graph builder.
     """)
 
     # --- Filters ---
@@ -1045,15 +1045,27 @@ if scenario == "Scenario 11 – Graph Based Movie Relationships":
     genres = sorted({g.strip() for sublist in IMDB_Ratings["Genre"].dropna().str.split(",") for g in sublist}) if "Genre" in IMDB_Ratings.columns else []
     years = sorted(IMDB_Ratings["Year"].dropna().unique().astype(int).tolist()) if "Year" in IMDB_Ratings.columns else []
 
-    # --- Default Selections ---
+    # --- Default Selections (without "All") ---
     default_directors = [d for d in ["Alfred Hitchcock", "Stanley Kubrick", "Francis Ford Coppola"] if d in directors]
     default_genres = ["Comedy"] if "Comedy" in genres else []
-    default_years = years  # default: all years
+    default_years = years  # select all years individually
 
-    # --- Multi-select Filters with "All" option ---
-    selected_years = st.multiselect("Filter by Year(s)", ["All"] + [str(y) for y in years], default=["All"])
-    selected_directors = st.multiselect("Filter by Director(s)", ["All"] + directors, default=["All"] + default_directors)
-    selected_genres = st.multiselect("Filter by Genre(s)", ["All"] + genres, default=["All"] + default_genres)
+    # --- Multi-select Filters with "All" option (not default) ---
+    selected_years = st.multiselect(
+        "Filter by Year(s)",
+        ["All"] + [str(y) for y in years],
+        default=[str(y) for y in default_years]
+    )
+    selected_directors = st.multiselect(
+        "Filter by Director(s)",
+        ["All"] + directors,
+        default=default_directors
+    )
+    selected_genres = st.multiselect(
+        "Filter by Genre(s)",
+        ["All"] + genres,
+        default=default_genres
+    )
 
     # --- Editable code template ---
     graph_code = '''
