@@ -1027,7 +1027,6 @@ if scenario == "Scenario 10 – Feature Hypothesis Testing":
         - RMSE increase + p-value < 0.05 → features worsen predictions.
         - p-value ≥ 0.05 → no significant change.
         """)
-
 # --- Scenario 11: Graph-Based Movie Relationships ---
 if scenario == "Scenario 11 – Graph Based Movie Relationships":
     st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
@@ -1124,21 +1123,25 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
             }
             exec(user_graph_code, {}, local_vars)
 
+            # --- Clean Explanation ---
             st.markdown("""
-            <span style='color:black'>
 ### Understanding the Graph
-- **Nodes** represent **Movies**, **Directors**, and **Genres**.  
-- **Edges** represent relationships:  
-  - **Director → Movie**  
-  - **Movie → Genre**  
-- Discovering these relationships helps identify:  
-  - Which directors specialize in which genres  
-  - Genre clusters with many movies  
-  - Connections between directors through shared genres or collaborations  
 
-This approach allows you to explore the structure of the movie dataset visually and gain insights into patterns and relationships.
-</span>
-            """, unsafe_allow_html=True)
+**Nodes:**  
+- Movies  
+- Directors  
+- Genres  
 
+**Edges:**  
+- Director → Movie  
+- Movie → Genre  
+
+**Why this matters:**  
+- Identify which directors specialize in which genres  
+- Discover genre clusters with many movies  
+- Explore connections between directors through shared genres or collaborations  
+
+This visualization helps you explore the movie dataset’s structure and uncover patterns and relationships clearly.
+""")
         except Exception as e:
             st.error(f"Error running Graph Analysis code: {e}")
