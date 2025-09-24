@@ -1125,18 +1125,19 @@ st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges*
             exec(user_graph_code, {}, local_vars)
 
             st.markdown("""
-            <span style='color:blue'>
-            **Understanding the Graph**  
-            - **Nodes** represent Movies, Directors, and Genres.  
-            - **Edges** represent relationships:  
-                - Director → Movie  
-                - Movie → Genre  
-            - Discovering these relationships helps identify:  
-                - Which directors specialize in which genres  
-                - Genre clusters with many movies  
-                - Connections between directors through shared genres or collaborations  
-            This approach allows you to explore the structure of the movie dataset visually and gain insights into patterns and relationships.
-            </span>
+            <span style='color:black'>
+### Understanding the Graph
+- **Nodes** represent **Movies**, **Directors**, and **Genres**.  
+- **Edges** represent relationships:  
+  - **Director → Movie**  
+  - **Movie → Genre**  
+- Discovering these relationships helps identify:  
+  - Which directors specialize in which genres  
+  - Genre clusters with many movies  
+  - Connections between directors through shared genres or collaborations  
+
+This approach allows you to explore the structure of the movie dataset visually and gain insights into patterns and relationships.
+</span>
             """, unsafe_allow_html=True)
 
         except Exception as e:
