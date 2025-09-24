@@ -13,3 +13,5 @@ seaborn
 lightgbm
 networkx
 shap
+requests
+sentence_transformers
