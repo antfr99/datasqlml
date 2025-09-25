@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a data/film project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Sentence_transformers , Requests ), SQL, OMDb API , AI , GitHub and IMDb.
+This is a small personal film/data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Sentence_transformers , Requests ), SQL, OMDb API , AI , GitHub and IMDb.
 """)
 
 st.markdown("""
@@ -1302,7 +1302,7 @@ def fetch_movie_data(title):
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
-    This scenario compares your **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for your **top 50 films by static rating**.  
+    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating**.  
 
     The table shows:  
     - Title  
@@ -1376,75 +1376,95 @@ def fetch_live_rating(title):
 
         st.markdown("""
         **Explanation:**  
-        - Each film's **static IMDb rating** from your Excel is compared with the **current live IMDb rating** from OMDb.  
+        - Each film's **static IMDb rating** from my Excel is compared with the **current live IMDb rating** from OMDb.  
         - **Rating Difference** shows how much the rating changed.  
         - **CheckedAt** shows when this check was performed.  
         - All results are saved to `live_ratings_history.csv`, supporting **MLOps + CI/CD + Monitoring** by logging changes over time.  
-        - `live_ratings_history.csv` can be pushed to GitHub to keep versioned history and track ratings changes in main.
+        - The `live_ratings_history.csv` can be pushed to GitHub to keep versioned history and track ratings changes in selected branch.            
         """)
 
 
 
 # Scenario 14 – Network Influence
 # -------------------------------
-if scenario.startswith("Scenario 14"):
-    st.header("Scenario 14 – Network Influence Analysis")
+
+# --- Scenario 14: Network Influence Analysis ---
+
+if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 20 Personal Films":
+    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 20 Personal Films")
     st.markdown("""
-    This scenario analyzes the **actor-director network** in your top 100 personal films,  
-    identifying key actors and directors who are central in your top-rated clusters.
+    This scenario analyzes my **top 20 personal films** to find key **actor-director connections**.  
+    It builds a network graph to highlight which actors and directors appear in top-rated films most frequently.
     """)
 
-    with st.expander("🔑 Show Code ", expanded=False):
-        st.code("""
+    # --- Rename column for consistency ---
+    if "Your Rating" in My_Ratings.columns:
+        My_Ratings.rename(columns={"Your Rating": "MyRating"}, inplace=True)
+
+    if My_Ratings.empty:
+        st.warning("My Ratings table is empty or missing 'Your Rating'.")
+    else:
+        # Get top 20 films by personal rating
+        top20_films = My_Ratings.sort_values("MyRating", ascending=False).head(20)
+
+        # --- Hidden code block ---
+        with st.expander("🔑 Show Code (API key hidden)", expanded=False):
+            st.code("""
 import requests
 import networkx as nx
-import matplotlib.pyplot as plt
 
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # hidden
-# Fetch actors/directors from top 100 films
-# Build network and compute centrality
-        """, language="python")
+# Example: Fetch actors from OMDb
+OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 
-    if st.button("Run Scenario 14"):
-        top_films = My_Ratings.sort_values("MyRating", ascending=False).head(100)["Title"].tolist()
-        st.write(f"Analyzing your top 100 rated films: {len(top_films)} films")
+def fetch_actors(title):
+    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    resp = requests.get(url).json()
+    return resp.get("Actors", "").split(", ") if resp.get("Actors") else []
 
-        OMDB_API_KEY = "bcf17f38"
-        film_data = []
-        for title in top_films:
-            try:
-                response = requests.get(f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}").json()
-                director = response.get("Director", "Unknown")
-                actors = response.get("Actors", "Unknown").split(", ")
-                film_data.append({"Title": title, "Director": director, "Actors": actors})
-            except Exception as e:
-                st.error(f"Failed fetching {title}: {e}")
+# Build network
+G = nx.Graph()
+for idx, row in top20_films.iterrows():
+    actors = fetch_actors(row['Title'])
+    director = row['Director']
+    for actor in actors:
+        G.add_edge(actor.strip(), director.strip())
+            """, language="python")
 
-        # Build network
-        G = nx.Graph()
-        for film in film_data:
-            director = film["Director"]
-            for actor in film["Actors"]:
-                G.add_edge(actor, director)
+        # --- Run button ---
+        if st.button("Run Actor-Director Network Analysis"):
+            import requests
+            import networkx as nx
+            import matplotlib.pyplot as plt
 
-        # Centrality
-        degree_centrality = nx.degree_centrality(G)
-        centrality_df = pd.DataFrame({
-            "Node": list(G.nodes),
-            "Degree": [degree_centrality[n] for n in G.nodes]
-        }).sort_values("Degree", ascending=False)
+            G = nx.Graph()
+            for idx, row in top20_films.iterrows():
+                title = row['Title']
+                director = row['Director']
+                try:
+                    url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
+                    resp = requests.get(url).json()
+                    actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
+                except:
+                    actors = []
 
-        st.subheader("Actor-Director Centrality Table")
-        st.dataframe(centrality_df, use_container_width=True)
+                for actor in actors:
+                    G.add_edge(actor.strip(), director.strip())
 
-        st.subheader("Actor-Director Network Graph")
-        plt.figure(figsize=(12,10))
-        pos = nx.spring_layout(G, seed=42)
-        nx.draw(G, pos, with_labels=True, node_size=[v*2000 for v in degree_centrality.values()],
-                node_color="skyblue", edge_color="gray", font_size=8)
-        st.pyplot(plt)
+            st.success("Network built ✅")
 
-        st.markdown("**Explanation:** Central actors/directors appear most frequently in your top films and connect multiple clusters. The network shows which partnerships dominate your personal favorites.")
+            # --- Draw network ---
+            plt.figure(figsize=(12, 8))
+            pos = nx.spring_layout(G, k=0.5, seed=42)
+            nx.draw(G, pos, with_labels=True, node_color="skyblue", edge_color="gray", node_size=2000, font_size=10)
+            st.pyplot(plt)
+
+            st.markdown("""
+            **Explanation:**  
+            - Each **top 20 personal film** is analyzed for actors and directors.  
+            - A **network graph** shows connections between actors and directors.  
+            - Nodes with many edges represent **central actors or directors** in your top films.
+            """)
+
 
 
 # --- Scenario 15: Counterfactual Analysis ---
