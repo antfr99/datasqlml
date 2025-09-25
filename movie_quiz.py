@@ -1390,22 +1390,23 @@ def fetch_live_rating(title):
 # --- Scenario 14: Interactive Network Analysis ---
 
 # --- Scenario 14: Network Influence Analysis ---
-if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
-    st.header("Scenario 14 – Network Influence Analysis")
+if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 IMDb Films":
+    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 IMDb Films")
+    st.markdown("""
+    **Description:**  
+    Select a film from your **top 100 IMDb-rated films**.  
+    The scenario fetches director and actors from OMDb and finds **other films in your top 100** sharing the same director or actors.
+    """)
 
-    if My_Ratings.empty:
-        st.warning("My Ratings table is empty.")
-    else:
-        # Top 100 personal films
-        top100 = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
-        film_titles = top100["Title"].tolist()
+    # --- Filter top 100 IMDb films ---
+    top100_imdb = IMDB_Ratings.sort_values("IMDb Rating", ascending=False).head(100)
+    film_options = top100_imdb["Title"].tolist()
+    
+    selected_film = st.selectbox("Select a film to inspect:", film_options)
 
-        # Select a film
-        selected_film = st.selectbox("Select a film to inspect:", film_titles)
-
-        # Hidden code box
-        with st.expander("🔑 Show Code", expanded=False):
-            st.code("""
+    # --- Hidden API key code in grey box ---
+    with st.expander("🔑 Show Code ", expanded=False):
+        st.code("""
 import requests
 
 OMDB_API_KEY = "YOUR_OMDB_API_KEY"
@@ -1413,47 +1414,54 @@ OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
-    actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
     director = resp.get("Director", "")
+    actors = resp.get("Actors", "")
     return director, actors
-            """, language="python")
+        """, language="python")
 
-        # Run button
-        if st.button("Run Analysis"):
-            import requests
+    # --- Run Button ---
+    if st.button("Run Analysis"):
+        import requests
 
-            OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # keep key hidden in expander
+        try:
+            url = f"http://www.omdbapi.com/?t={selected_film}&apikey=bcf17f38"
+            resp = requests.get(url).json()
+            director = resp.get("Director", "")
+            actors = resp.get("Actors", "")
+            actors_list = [a.strip() for a in actors.split(",")] if actors else []
+        except Exception as e:
+            st.error(f"Failed to fetch data from OMDb: {e}")
+            director = ""
+            actors_list = []
 
-            # Fetch actors and director
-            try:
-                url = f"http://www.omdbapi.com/?t={selected_film}&apikey={OMDB_API_KEY}"
-                resp = requests.get(url).json()
-                actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
-                director = resp.get("Director", "")
-            except Exception as e:
-                st.error(f"Error fetching film details: {e}")
-                actors = []
-                director = ""
+        # Filter other films in top 100 sharing director or actors
+        related = top100_imdb.copy()
+        related_films = related[
+            (related["Director"] == director) |
+            (related["Title"] != selected_film) & 
+            (related["Title"].isin([
+                row["Title"] for _, row in related.iterrows()
+                if any(a in row.get("Actors", "") for a in actors_list)
+            ]))
+        ]
 
-            st.markdown(f"**Selected Film:** {selected_film}")
-            st.markdown(f"**Director:** {director}")
-            st.markdown(f"**Actors:** {', '.join(actors)}")
+        st.success(f"Selected Film: {selected_film}")
+        st.write(f"Director: {director}")
+        st.write(f"Actors: {', '.join(actors_list) if actors_list else 'N/A'}")
 
-            # Find related films
-            related = top100[
-                (top100["Director"] == director) |
-                (top100["Title"].isin([row for row in top100["Title"] if any(a in row for a in actors)]))
-            ]
-            st.markdown("**Other films in your top 100 with same director/actors:**")
-            st.dataframe(related[["Title", "Director", "Your Rating", "Genre"]], use_container_width=True)
+        if not related_films.empty:
+            st.write("Other films in top 100 sharing director or actors:")
+            st.dataframe(related_films[["Title", "Director", "Genre", "IMDb Rating"]], use_container_width=True)
+        else:
+            st.info("No other films in top 100 share the same director or actors.")
 
-            st.markdown("""
-            **Explanation:**  
-            - Choose any film from your top 100 rated films.  
-            - Click **Run Analysis** to fetch director and actors from OMDb.  
-            - See which other films in your top 100 share the same director or actors.  
-            - This avoids clutter from a full network graph while keeping insights interactive.
-            """)
+        st.markdown("""
+        **Explanation:**  
+        - Select a film from your top 100 IMDb-rated films.  
+        - The director and actors are fetched via OMDb.  
+        - The table shows other films in your top 100 sharing the same director or actors.  
+        - This keeps the analysis interactive and avoids clutter from a full network graph.
+        """)
 
 
 
