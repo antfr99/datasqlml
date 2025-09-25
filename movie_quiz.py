@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-TThis is a test project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests, and LIME. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
+TThis is a test project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests, and Lime. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
@@ -1398,9 +1398,9 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
 
     st.header("Scenario 14 – Network Influence Analysis")
     st.markdown("""
-    Select a film from your **top-rated films** to see connections:
-    - Director and actors of the film
-    - Other films sharing the same director or actors (from your top-rated list)
+    Select a film from my **top-rated films** to see connections:
+    - Director and actors of the film ( try Annie Hall if you are not sure which film to select - be patient when requesting the analysis ) 
+    - Other films sharing the same director or actors (from my top-rated list)
     - Visual network of relationships
     """)
 
@@ -1636,9 +1636,9 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
     st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
 
-    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
+    if not My_Ratings.empty and "Your Rating" in My_Ratings.columns:
         # Filter only films you rated highly
-        high_rated = My_Ratings[My_Ratings["MyRating"] >= 8]
+        high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
         if high_rated.empty:
             st.warning("No films with ratings >= 8 in your data.")
@@ -1666,8 +1666,7 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
             st.write("**Based on your high-rated films, you may also like:**")
             st.dataframe(recs[["Title", "Genre", "Director", "SimilarityScore"]])
     else:
-        st.warning("My Ratings table is empty or missing `MyRating` column.")
-
+        st.warning("My Ratings table is empty or missing `Your Rating` column.")
 
 
 
