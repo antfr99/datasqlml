@@ -1424,52 +1424,53 @@ def fetch_film_details(title):
 
     # --- Run analysis button ---
     if st.button("Run Analysis"):
-        if selected_film:
-            OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # replace with your key
+        import requests
+        import networkx as nx
+        import matplotlib.pyplot as plt
 
-            def fetch_film_details(title):
-                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-                resp = requests.get(url).json()
-                director = resp.get("Director", "")
-                actors = resp.get("Actors", "")
-                actors_list = [a.strip() for a in actors.split(",")] if actors else []
-                return director, actors_list
+        OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # replace with your key
 
-            # Fetch selected film details
-            director, actors_list = fetch_film_details(selected_film)
+        # Define fetch function here to ensure 'requests' is defined
+        def fetch_film_details(title):
+            url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+            resp = requests.get(url).json()
+            director = resp.get("Director", "")
+            actors = resp.get("Actors", "")
+            actors_list = [a.strip() for a in actors.split(",")] if actors else []
+            return director, actors_list
 
-            # Find related films in top-rated list
-            related = top_rated[top_rated["Title"] != selected_film].copy()
-            related = related[
-                (related["Director"] == director) |
-                (related["Title"].apply(lambda x: any(a in actors_list for a in top_rated[top_rated["Title"]==x]["Director"].tolist())))
-            ]
+        # Fetch selected film details
+        director, actors_list = fetch_film_details(selected_film)
 
-            # Display details
-            st.subheader(f"Selected Film: {selected_film}")
-            st.write(f"Director: {director}")
-            st.write(f"Actors: {', '.join(actors_list)}")
+        # Find related films in top-rated list
+        related = top_rated[top_rated["Title"] != selected_film].copy()
+        related = related[
+            (related["Director"] == director) |
+            (related["Title"].apply(lambda x: any(a in actors_list for a in top_rated[top_rated["Title"]==x]["Director"].tolist())))
+        ]
 
-            if not related.empty:
-                st.write("Other top-rated films sharing the same director or actors:")
-                st.dataframe(related[["Title", "Director", "Your Rating", "Genre"]], use_container_width=True)
-            else:
-                st.info("No other top-rated films share the same director or actors.")
+        # Display details
+        st.subheader(f"Selected Film: {selected_film}")
+        st.write(f"Director: {director}")
+        st.write(f"Actors: {', '.join(actors_list)}")
 
-            # --- Network visualization ---
-            import networkx as nx
-            import matplotlib.pyplot as plt
+        if not related.empty:
+            st.write("Other top-rated films sharing the same director or actors:")
+            st.dataframe(related[["Title", "Director", "Your Rating", "Genre"]], use_container_width=True)
+        else:
+            st.info("No other top-rated films share the same director or actors.")
 
-            G = nx.Graph()
-            G.add_node(selected_film)
-            for _, row in related.iterrows():
-                G.add_node(row["Title"])
-                G.add_edge(selected_film, row["Title"])
+        # --- Network visualization ---
+        G = nx.Graph()
+        G.add_node(selected_film)
+        for _, row in related.iterrows():
+            G.add_node(row["Title"])
+            G.add_edge(selected_film, row["Title"])
 
-            st.subheader("Network Visualization")
-            plt.figure(figsize=(8, 6))
-            nx.draw_networkx(G, with_labels=True, node_color="skyblue", edge_color="gray", node_size=2000, font_size=10)
-            st.pyplot(plt)
+        st.subheader("Network Visualization")
+        plt.figure(figsize=(8, 6))
+        nx.draw_networkx(G, with_labels=True, node_color="skyblue", edge_color="gray", node_size=2000, font_size=10)
+        st.pyplot(plt)
 
 
 
