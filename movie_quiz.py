@@ -1542,7 +1542,7 @@ plt.show()
 
 # --- Scenario 15: Counterfactual Analysis ---
 if scenario == "Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)":
-    st.markdown("Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets")
+    st.markdown("**Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)**")
 
     st.write("""
     What if notoriously bad science fiction films had been made by great directors, with bigger budgets, 
@@ -1550,7 +1550,7 @@ if scenario == "Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sc
     This scenario explores counterfactuals: imagining how ratings might have changed.  
     """)
 
-    with st.expander("📜 Show Code (Hidden API Key)"):
+    with st.expander("📜 Show Code "):
         st.code("""
 import requests
 import pandas as pd
