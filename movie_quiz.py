@@ -1387,35 +1387,68 @@ def fetch_live_rating(title):
 
 
 
-# --- Scenario 14: Interactive Network Analysis ---
+
 
 # --- Scenario 14: Network Influence Analysis (Visual Network) ---
 
-if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
-    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films")
-    st.markdown("""
-    **Instructions:**  
-    - Choose a film from your **top 100 personal rated films**.  
-    - The scenario fetches the **director and actors** from OMDb.  
-    - It then finds **other films from OMDb** with the same director or actors.  
-    - A **network visualization** shows the relationships between films, director, and actors.
-    """)
-
-    if My_Ratings.empty:
-        st.warning("My Ratings table is empty or missing 'Your Rating' column.")
-    else:
-        top100_myfilms = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
-        film_options = top100_myfilms["Title"].tolist()
-
-        # Default to "The Shining"
-        default_index = film_options.index("The Shining") if "The Shining" in film_options else 0
-        selected_film = st.selectbox("Select a film to inspect:", film_options, index=default_index)
-
-        with st.expander("🔑 Show Code", expanded=False):
-            st.code("""
-import requests
+import streamlit as st
+import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import requests
+
+# --- Page Config ---
+st.set_page_config(layout="centered", page_title="IMDb/SQL/PYTHON Data Project 🎬")
+
+st.title("Scenario 14 – Network Influence Analysis")
+st.markdown("""
+Select a film from your **top 100 personal rated films**.
+The app fetches director and actors from OMDb.
+Finds other films in your top 100 that share the same director or actors.
+Displays a network visualization showing relationships.
+""")
+
+# --- Load your personal ratings ---
+try:
+    My_Ratings = pd.read_excel("myratings.xlsx")
+except Exception as e:
+    st.error(f"Error loading My Ratings Excel: {e}")
+    My_Ratings = pd.DataFrame()
+
+# --- Clean unnamed columns ---
+def clean_unnamed_columns(df):
+    return df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
+My_Ratings = clean_unnamed_columns(My_Ratings)
+
+# --- Filter top 100 films by Your Rating ---
+if "Your Rating" not in My_Ratings.columns:
+    st.error("Column 'Your Rating' not found in myratings.xlsx")
+else:
+    top100 = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
+
+    # --- Film selection ---
+    default_film = "The Shining"
+    selected_film = st.selectbox(
+        "Select a film to inspect:",
+        top100["Title"].tolist(),
+        index=top100.index[top100["Title"]==default_film][0] if default_film in top100["Title"].values else 0
+    )
+
+    # --- Define function to fetch director and actors ---
+    OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # Hide key in actual code
+
+    def fetch_film_details(title):
+        url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+        resp = requests.get(url).json()
+        director = resp.get("Director", "").split(", ")
+        actors = resp.get("Actors", "").split(", ")
+        return director, actors
+
+    # --- Show code in grey box ---
+    with st.expander("🔑 Show Code", expanded=False):
+        st.code("""
+import requests
 
 OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 
@@ -1425,76 +1458,65 @@ def fetch_film_details(title):
     director = resp.get("Director", "").split(", ")
     actors = resp.get("Actors", "").split(", ")
     return director, actors
-            """, language="python")
+        """, language="python")
 
-        if st.button("Run Analysis"):
-            import requests
-            import networkx as nx
-            import matplotlib.pyplot as plt
+    # --- Run Analysis Button ---
+    if st.button("Run Analysis"):
+        director, actors = fetch_film_details(selected_film)
 
-            director, actors = fetch_film_details(selected_film)
+        st.markdown(f"**Selected Film:** {selected_film}")
+        st.markdown(f"**Director:** {', '.join(director)}")
+        st.markdown(f"**Actors:** {', '.join(actors)}")
 
-            st.markdown(f"**Selected Film:** {selected_film}")
-            st.markdown(f"**Director:** {', '.join(director)}")
-            st.markdown(f"**Actors:** {', '.join(actors)}")
+        # --- Find other films sharing director or actors ---
+        related = top100[
+            (top100["Director"].isin(director)) |
+            (top100["Title"].isin(top100[top100["Title"].isin(top100["Title"])]))  # ensure only top100
+        ].copy()
 
-            # Find other films in top 100 with same director or actors
-            related = top100_myfilms[
-                (top100_myfilms["Director"].isin(director)) |
-                (top100_myfilms["Title"].isin(selected_film)==False) & 
-                (top100_myfilms["Title"].apply(lambda x: any(actor in x for actor in actors)))
-            ]
+        # Build network graph
+        G = nx.Graph()
+        G.add_node(selected_film, type="film")
+        for d in director:
+            G.add_node(d, type="director")
+            G.add_edge(selected_film, d)
+        for a in actors:
+            G.add_node(a, type="actor")
+            G.add_edge(selected_film, a)
 
-            st.markdown("**Other films in your top 100 with same director/actors:**")
-            if related.empty:
-                st.write("No related films found in top 100.")
-            else:
-                st.dataframe(related[["Title", "Director", "Actors" if "Actors" in related.columns else "Genre"]], use_container_width=True)
-
-            # --- Build Network ---
-            G = nx.Graph()
-            G.add_node(selected_film, type="Film")
+        for idx, row in related.iterrows():
+            if row["Title"] == selected_film:
+                continue
+            # Connect shared director
             for d in director:
-                G.add_node(d, type="Director")
-                G.add_edge(d, selected_film)
+                if row["Director"] == d:
+                    G.add_edge(row["Title"], d)
+            # Connect shared actor
+            film_actors = row.get("Actors", "").split(", ")  # if you have actors in Excel
             for a in actors:
-                G.add_node(a, type="Actor")
-                G.add_edge(a, selected_film)
+                if a in film_actors:
+                    G.add_edge(row["Title"], a)
 
-            for _, row in related.iterrows():
-                film = row["Title"]
-                G.add_node(film, type="Film")
-                for d in director:
-                    if row["Director"] == d:
-                        G.add_edge(film, d)
-                # You can add actor edges if Actors column exists
-                if "Actors" in row:
-                    for a in row["Actors"].split(", "):
-                        if a in actors:
-                            G.add_edge(film, a)
+        # --- Draw network ---
+        plt.figure(figsize=(10, 6))
+        pos = nx.spring_layout(G, k=0.5, seed=42)
+        nx.draw(
+            G, pos,
+            with_labels=True,
+            node_size=2000,
+            node_color=["lightblue" if G.nodes[n]["type"]=="film" else "lightgreen" for n in G.nodes],
+            font_size=10,
+            font_weight="bold",
+            edge_color="gray"
+        )
+        st.pyplot(plt)
 
-            # --- Draw Network ---
-            plt.figure(figsize=(12,8))
-            pos = nx.spring_layout(G, k=0.5, seed=42)
-            color_map = []
-            for node in G:
-                if G.nodes[node]["type"] == "Film":
-                    color_map.append("lightblue")
-                elif G.nodes[node]["type"] == "Director":
-                    color_map.append("lightgreen")
-                else:
-                    color_map.append("orange")
-            nx.draw(G, pos, with_labels=True, node_color=color_map, node_size=2000, font_size=10, font_weight="bold")
-            st.pyplot(plt)
-
-            st.markdown("""
-            **Explanation:**  
-            - Select a film from your top 100 rated films.  
-            - Director and actors are fetched from OMDb.  
-            - Other films sharing the same director or actors are identified.  
-            - Network visualization highlights the relationships between films, director, and actors interactively.  
-            - This avoids clutter from a full network graph while showing key influence connections.
-            """)
+        st.markdown("""
+        **Explanation:**  
+        - Selected film is connected to its director and main actors.  
+        - Other films in your top 100 that share the same director or actors are linked.  
+        - This network visualization shows key influence connections interactively.  
+        """)
 
 
 
