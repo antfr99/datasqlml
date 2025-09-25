@@ -1395,34 +1395,34 @@ def fetch_live_rating(title):
 if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
     st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films")
     st.markdown("""
-    Select a film from your **top 100 personal rated films** to see key connections.  
-    - Shows **director** and **actors** from OMDb.
-    - Finds other films in your **top 100** sharing the same director or actors.
-    - Displays a **network visualization** of these relationships.
+    This scenario lets you **inspect a single film from your top 100 rated films**.  
+
+    It shows:  
+    - Director  
+    - Actors  
+    - Other films in your top 100 with the same director or actors  
+    - Explanation of relationships
     """)
 
-    # --- Filter top 100 personal films by Your Rating ---
-    if "Your Rating" not in My_Ratings.columns:
-        st.error("My Ratings table is missing 'Your Rating' column.")
+    # --- Use top 100 films from My_Ratings ---
+    top100 = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
+
+    # --- Film selection ---
+    default_film = "The Shining"
+    if default_film in top100["Title"].values:
+        default_index = int(top100.index[top100["Title"] == default_film][0])
     else:
-        top100 = My_Ratings.sort_values("Your Rating", ascending=False).head(100).copy()
-        top100["Title"] = top100["Title"].fillna("").astype(str)  # Ensure strings
-
-        # --- Film selection ---
-        default_film = "The Shining"
         default_index = 0
-        if default_film in top100["Title"].values:
-            default_index = top100.index[top100["Title"]==default_film][0]
 
-        selected_film = st.selectbox(
-            "Select a film to inspect:",
-            top100["Title"].tolist(),
-            index=default_index
-        )
+    selected_film = st.selectbox(
+        "Select a film to inspect:",
+        top100["Title"].tolist(),
+        index=default_index
+    )
 
-        # --- Hidden API code ---
-        with st.expander("🔑 Show Code ", expanded=False):
-            st.code("""
+    # --- Hidden code block ---
+    with st.expander("🔑 Show Code", expanded=False):
+        st.code("""
 import requests
 
 OMDB_API_KEY = "YOUR_OMDB_API_KEY"
@@ -1432,63 +1432,43 @@ def fetch_film_details(title):
     resp = requests.get(url).json()
     director = resp.get("Director", "")
     actors = resp.get("Actors", "")
-    return director, actors.split(", ") if actors else []
-            """, language="python")
+    return director, actors
+        """, language="python")
 
-        # --- Run button ---
-        if st.button("Run Analysis"):
-            import requests
-            import networkx as nx
-            import matplotlib.pyplot as plt
+    # --- Run button ---
+    if st.button("Run Analysis"):
+        import requests
 
-            # Fetch director and actors for selected film
-            OMDB_API_KEY = "bcf17f38"
-            def fetch_film_details(title):
-                try:
-                    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-                    resp = requests.get(url).json()
-                    director = resp.get("Director", "")
-                    actors = resp.get("Actors", "")
-                    return director, actors.split(", ") if actors else []
-                except:
-                    return "", []
+        director, actors = fetch_film_details(selected_film)
+        st.write(f"**Selected Film:** {selected_film}")
+        st.write(f"**Director:** {director}")
+        st.write(f"**Actors:** {actors}")
 
-            director, actors = fetch_film_details(selected_film)
+        actor_list = [a.strip() for a in actors.split(",")]
 
-            # Find related films in top100
-            related = top100[
-                (top100["Director"] == director) |
-                (top100["Title"].isin([row for row in top100["Title"] if any(a in row for a in actors)]))
-            ]
+        # Find related films in top 100 sharing director or actors
+        related = top100[
+            (top100["Director"] == director) |
+            (top100["Title"] != selected_film) & 
+            (top100["Your Rating"] > 0) & 
+            (top100["Title"].isin(
+                [row["Title"] for idx, row in top100.iterrows() if any(a in row["Title"] for a in actor_list)]
+            ))
+        ]
 
-            st.write(f"**Selected Film:** {selected_film}")
-            st.write(f"**Director:** {director}")
-            st.write(f"**Actors:** {', '.join(actors)}")
-
+        if related.empty:
+            st.warning("No related films found in your top 100 for this director/actors.")
+        else:
             st.write("**Other films in your top 100 with same director/actors:**")
             st.dataframe(related[["Title", "Director", "Your Rating", "Genre"]], use_container_width=True)
 
-            # --- Network visualization ---
-            G = nx.Graph()
-            G.add_node(selected_film)
-            for film in related["Title"].tolist():
-                if film != selected_film:
-                    G.add_node(film)
-                    G.add_edge(selected_film, film)
-
-            plt.figure(figsize=(8, 6))
-            pos = nx.circular_layout(G)
-            nx.draw(G, pos, with_labels=True, node_color="skyblue", edge_color="gray", node_size=2000, font_size=10)
-            st.pyplot(plt)
-
-            st.markdown("""
-            **Explanation:**  
-            - Select a film from your top 100 personal ratings.  
-            - Director and actors are fetched from OMDb.  
-            - Related films in your top 100 sharing the same director or actors are displayed.  
-            - A network graph shows the relationships interactively.
-            """)
-
+        st.markdown("""
+        **Explanation:**  
+        - Select a film from your top 100 personal rated films.  
+        - The app fetches **director and actors from OMDb**.  
+        - It finds other films in your top 100 that share the **same director or actors**.  
+        - This keeps the network analysis interactive and uncluttered while showing **key influence connections**.
+        """)
 
 
 
