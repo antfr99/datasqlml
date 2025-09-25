@@ -1302,7 +1302,7 @@ def fetch_movie_data(title):
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
-    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating**.  
+    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating. Only basic framework created for various reasons**.  
 
     The table shows:  
     - Title  
@@ -1634,7 +1634,14 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 # Scenario 16 # -------------------------------
 
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
-    st.markdown("#### Collaborative Filtering – Recommend Films You Haven’t Seen Yet")
+    st.markdown("#### Collaborative Filtering – Recommend Films I Haven’t Seen Yet")
+
+    st.markdown("""
+    **Note:** This scenario differs from Scenario 2 – Hybrid Recommendations (SQL):
+    - Scenario 2 uses a **point-based SQL scoring system** considering past directors/genres and vote counts.  
+    - Scenario 16 uses **collaborative filtering**, focusing on **top-rated films you liked** and recommending unseen films from IMDb with **similar directors or genres**.  
+    - Scenario 16 is more personalized to **your top-rated films** rather than applying a static scoring system.
+    """)
 
     if not My_Ratings.empty and not IMDB_Ratings.empty:
         # Filter only high-rated films from your ratings
