@@ -1390,78 +1390,79 @@ def fetch_live_rating(title):
 # --- Scenario 14: Interactive Network Analysis ---
 
 # --- Scenario 14: Network Influence Analysis ---
-if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 IMDb Films":
-    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 IMDb Films")
+if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
+    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films")
     st.markdown("""
-    **Description:**  
-    Select a film from your **top 100 IMDb-rated films**.  
-    The scenario fetches director and actors from OMDb and finds **other films in your top 100** sharing the same director or actors.
+    **Instructions:**  
+    - Choose a film from your **top 100 personal rated films**.  
+    - The scenario will fetch the **director and actors** from OMDb and find **other films in your top 100** that share the same director or actors.  
+    - This avoids a cluttered network while keeping insights interactive.
     """)
 
-    # --- Filter top 100 IMDb films ---
-    top100_imdb = IMDB_Ratings.sort_values("IMDb Rating", ascending=False).head(100)
-    film_options = top100_imdb["Title"].tolist()
-    
-    selected_film = st.selectbox("Select a film to inspect:", film_options)
+    # --- Filter top 100 personal films ---
+    if My_Ratings.empty:
+        st.warning("My Ratings table is empty or missing 'Your Rating' column.")
+    else:
+        top100_myfilms = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
+        film_options = top100_myfilms["Title"].tolist()
 
-    # --- Hidden API key code in grey box ---
-    with st.expander("🔑 Show Code ", expanded=False):
-        st.code("""
+        selected_film = st.selectbox("Select a film to inspect:", film_options)
+
+        # --- Hidden API key / code ---
+        with st.expander("🔑 Show Code", expanded=False):
+            st.code("""
 import requests
 
 OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 
-def fetch_film_details(title):
+def get_movie_info(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
     director = resp.get("Director", "")
     actors = resp.get("Actors", "")
-    return director, actors
-        """, language="python")
+    return director, actors.split(", ") if actors else []
+            """, language="python")
 
-    # --- Run Button ---
-    if st.button("Run Analysis"):
-        import requests
+        # --- Run Button ---
+        if st.button("Run Analysis"):
+            import requests
 
-        try:
-            url = f"http://www.omdbapi.com/?t={selected_film}&apikey=bcf17f38"
-            resp = requests.get(url).json()
-            director = resp.get("Director", "")
-            actors = resp.get("Actors", "")
-            actors_list = [a.strip() for a in actors.split(",")] if actors else []
-        except Exception as e:
-            st.error(f"Failed to fetch data from OMDb: {e}")
-            director = ""
-            actors_list = []
+            OMDB_API_KEY = "bcf17f38"  # replace with your key
+            def get_movie_info(title):
+                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+                resp = requests.get(url).json()
+                director = resp.get("Director", "")
+                actors = resp.get("Actors", "")
+                return director, actors.split(", ") if actors else []
 
-        # Filter other films in top 100 sharing director or actors
-        related = top100_imdb.copy()
-        related_films = related[
-            (related["Director"] == director) |
-            (related["Title"] != selected_film) & 
-            (related["Title"].isin([
-                row["Title"] for _, row in related.iterrows()
-                if any(a in row.get("Actors", "") for a in actors_list)
-            ]))
-        ]
+            director, actors = get_movie_info(selected_film)
 
-        st.success(f"Selected Film: {selected_film}")
-        st.write(f"Director: {director}")
-        st.write(f"Actors: {', '.join(actors_list) if actors_list else 'N/A'}")
+            st.write(f"**Selected Film:** {selected_film}")
+            st.write(f"**Director:** {director}")
+            st.write(f"**Actors:** {', '.join(actors) if actors else 'N/A'}")
 
-        if not related_films.empty:
-            st.write("Other films in top 100 sharing director or actors:")
-            st.dataframe(related_films[["Title", "Director", "Genre", "IMDb Rating"]], use_container_width=True)
-        else:
-            st.info("No other films in top 100 share the same director or actors.")
+            # --- Find other films with same director or actors ---
+            related = top100_myfilms[
+                (top100_myfilms["Director"] == director) |
+                (top100_myfilms.apply(lambda row: any(actor in row["Director"] for actor in actors), axis=1))
+            ]
 
-        st.markdown("""
-        **Explanation:**  
-        - Select a film from your top 100 IMDb-rated films.  
-        - The director and actors are fetched via OMDb.  
-        - The table shows other films in your top 100 sharing the same director or actors.  
-        - This keeps the analysis interactive and avoids clutter from a full network graph.
-        """)
+            st.write("**Other films in your top 100 with the same director/actors:**")
+            if not related.empty:
+                st.dataframe(
+                    related[["Title", "Director", "Your Rating", "Genre"]],
+                    use_container_width=True
+                )
+            else:
+                st.info("No other films with the same director or actors found in your top 100.")
+
+            st.markdown("""
+            **Explanation:**  
+            - Select a film from your **top 100 personal rated films**.  
+            - The app fetches **director and actors** from OMDb.  
+            - Finds other films in your **top 100** that share the same director or actors.  
+            - This keeps the network analysis **interactive and uncluttered** while showing key influence connections.
+            """)
 
 
 
