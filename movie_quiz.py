@@ -1388,6 +1388,8 @@ def fetch_live_rating(title):
 
 
 # --- Scenario 14: Interactive Network Analysis ---
+
+# --- Scenario 14: Network Influence Analysis ---
 if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
     st.header("Scenario 14 – Network Influence Analysis")
 
@@ -1401,22 +1403,43 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
         # Select a film
         selected_film = st.selectbox("Select a film to inspect:", film_titles)
 
-        if selected_film:
+        # Hidden code box
+        with st.expander("🔑 Show Code", expanded=False):
+            st.code("""
+import requests
+
+OMDB_API_KEY = "YOUR_OMDB_API_KEY"
+
+def fetch_film_details(title):
+    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    resp = requests.get(url).json()
+    actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
+    director = resp.get("Director", "")
+    return director, actors
+            """, language="python")
+
+        # Run button
+        if st.button("Run Analysis"):
             import requests
 
-            OMDB_API_KEY = "YOUR_OMDB_API_KEY"
+            OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # keep key hidden in expander
 
-            # Fetch actors and director from OMDb
-            url = f"http://www.omdbapi.com/?t={selected_film}&apikey={OMDB_API_KEY}"
-            resp = requests.get(url).json()
-            actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
-            director = resp.get("Director", "")
+            # Fetch actors and director
+            try:
+                url = f"http://www.omdbapi.com/?t={selected_film}&apikey={OMDB_API_KEY}"
+                resp = requests.get(url).json()
+                actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
+                director = resp.get("Director", "")
+            except Exception as e:
+                st.error(f"Error fetching film details: {e}")
+                actors = []
+                director = ""
 
             st.markdown(f"**Selected Film:** {selected_film}")
             st.markdown(f"**Director:** {director}")
             st.markdown(f"**Actors:** {', '.join(actors)}")
 
-            # Find other films in top100 with same director or actors
+            # Find related films
             related = top100[
                 (top100["Director"] == director) |
                 (top100["Title"].isin([row for row in top100["Title"] if any(a in row for a in actors)]))
@@ -1427,8 +1450,8 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
             st.markdown("""
             **Explanation:**  
             - Choose any film from your top 100 rated films.  
-            - See the director and actors for that film.  
-            - Find **other films in your top 100** that share the same director or actors.  
+            - Click **Run Analysis** to fetch director and actors from OMDb.  
+            - See which other films in your top 100 share the same director or actors.  
             - This avoids clutter from a full network graph while keeping insights interactive.
             """)
 
