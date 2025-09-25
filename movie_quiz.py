@@ -101,7 +101,7 @@ scenario = st.radio(
         "Scenario 11 – Graph Based Movie Relationships",
         "Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
         "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 20 Personal Films",
+        "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films",
         "Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)",
         "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings",
         "Scenario 17 – Explainable AI: See Which Features Affect My Predicted Ratings (LIME)"
