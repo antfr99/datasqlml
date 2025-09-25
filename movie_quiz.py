@@ -1724,18 +1724,17 @@ elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My P
     st.markdown("### Scenario 17 – Explainable AI with LIME (Predictions for Unseen Films)")
 
     st.write("""
-    This scenario uses **LIME** to explain predicted ratings for **films you haven’t rated yet**.  
-    You will see which features (Year, Runtime, Genre, Director) influence the predicted rating for each unseen film.
+    This scenario predicts ratings for **films you haven’t rated yet** and explains which features influence predictions using **LIME**.
     """)
 
     # --- Grey code box ---
     with st.expander("🔑 Show Code", expanded=False):
         st.code("""
-# 1. Train model on films you've rated
-# 2. Prepare numeric + encoded categorical features
-# 3. Predict ratings for films you haven't rated
-# 4. Apply LIME to see feature contributions
-# 5. Show predictions + contributions in a dataframe
+# Train RandomForest on films you've rated
+# Prepare numeric + encoded categorical features
+# Map unseen categories to 'Unknown' to avoid errors
+# Predict ratings for unseen films
+# Apply LIME to show feature contributions per film
         """, language="python")
 
     if st.button("Run Explainable AI (LIME) for Unseen Films"):
@@ -1746,49 +1745,48 @@ elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My P
             from sklearn.preprocessing import LabelEncoder
             from sklearn.ensemble import RandomForestRegressor
             from lime.lime_tabular import LimeTabularExplainer
+            import numpy as np
 
-            # --- Prepare training data ---
             df_train = My_Ratings.copy()
             df_unseen = IMDB_Ratings[~IMDB_Ratings["Title"].isin(My_Ratings["Title"])].copy()
 
             if df_unseen.empty:
                 st.info("No unseen films to predict.")
             else:
-                # Encode categorical features
-                encoders = {}
                 features = ["Runtime (mins)", "Year"]
+                encoders = {}
 
                 for col in ["Genre", "Director"]:
                     if col in df_train.columns:
+                        # Combine unique values + "Unknown"
+                        all_labels = np.unique(df_train[col].fillna("Unknown"))
                         le = LabelEncoder()
-                        df_train[col+"_Enc"] = le.fit_transform(df_train[col])
-                        df_unseen[col+"_Enc"] = le.transform(df_unseen[col].fillna("Unknown"))
+                        le.fit(np.append(all_labels, "Unknown"))
+
+                        # Transform train data
+                        df_train[col+"_Enc"] = le.transform(df_train[col].fillna("Unknown"))
+
+                        # Map unseen values to "Unknown" before transforming
+                        df_unseen[col+"_Enc"] = df_unseen[col].apply(lambda x: x if x in le.classes_ else "Unknown")
+                        df_unseen[col+"_Enc"] = le.transform(df_unseen[col+"_Enc"])
+
                         features.append(col+"_Enc")
                         encoders[col] = le
 
                 X_train = df_train[features].values
                 y_train = df_train["Your Rating"].values
 
-                # Train model
                 model = RandomForestRegressor(n_estimators=200, random_state=42)
                 model.fit(X_train, y_train)
 
-                # Prepare unseen features
                 X_unseen = df_unseen[features].values
                 df_unseen["Predicted Rating"] = model.predict(X_unseen)
 
-                # Apply LIME for first 10 unseen films
-                explainer = LimeTabularExplainer(
-                    X_train,
-                    feature_names=features,
-                    mode="regression"
-                )
+                explainer = LimeTabularExplainer(X_train, feature_names=features, mode="regression")
 
                 lime_results = []
                 for i in range(min(10, len(X_unseen))):
-                    exp = explainer.explain_instance(
-                        X_unseen[i], model.predict, num_features=len(features)
-                    )
+                    exp = explainer.explain_instance(X_unseen[i], model.predict, num_features=len(features))
                     contributions = dict(exp.as_list())
                     row = {
                         "Title": df_unseen.iloc[i]["Title"],
@@ -1805,8 +1803,8 @@ elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My P
 
                 st.markdown("""
                 **Explanation:**  
-                - The model predicts ratings for films you haven’t rated yet.  
-                - Each `_contribution` column shows how much a feature influenced the predicted rating.  
-                - Positive values mean the feature increased the predicted rating; negative means it decreased it.  
-                - This helps you understand **why a film is predicted to be a high or low match for you**.
+                - Predicts ratings for films you haven’t rated.  
+                - Each `_contribution` shows how much a feature increased/decreased the predicted rating.  
+                - Maps unseen directors/genres to 'Unknown' to prevent errors.  
+                - Helps understand why a film might be a good or poor match for your taste.
                 """)
