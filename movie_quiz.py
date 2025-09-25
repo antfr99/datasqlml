@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small personal film/data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Sentence_transformers , Requests ), SQL, OMDb API , AI , GitHub and IMDb.
+This is a small personal film/data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Sentence_transformers , Requests , Lime ), SQL, OMDb API , AI , GitHub and IMDb.
 """)
 
 st.markdown("""
@@ -1388,81 +1388,53 @@ def fetch_live_rating(title):
 # Scenario 14 – Network Influence
 # -------------------------------
 
-# --- Scenario 14: Network Influence Analysis ---
+# --- Scenario 14: Interactive Network Analysis ---
+if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
+    st.header("Scenario 14 – Network Influence Analysis: Interactive Actor-Director Lookup")
 
-if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 20 Personal Films":
-    st.header("Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 20 Personal Films")
-    st.markdown("""
-    This scenario analyzes my **top 20 personal films** to find key **actor-director connections**.  
-    It builds a network graph to highlight which actors and directors appear in top-rated films most frequently.
-    """)
-
-    # --- Rename column for consistency ---
+    # Ensure 'Your Rating' exists
     if "Your Rating" in My_Ratings.columns:
         My_Ratings.rename(columns={"Your Rating": "MyRating"}, inplace=True)
 
     if My_Ratings.empty:
         st.warning("My Ratings table is empty or missing 'Your Rating'.")
     else:
-        # Get top 20 films by personal rating
-        top20_films = My_Ratings.sort_values("MyRating", ascending=False).head(20)
+        # Top 100 personal films
+        top100 = My_Ratings.sort_values("MyRating", ascending=False).head(100)
+        film_titles = top100["Title"].tolist()
 
-        # --- Hidden code block ---
-        with st.expander("🔑 Show Code (API key hidden)", expanded=False):
-            st.code("""
-import requests
-import networkx as nx
+        # Select a film
+        selected_film = st.selectbox("Select a film to inspect:", film_titles)
 
-# Example: Fetch actors from OMDb
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"
-
-def fetch_actors(title):
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    resp = requests.get(url).json()
-    return resp.get("Actors", "").split(", ") if resp.get("Actors") else []
-
-# Build network
-G = nx.Graph()
-for idx, row in top20_films.iterrows():
-    actors = fetch_actors(row['Title'])
-    director = row['Director']
-    for actor in actors:
-        G.add_edge(actor.strip(), director.strip())
-            """, language="python")
-
-        # --- Run button ---
-        if st.button("Run Actor-Director Network Analysis"):
+        if selected_film:
             import requests
-            import networkx as nx
-            import matplotlib.pyplot as plt
 
-            G = nx.Graph()
-            for idx, row in top20_films.iterrows():
-                title = row['Title']
-                director = row['Director']
-                try:
-                    url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
-                    resp = requests.get(url).json()
-                    actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
-                except:
-                    actors = []
+            OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 
-                for actor in actors:
-                    G.add_edge(actor.strip(), director.strip())
+            # Fetch actors and director from OMDb
+            url = f"http://www.omdbapi.com/?t={selected_film}&apikey={OMDB_API_KEY}"
+            resp = requests.get(url).json()
+            actors = resp.get("Actors", "").split(", ") if resp.get("Actors") else []
+            director = resp.get("Director", "")
 
-            st.success("Network built ✅")
+            st.markdown(f"**Selected Film:** {selected_film}")
+            st.markdown(f"**Director:** {director}")
+            st.markdown(f"**Actors:** {', '.join(actors)}")
 
-            # --- Draw network ---
-            plt.figure(figsize=(12, 8))
-            pos = nx.spring_layout(G, k=0.5, seed=42)
-            nx.draw(G, pos, with_labels=True, node_color="skyblue", edge_color="gray", node_size=2000, font_size=10)
-            st.pyplot(plt)
+            # Find other films in top100 with same director or actors
+            related = top100[
+                (top100["Director"] == director) |
+                (top100["Title"].isin([row for row in top100["Title"] if any(a in row for a in actors)]))
+            ]
+            st.markdown("**Other films in your top 100 with same director/actors:**")
+            st.dataframe(related[["Title", "Director", "Your Rating", "Genre"]], use_container_width=True)
 
             st.markdown("""
             **Explanation:**  
-            - Each **top 20 personal film** is analyzed for actors and directors.  
-            - A **network graph** shows connections between actors and directors.  
-            - Nodes with many edges represent **central actors or directors** in your top films.
+            - Choose any film from your top 100 rated films.  
+            - See the director and actors for that film.  
+            - Find **other films in your top 100** that share the same director or actors.  
+            - This approach avoids clutter from a full network graph while keeping insights interactive.
             """)
 
 
