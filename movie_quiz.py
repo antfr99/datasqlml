@@ -1398,7 +1398,7 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
     st.header("Scenario 14 – Network Influence Analysis")
     st.markdown("""
     Select a film from my **top-rated films** to see connections:
-    - Director and actors of the film ( try Annie Hall if you are not sure which film to select - be patient when requesting the analysis ) 
+    - Director and actors of the film
     - Other films sharing the same director or actors (from my top-rated list)
     - Visual network of relationships
     """)
@@ -1416,7 +1416,7 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
         # --- Show code in grey box ---
         with st.expander("🔑 Show Code", expanded=False):
             st.code("""
-# Fetch director and actors from OMDb
+
 import requests
 
 def fetch_film_details(title):
@@ -1429,7 +1429,7 @@ def fetch_film_details(title):
 
 director, actors_list = fetch_film_details(selected_film)
 
-# Build network graph
+
 import networkx as nx
 G = nx.Graph()
 G.add_node(selected_film, type="film")
@@ -1439,7 +1439,7 @@ for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
-# Add related films
+
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film:
         continue
@@ -1455,7 +1455,7 @@ for _, row in top_films.iterrows():
         G.add_node(related_title, type="film")
         G.add_edge(related_title, sa)
 
-# Draw network
+
 import matplotlib.pyplot as plt
 pos = nx.spring_layout(G, k=0.5, iterations=50)
 colors = []
@@ -1542,7 +1542,7 @@ plt.show()
 
 # --- Scenario 15: Counterfactual Analysis ---
 if scenario == "Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)":
-    st.markdown("Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)")
+    st.markdown("Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sci-Fi with Modern Directors & Budgets)"
 
     st.write("""
     What if notoriously bad science fiction films had been made by great directors, with bigger budgets, 
@@ -1555,16 +1555,16 @@ if scenario == "Scenario 15 – Counterfactual Analysis (1960s–70s Infamous Sc
 import requests
 import pandas as pd
 
-# Example setup for OMDb + counterfactual analysis
+
 OMDB_API_KEY = "YOUR_OMDB_API_KEY"
 
-# Function to fetch current IMDb rating
+
 def get_imdb_rating(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     data = requests.get(url).json()
     return float(data.get("imdbRating", 0)) if "imdbRating" in data else None
 
-# Counterfactual logic: adjust rating with weights
+
 def counterfactual_rating(current_rating, director_boost, budget_boost, actor_boost):
     return min(10, round(current_rating + director_boost + budget_boost + actor_boost, 1))
         """, language="python")
@@ -1639,7 +1639,7 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
     **Note:** This scenario differs from Scenario 2 – Hybrid Recommendations (SQL):
     - Scenario 2 uses a **point-based SQL scoring system** considering past directors/genres and vote counts.  
     - Scenario 16 uses **collaborative filtering**, focusing on **top-rated films I liked** and recommending unseen films from IMDb with **similar directors or genres**.  
-    - Scenario 16 is more personalized to **your top-rated films** rather than applying a static scoring system.
+    - Scenario 16 is more personalized to **my top-rated films** rather than applying a static scoring system.
     """)
 
     if not My_Ratings.empty and not IMDB_Ratings.empty:
