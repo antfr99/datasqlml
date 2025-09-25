@@ -1639,7 +1639,7 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
     st.markdown("""
     **Note:** This scenario differs from Scenario 2 – Hybrid Recommendations (SQL):
     - Scenario 2 uses a **point-based SQL scoring system** considering past directors/genres and vote counts.  
-    - Scenario 16 uses **collaborative filtering**, focusing on **top-rated films you liked** and recommending unseen films from IMDb with **similar directors or genres**.  
+    - Scenario 16 uses **collaborative filtering**, focusing on **top-rated films I liked** and recommending unseen films from IMDb with **similar directors or genres**.  
     - Scenario 16 is more personalized to **your top-rated films** rather than applying a static scoring system.
     """)
 
@@ -1698,7 +1698,7 @@ recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=
                 if recommendations.empty:
                     st.info("No unseen recommendations found for this film.")
                 else:
-                    st.write(f"**Based on '{selected_film}', you may like these unseen films:**")
+                    st.write(f"**Based on '{selected_film}', I may like these unseen films:**")
                     st.dataframe(
                         recommendations[["Title", "Director", "Genre", "IMDb Rating"]],
                         use_container_width=True
@@ -1706,9 +1706,9 @@ recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=
 
                     st.markdown("""
                     **Explanation:**  
-                    - Shows films you haven't rated yet.  
+                    - Shows films I haven't rated yet.  
                     - Prioritizes **same director**, then supplements with **same genre** films.  
-                    - This hybrid approach recommends unseen films most similar to your top-rated ones.
+                    - This hybrid approach recommends unseen films most similar to my top-rated ones.
                     """)
     else:
         st.warning("My Ratings or IMDb Ratings table is empty.")
@@ -1723,76 +1723,93 @@ elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My P
     st.markdown("### Scenario 17 – Explainable AI with LIME")
 
     st.write("""
-    This scenario uses **LIME (Local Interpretable Model-Agnostic Explanations)** to show which features most influence the prediction of **your personal ratings**.  
+    This scenario uses **LIME (Local Interpretable Model-Agnostic Explanations)** to show which **numeric features** most influence the prediction of your personal ratings.  
+
     You will see a table with predicted ratings, actual ratings, and feature contributions.
     """)
 
     # --- Grey code box ---
     st.code("""
-# Example workflow:
-# 1. Use RandomForestRegressor to predict 'Your Rating' from numeric features.
-# 2. Apply LIME to see which features most influenced each prediction.
-# 3. Show contributions in a table for interpretability.
+# 1. Prepare the dataset
+# Keep numeric features only for clearer interpretation
+numeric_features = ["Runtime (mins)", "Year"]
+
+# 2. Train a RandomForestRegressor on your personal ratings
+X = My_Ratings[numeric_features].values
+y = My_Ratings["Your Rating"].values
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X, y)
+
+# 3. Apply LIME for each film (or top 10 for speed)
+from lime.lime_tabular import LimeTabularExplainer
+explainer = LimeTabularExplainer(X, feature_names=numeric_features, mode='regression')
+
+explanations = []
+for i in range(min(10, len(X))):
+    exp = explainer.explain_instance(X[i], model.predict, num_features=len(numeric_features))
+    contributions = dict(exp.as_list())
+    row_result = {
+        "Title": My_Ratings.iloc[i]["Title"],
+        "Your Rating": y[i],
+        "Predicted Rating": model.predict(X[i].reshape(1, -1))[0]
+    }
+    for f in numeric_features:
+        row_result[f"{f}_contribution"] = contributions.get(f, 0)
+    explanations.append(row_result)
+
+exp_df = pd.DataFrame(explanations)
+# 4. Show table
+exp_df
     """, language="python")
 
     # --- Button to run ---
     if st.button("Run Explainable AI (LIME) Analysis"):
-
         if My_Ratings.empty:
             st.warning("My Ratings table is empty or missing data.")
         else:
-            from sklearn.model_selection import train_test_split
-            from sklearn.preprocessing import LabelEncoder
+            from sklearn.ensemble import RandomForestRegressor
+            from lime.lime_tabular import LimeTabularExplainer
 
-            # --- Prepare dataset ---
+            # Keep numeric features only for clarity
+            numeric_features = ["Runtime (mins)", "Year"]
             df = My_Ratings.copy()
-
-            # Keep only relevant numeric features and encode categorical
-            features = ["Runtime (mins)", "Year"]
-            if "Genre" in df.columns:
-                df["Genre_Cat"] = LabelEncoder().fit_transform(df["Genre"])
-                features.append("Genre_Cat")
-            if "Director" in df.columns:
-                df["Director_Cat"] = LabelEncoder().fit_transform(df["Director"])
-                features.append("Director_Cat")
-
-            X = df[features].values
+            X = df[numeric_features].values
             y = df["Your Rating"].values
 
-            # Split train/test (optional, here we use all for LIME demo)
+            # Train Random Forest
             model = RandomForestRegressor(n_estimators=100, random_state=42)
             model.fit(X, y)
 
-            # --- Apply LIME ---
-            explainer = LimeTabularExplainer(
-                X,
-                feature_names=features,
-                mode="regression"
-            )
-
-            # Collect explanation for first 10 rows (for speed)
+            # Apply LIME
+            explainer = LimeTabularExplainer(X, feature_names=numeric_features, mode='regression')
             explanations = []
             for i in range(min(10, len(X))):
-                exp = explainer.explain_instance(X[i], model.predict, num_features=len(features))
+                exp = explainer.explain_instance(X[i], model.predict, num_features=len(numeric_features))
                 contributions = dict(exp.as_list())
                 row_result = {
                     "Title": df.iloc[i]["Title"],
-                    "Your Rating": df.iloc[i]["Your Rating"],
+                    "Your Rating": y[i],
                     "Predicted Rating": model.predict(X[i].reshape(1, -1))[0]
                 }
-                # Add contributions
-                for f in features:
+                for f in numeric_features:
                     row_result[f"{f}_contribution"] = contributions.get(f, 0)
                 explanations.append(row_result)
 
             exp_df = pd.DataFrame(explanations)
+
             st.write("### LIME Feature Contributions for Predicted Ratings")
-            st.dataframe(exp_df, width="stretch", height=400)
+            st.dataframe(
+                exp_df[["Title", "Your Rating", "Predicted Rating"] +
+                       [f"{f}_contribution" for f in numeric_features]],
+                use_container_width=True
+            )
 
             st.markdown("""
             **Explanation:**  
-            - **LIME** approximates the model locally to explain each prediction.  
-            - Each `_contribution` column shows how much a feature increased or decreased the predicted rating.  
-            - This allows you to **understand why the model predicts a certain rating for each film**.  
-            - Even non-technical users can see which features drive predictions.
+            - **Predicted Rating**: model's estimated rating for each film  
+            - **Your Rating**: the actual rating you gave  
+            - **Runtime (mins)_contribution**: how much runtime affected the prediction  
+            - **Year_contribution**: how much the release year affected the prediction  
+            - Values near 0 mean minimal effect; positive increases predicted rating, negative decreases it  
+            - Only numeric features are used here for clear, interpretable contributions
             """)
