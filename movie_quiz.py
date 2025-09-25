@@ -9,7 +9,6 @@ import lightgbm as lgb
 import numpy as np
 import logging
 import os
-from lime.lime_tabular import LimeTabularExplainer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import NearestNeighbors
 
@@ -22,7 +21,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is an experimental project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests, and Lime. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
+This is an experimental project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
