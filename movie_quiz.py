@@ -1182,7 +1182,7 @@ if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning 
     OMDB_API_KEY = "bcf17f38"
 
     # --- Grey block with hidden key ---
-    with st.expander("🔑 Show Code (API key hidden)", expanded=False):
+    with st.expander("🔑 Show Code ", expanded=False):
         st.code("""
 import requests
 from sentence_transformers import SentenceTransformer, util
@@ -1298,12 +1298,11 @@ def fetch_movie_data(title):
 
 
 # --- Scenario 13: Live Ratings Monitor ---
-
 # --- Scenario 13: Live Ratings Monitor (MLOps + CI/CD + Monitoring) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
-    This scenario compares your **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for your **top 20 sci-fi films**.  
+    This scenario compares your **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for your **top 50 films by static rating**.  
 
     The table shows:  
     - Title  
@@ -1313,67 +1312,76 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     - Timestamp of check
     """)
 
-    # --- Filter top 20 sci-fi films ---
-    if "Sci-Fi" not in IMDB_Ratings["Genre"].values:
-        st.warning("No Sci-Fi films found in your IMDb Ratings Excel.")
-    else:
-        top20_sci_fi = IMDB_Ratings[IMDB_Ratings["Genre"].str.contains("Sci-Fi")].sort_values(
-            by="IMDb Rating", ascending=False
-        ).head(20)
+    # --- Select top 50 films ---
+    top50_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(50)
 
-        # --- Hidden API key in grey box ---
-        with st.expander("🔑 Show Code (API key hidden)", expanded=False):
-            st.code("""
+    # --- Hidden API key in grey box ---
+    with st.expander("🔑 Show Code", expanded=False):
+        st.code("""
 import requests
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # Hidden
+OMDB_API_KEY = "YOUR_OMDB_API_KEY"  
 
 def fetch_live_rating(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
     return float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-            """, language="python")
+        """, language="python")
 
-        # --- Run Button ---
-        if st.button("Run Live Ratings Check"):
-            import requests
-            from datetime import datetime
+    # --- Run Button ---
+    if st.button("Run Live Ratings Check"):
+        import requests
+        from datetime import datetime
+        import os
 
-            results = []
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        history_file = "live_ratings_history.csv"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-            for _, row in top20_sci_fi.iterrows():
-                title = row["Title"]
-                static_rating = row["IMDb Rating"]
+        # Load previous history
+        if os.path.exists(history_file):
+            history_df = pd.read_csv(history_file)
+        else:
+            history_df = pd.DataFrame()
 
-                try:
-                    url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
-                    resp = requests.get(url).json()
-                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-                except Exception as e:
-                    live_rating = None
+        results = []
 
-                rating_diff = live_rating - static_rating if live_rating is not None else None
+        for _, row in top50_films.iterrows():
+            title = row["Title"]
+            static_rating = row["IMDb Rating"]
 
-                results.append({
-                    "Title": title,
-                    "IMDb Rating (Static)": static_rating,
-                    "IMDb Rating (Live)": live_rating,
-                    "Rating Difference": rating_diff,
-                    "CheckedAt": timestamp
-                })
+            try:
+                url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
+                resp = requests.get(url).json()
+                live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+            except Exception as e:
+                live_rating = None
 
-            df_results = pd.DataFrame(results)
-            st.success("Live ratings check complete ✅")
-            st.dataframe(df_results, use_container_width=True)
+            rating_diff = live_rating - static_rating if live_rating is not None else None
 
-            st.markdown("""
-            **Explanation:**  
-            - Each film's **static IMDb rating** from your Excel is compared with the **current live IMDb rating** from OMDb.  
-            - **Rating Difference** shows how much the rating changed.  
-            - **CheckedAt** shows when this check was performed.  
-            - Limiting to **top 20 Sci-Fi films** keeps the check fast and avoids API limits.  
-            - This scenario supports **MLOps + CI/CD + Monitoring** by tracking live rating changes over time and logging them.
-            """)
+            results.append({
+                "Title": title,
+                "IMDb Rating (Static)": static_rating,
+                "IMDb Rating (Live)": live_rating,
+                "Rating Difference": rating_diff,
+                "CheckedAt": timestamp
+            })
+
+        new_df = pd.DataFrame(results)
+
+        # Append to history and save CSV (this can be pushed to GitHub)
+        history_df = pd.concat([history_df, new_df], ignore_index=True)
+        history_df.to_csv(history_file, index=False)
+
+        st.success("Live ratings check complete ✅")
+        st.dataframe(history_df, use_container_width=True)
+
+        st.markdown("""
+        **Explanation:**  
+        - Each film's **static IMDb rating** from your Excel is compared with the **current live IMDb rating** from OMDb.  
+        - **Rating Difference** shows how much the rating changed.  
+        - **CheckedAt** shows when this check was performed.  
+        - All results are saved to `live_ratings_history.csv`, supporting **MLOps + CI/CD + Monitoring** by logging changes over time.  
+        - `live_ratings_history.csv` can be pushed to GitHub to keep versioned history and track ratings changes in main.
+        """)
 
 
 
@@ -1386,7 +1394,7 @@ if scenario.startswith("Scenario 14"):
     identifying key actors and directors who are central in your top-rated clusters.
     """)
 
-    with st.expander("🔑 Show Code (API key hidden)", expanded=False):
+    with st.expander("🔑 Show Code ", expanded=False):
         st.code("""
 import requests
 import networkx as nx
