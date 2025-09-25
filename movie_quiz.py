@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a small personal film/data project combining Python Packages (Pandas, PandasQL, Numpy , Streamlit , Sklearn , Scipy , Textblob , Matplotlib , Seaborn , Networkx , Sentence_transformers , Requests , Lime ), SQL, OMDb API , AI , GitHub and IMDb.
+TThis is a test project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests, and LIME. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
@@ -1385,22 +1385,17 @@ def fetch_live_rating(title):
 
 
 
-# Scenario 14 – Network Influence
-# -------------------------------
+
 
 # --- Scenario 14: Interactive Network Analysis ---
 if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
-    st.header("Scenario 14 – Network Influence Analysis: Interactive Actor-Director Lookup")
-
-    # Ensure 'Your Rating' exists
-    if "Your Rating" in My_Ratings.columns:
-        My_Ratings.rename(columns={"Your Rating": "MyRating"}, inplace=True)
+    st.header("Scenario 14 – Network Influence Analysis")
 
     if My_Ratings.empty:
-        st.warning("My Ratings table is empty or missing 'Your Rating'.")
+        st.warning("My Ratings table is empty.")
     else:
         # Top 100 personal films
-        top100 = My_Ratings.sort_values("MyRating", ascending=False).head(100)
+        top100 = My_Ratings.sort_values("Your Rating", ascending=False).head(100)
         film_titles = top100["Title"].tolist()
 
         # Select a film
@@ -1434,7 +1429,7 @@ if scenario == "Scenario 14 – Network Influence Analysis: Identify Key Actor-D
             - Choose any film from your top 100 rated films.  
             - See the director and actors for that film.  
             - Find **other films in your top 100** that share the same director or actors.  
-            - This approach avoids clutter from a full network graph while keeping insights interactive.
+            - This avoids clutter from a full network graph while keeping insights interactive.
             """)
 
 
