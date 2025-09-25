@@ -1634,10 +1634,10 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 # Scenario 16 # -------------------------------
 
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
-    st.markdown("#### Collaborative Filtering – Hybrid Director + Genre Recommendations")
+    st.markdown("#### Collaborative Filtering – Recommend Films You Haven’t Seen Yet")
 
-    if not My_Ratings.empty:
-        # Filter only high-rated films
+    if not My_Ratings.empty and not IMDB_Ratings.empty:
+        # Filter only high-rated films from your ratings
         top_films = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
         if top_films.empty:
@@ -1652,26 +1652,21 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
             # --- Show code ---
             with st.expander("🔑 Show Code", expanded=False):
                 st.code("""
-# Hybrid Collaborative Filtering
-# 1. Find films with the same director
-# 2. Supplement with films in the same genre
+# Hybrid Collaborative Filtering: Director + Genre
 selected_row = My_Ratings[My_Ratings["Title"] == selected_film]
 director = selected_row["Director"].values[0]
 genres = selected_row["Genre"].values[0].split(", ")
 
-# Films with same director
-same_director = My_Ratings[(My_Ratings["Director"] == director) & (My_Ratings["Title"] != selected_film)]
+# Films not yet rated by you
+unseen = IMDB_Ratings[~IMDB_Ratings["Title"].isin(My_Ratings["Title"])]
 
-# Films with same genre (excluding duplicates)
-same_genre = My_Ratings[
-    My_Ratings["Title"] != selected_film
-]
-same_genre = same_genre[
-    same_genre["Title"].isin(
-        My_Ratings[My_Ratings["Genre"].apply(lambda g: any(genre in g for genre in genres))]["Title"]
-    )
-]
-# Combine and remove duplicates
+# Films with same director
+same_director = unseen[unseen["Director"] == director]
+
+# Films in same genres
+same_genre = unseen[unseen["Genre"].apply(lambda g: any(genre in g for genre in genres))]
+
+# Combine, remove duplicates
 recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=["Title"])
                 """, language="python")
 
@@ -1681,37 +1676,36 @@ recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=
                 director = selected_row["Director"].values[0]
                 genres = selected_row["Genre"].values[0].split(", ")
 
-                # Films with same director
-                same_director = My_Ratings[(My_Ratings["Director"] == director) & (My_Ratings["Title"] != selected_film)]
+                # Only films you haven't seen/rated yet
+                unseen = IMDB_Ratings[~IMDB_Ratings["Title"].isin(My_Ratings["Title"])]
 
-                # Films with same genre (excluding duplicates)
-                same_genre = My_Ratings[My_Ratings["Title"] != selected_film]
-                same_genre = same_genre[
-                    same_genre["Title"].isin(
-                        My_Ratings[My_Ratings["Genre"].apply(lambda g: any(genre in g for genre in genres))]["Title"]
-                    )
-                ]
+                # Same director
+                same_director = unseen[unseen["Director"] == director]
 
-                # Combine and remove duplicates
+                # Same genre
+                same_genre = unseen[unseen["Genre"].apply(lambda g: any(genre in g for genre in genres))]
+
+                # Combine and drop duplicates
                 recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=["Title"])
 
                 if recommendations.empty:
-                    st.info("No recommendations found for this film.")
+                    st.info("No unseen recommendations found for this film.")
                 else:
-                    st.write(f"**Based on '{selected_film}', you may also like:**")
+                    st.write(f"**Based on '{selected_film}', you may like these unseen films:**")
                     st.dataframe(
-                        recommendations[["Title", "Director", "Genre", "Your Rating", "IMDb Rating"]],
+                        recommendations[["Title", "Director", "Genre", "IMDb Rating"]],
                         use_container_width=True
                     )
 
                     st.markdown("""
                     **Explanation:**  
-                    - Films by the same director are prioritized.  
-                    - Additional films in the same genre are included.  
-                    - This hybrid approach balances **director-based** and **genre-based** recommendations for your top-rated films.
+                    - Shows films you haven't rated yet.  
+                    - Prioritizes **same director**, then supplements with **same genre** films.  
+                    - This hybrid approach recommends unseen films most similar to your top-rated ones.
                     """)
     else:
-        st.warning("My Ratings table is empty.")
+        st.warning("My Ratings or IMDb Ratings table is empty.")
+
 
 
 # -------------------------------
