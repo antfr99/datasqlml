@@ -1188,7 +1188,7 @@ import requests
 from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # key hidden
+OMDB_API_KEY = "YOUR_OMDB_API_KEY" 
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -1298,82 +1298,41 @@ def fetch_movie_data(title):
 
 
 # --- Scenario 13: Live Ratings Monitor ---
-if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
-    st.write("""
-    This scenario compares your GitHub-stored ratings (`imdbratings.xlsx`) with live IMDb ratings from OMDb, 
-    highlights changes with color coding, and logs them with timestamps for monitoring and reproducibility.
-    """)
 
-    # --- OMDb API key ---
-    OMDB_API_KEY = "bcf17f38"  # Replace with your key if needed
+elif scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
+    st.markdown("#### Live Ratings Monitor – Track IMDb vs. My Ratings Over Time")
 
-    # --- Fetch live IMDb rating function ---
-    def fetch_live_rating(title):
-        try:
-            response = requests.get(f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}").json()
-            rating = float(response.get("imdbRating")) if response.get("imdbRating") and response.get("imdbRating") != "N/A" else None
-            return {"Title": title, "IMDbRating_Live": rating}
-        except Exception as e:
-            logging.error(f"Failed fetching {title}: {e}")
-            return {"Title": title, "IMDbRating_Live": None}
+    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
+        # Merge IMDb & My Ratings
+        comparison = pd.merge(IMDB_Ratings, My_Ratings, on="Movie ID", suffixes=("_IMDb", "_Mine"))
 
-    # --- Movie selection ---
-    if not IMDB_Ratings.empty:
-        movie_list = IMDB_Ratings["Title"].tolist()
-        selected_movies = st.multiselect(
-            "Select movies to check live ratings:",
-            movie_list,
-            default=movie_list[:10]
-        )
-    else:
-        selected_movies = []
+        if "IMDb Rating" in comparison.columns and "MyRating" in comparison.columns:
+            # Calculate rating difference
+            comparison["RatingDiff"] = comparison["IMDb Rating"] - comparison["MyRating"]
 
-    # --- Run live rating check ---
-    if st.button("Check Live Ratings") and selected_movies:
-        live_data = [fetch_live_rating(title) for title in selected_movies]
-        live_df = pd.DataFrame(live_data)
+            st.write("**Comparison Table:**")
+            st.dataframe(comparison[["Title", "Year", "IMDb Rating", "MyRating", "RatingDiff"]])
 
-        # Merge with GitHub static ratings
-        comparison = IMDB_Ratings.merge(live_df, on="Title", how="left")
-        comparison["RatingDiff"] = comparison["IMDbRating_Live"] - comparison["MyRating"]
-        comparison["RatingChanged"] = comparison["RatingDiff"] != 0
-        comparison["CheckedAt"] = datetime.now()
+            # Show monitoring plot
+            st.write("**Monitoring IMDb vs My Ratings:**")
+            import matplotlib.pyplot as plt
 
-        # Log changes
-        changed_movies = comparison[comparison["RatingChanged"]]
-        logging.info(f"Checked {len(selected_movies)} movies; {len(changed_movies)} rating changes found.")
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.scatter(comparison["IMDb Rating"], comparison["MyRating"], alpha=0.7)
+            ax.plot([0, 10], [0, 10], 'r--')  # 45-degree line
+            ax.set_xlabel("IMDb Rating")
+            ax.set_ylabel("My Rating")
+            ax.set_title("IMDb vs. My Ratings")
+            st.pyplot(fig)
 
-        # Append to CSV history for monitoring
-        history_file = "rating_changes_history.csv"
-        if os.path.exists(history_file):
-            history = pd.read_csv(history_file)
+            # Quick interpretation
+            avg_diff = comparison["RatingDiff"].mean()
+            st.markdown(f"📊 **On average, you rate {avg_diff:.2f} points higher/lower than IMDb users.**")
         else:
-            history = pd.DataFrame()
-
-        updated_history = pd.concat([history, changed_movies[["Title", "MyRating", "IMDbRating_Live", "RatingDiff", "CheckedAt"]]], ignore_index=True)
-        updated_history.to_csv(history_file, index=False)
-
-        # Display results with color coding
-        st.subheader("Movies with Rating Changes (Color-coded)")
-
-        def highlight_rating_change(row):
-            if row["RatingDiff"] > 0:
-                return ['background-color: lightgreen']*len(row)
-            elif row["RatingDiff"] < 0:
-                return ['background-color: lightcoral']*len(row)
-            else:
-                return ['']*len(row)
-
-        if not comparison.empty:
-            st.dataframe(comparison.style.apply(highlight_rating_change, axis=1), use_container_width=True)
-        else:
-            st.info("No movies selected or data unavailable.")
-
-        st.success("Rating comparison complete and logged ✅")
+            st.warning("Columns missing in merged table (`IMDb Rating` or `MyRating`).")
     else:
-        if not selected_movies:
-            st.warning("Please select at least one movie to check live ratings.")
+        st.warning("My Ratings table is empty or missing `MyRating` column.")
+
 
 
 # Scenario 14 – Network Influence
@@ -1528,34 +1487,42 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
         While purely hypothetical, this exercise highlights the *impact of talent and resources* on film ratings.
         """)
 
+# Scenario 16 # -------------------------------
 
+elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
+    st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
 
-# -------------------------------
-# Scenario 16 – Collaborative Filtering
-# -------------------------------
-if scenario.startswith("Scenario 16"):
-    st.header("Scenario 16 – Collaborative Filtering Recommendations")
-    st.markdown("""
-    Recommend films **based on your personal high ratings** and **high Metacritic scores** from OMDb.  
-    Shows genre/director combinations you are likely to enjoy.
-    """)
+    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
+        # Filter only films you rated highly
+        high_rated = My_Ratings[My_Ratings["MyRating"] >= 8]
 
-    with st.expander("🔑 Show Code (API key hidden)", expanded=False):
-        st.code("""
-# Build user-item matrix
-# Use NearestNeighbors or another collaborative filtering method
-# Include Metacritic ratings in scoring
-        """, language="python")
+        if high_rated.empty:
+            st.warning("No films with ratings >= 8 in your data.")
+        else:
+            # Merge with IMDb to get genres/directors
+            merged = pd.merge(high_rated, IMDB_Ratings, on="Movie ID", suffixes=("_Mine", "_IMDb"))
 
-    if st.button("Run Scenario 16"):
-        high_rated = My_Ratings[My_Ratings["MyRating"] >= 8].copy()
-        high_rated["GenreDirector"] = high_rated["Genre"] + " / " + high_rated["Director"]
-        # Placeholder recommendation scores
-        high_rated["Score"] = np.random.uniform(0.7,1.0,len(high_rated))
-        st.subheader("Recommendations Based on Your High Ratings & Metacritic Scores")
-        st.dataframe(high_rated[["Title","GenreDirector","MyRating","Score"]], use_container_width=True)
-        st.markdown("**Explanation:** Combines your high ratings with Metacritic scores to suggest films or genre/director combinations you are likely to enjoy.")
+            # Build features from Genre + Director
+            features = pd.get_dummies(
+                merged[["Genre", "Director"]],
+                columns=["Genre", "Director"]
+            )
 
+            # Fit nearest neighbors on high-rated films
+            nn = NearestNeighbors(n_neighbors=5, metric="cosine")
+            nn.fit(features)
+
+            # Get recommendations for first film in your high-rated list
+            idx = 0
+            distances, indices = nn.kneighbors([features.iloc[idx]])
+
+            recs = merged.iloc[indices[0]].copy()
+            recs["SimilarityScore"] = 1 - distances[0]
+
+            st.write("**Based on your high-rated films, you may also like:**")
+            st.dataframe(recs[["Title", "Genre", "Director", "SimilarityScore"]])
+    else:
+        st.warning("My Ratings table is empty or missing `MyRating` column.")
 
 
 
@@ -1563,32 +1530,36 @@ if scenario.startswith("Scenario 16"):
 # -------------------------------
 # Scenario 17 – Explainable AI (LIME)
 # -------------------------------
-if scenario.startswith("Scenario 17"):
-    st.header("Scenario 17 – Explainable AI")
-    st.markdown("""
-    Explains **why your predicted ratings are what they are** using LIME.  
-    Shows the most influential features in an interpretable table and plot.
-    """)
 
-    with st.expander("🔑 Show Code (ML model hidden)", expanded=False):
-        st.code("""
-# Train model (RandomForest or other)
-# Use LimeTabularExplainer on features such as Year, GenreEncoded, DirectorEncoded, Budget
-# Show explanation for selected film
-        """, language="python")
+elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My Predicted Ratings (LIME)":
+    st.markdown("#### Explainable AI – Why Did the Model Predict My Rating?")
 
-    if st.button("Run Scenario 17"):
-        features = ["Year","GenreEncoded","DirectorEncoded","Budget"]
-        X = My_Ratings[features].fillna(0).values
-        y = My_Ratings["MyRating"].values
+    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
+        # Merge IMDb + My Ratings
+        comparison = pd.merge(IMDB_Ratings, My_Ratings, on="Movie ID", suffixes=("_IMDb", "_Mine"))
 
-        model = RandomForestRegressor()
-        model.fit(X,y)
+        # Select features
+        X = pd.get_dummies(comparison[["Genre", "Director"]])
+        y = comparison["MyRating"]
 
-        explainer = LimeTabularExplainer(X, feature_names=features, mode="regression")
-        exp = explainer.explain_instance(X[0], model.predict, num_features=4)
+        # Train model
+        model = RandomForestRegressor(n_estimators=50, random_state=42)
+        model.fit(X, y)
 
-        st.subheader(f"LIME Explanation for: {My_Ratings.iloc[0]['Title']}")
+        # Explain a sample film
+        explainer = LimeTabularExplainer(
+            training_data=np.array(X),
+            feature_names=X.columns,
+            mode="regression"
+        )
+
+        i = 0  # first film
+        exp = explainer.explain_instance(X.iloc[i].to_numpy(), model.predict, num_features=5)
+
+        st.write("**Film explained:**", comparison.iloc[i]["Title"])
+        st.write("**My Rating:**", comparison.iloc[i]["MyRating"])
+        st.write("**IMDb Rating:**", comparison.iloc[i]["IMDb Rating"])
+        st.write("**Feature Contributions:**")
         st.write(exp.as_list())
-        st.pyplot(exp.as_pyplot_figure())
-        st.markdown("**Explanation:** Each feature shows how it influenced the predicted rating. Positive values increase the rating; negative decrease it. This allows deep understanding of the ML model’s reasoning.")
+    else:
+        st.warning("My Ratings table is empty or missing `MyRating` column.")
