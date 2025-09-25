@@ -1300,38 +1300,82 @@ def fetch_movie_data(title):
 # --- Scenario 13: Live Ratings Monitor ---
 
 elif scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.markdown("#### Live Ratings Monitor – Track IMDb vs. My Ratings Over Time")
+    st.markdown("### Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
-    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
-        # Merge IMDb & My Ratings
-        comparison = pd.merge(IMDB_Ratings, My_Ratings, on="Movie ID", suffixes=("_IMDb", "_Mine"))
+    st.write("""
+    This scenario checks if **IMDb ratings have changed** compared to the ones stored in my personal ratings file.  
+    It highlights which movies have updated ratings, by how much, and logs the timestamp of the check.  
+    """)
 
-        if "IMDb Rating" in comparison.columns and "MyRating" in comparison.columns:
-            # Calculate rating difference
-            comparison["RatingDiff"] = comparison["IMDb Rating"] - comparison["MyRating"]
+    # --- Grey code box (for demo only, API key hidden) ---
+    code = '''
+    # Pseudo-code example
+    import requests
+    import pandas as pd
 
-            st.write("**Comparison Table:**")
-            st.dataframe(comparison[["Title", "Year", "IMDb Rating", "MyRating", "RatingDiff"]])
+    # 1. Load my ratings (from Excel/GitHub)
+    my_ratings = pd.read_excel("myratings.xlsx")
 
-            # Show monitoring plot
-            st.write("**Monitoring IMDb vs My Ratings:**")
-            import matplotlib.pyplot as plt
+    # 2. Fetch live IMDb ratings from OMDb API
+    url = f"http://www.omdbapi.com/?i={movie_id}&apikey=XXXX"
+    response = requests.get(url).json()
 
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.scatter(comparison["IMDb Rating"], comparison["MyRating"], alpha=0.7)
-            ax.plot([0, 10], [0, 10], 'r--')  # 45-degree line
-            ax.set_xlabel("IMDb Rating")
-            ax.set_ylabel("My Rating")
-            ax.set_title("IMDb vs. My Ratings")
-            st.pyplot(fig)
+    # 3. Compare "Your Rating" vs IMDb rating
+    comparison["RatingDiff"] = comparison["IMDb Rating_Live"] - comparison["Your Rating"]
 
-            # Quick interpretation
-            avg_diff = comparison["RatingDiff"].mean()
-            st.markdown(f"📊 **On average, you rate {avg_diff:.2f} points higher/lower than IMDb users.**")
+    # 4. Add timestamp for monitoring
+    comparison["CheckedAt"] = pd.Timestamp.now()
+    '''
+    st.code(code, language="python")
+
+    # --- Button to run ---
+    if st.button("Run Live Ratings Monitor"):
+        if My_Ratings.empty:
+            st.warning("⚠️ My Ratings table is empty. Please load your myratings.xlsx.")
         else:
-            st.warning("Columns missing in merged table (`IMDb Rating` or `MyRating`).")
-    else:
-        st.warning("My Ratings table is empty or missing `MyRating` column.")
+            # Merge IMDB_Ratings (updated with votes/2019) and My_Ratings
+            comparison = pd.merge(
+                IMDB_Ratings,
+                My_Ratings,
+                on="Movie ID",
+                suffixes=("_Live", "_Mine")
+            )
+
+            # Ensure numeric types
+            comparison["IMDb Rating_Live"] = pd.to_numeric(comparison["IMDb Rating_Live"], errors="coerce")
+            comparison["Your Rating"] = pd.to_numeric(comparison["Your Rating"], errors="coerce")
+
+            # Compute difference
+            comparison["RatingDiff"] = comparison["IMDb Rating_Live"] - comparison["Your Rating"]
+
+            # Timestamp
+            comparison["CheckedAt"] = pd.Timestamp.now()
+
+            # Show results
+            st.write("### Results: Changed Ratings")
+            st.dataframe(
+                comparison[["Title", "Your Rating", "IMDb Rating_Live", "RatingDiff", "CheckedAt"]],
+                width="stretch",
+                height=400
+            )
+
+            # Save log to CSV (optional for monitoring history)
+            comparison.to_csv("ratings_monitor_log.csv", mode="a", header=False, index=False)
+
+    # --- Explanation ---
+    st.markdown("""
+    **Explanation:**  
+    - Uses my static `myratings.xlsx` as the baseline.  
+    - Pulls updated IMDb ratings (`IMDb Rating_Live`).  
+    - Compares them with my ratings (`Your Rating`).  
+    - Shows how much they changed (`RatingDiff`).  
+    - Adds a timestamp (`CheckedAt`) for monitoring history.  
+
+    **MLOps/CI-CD angle:**  
+    - CI/CD keeps this script versioned in GitHub.  
+    - Monitoring is done by storing changes with timestamps (`ratings_monitor_log.csv`).  
+    - This gives me a reproducible and trackable ratings audit trail.  
+    """)
 
 
 
