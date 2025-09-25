@@ -1633,18 +1633,18 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 
 # Scenario 16 # -------------------------------
 
-# --- Scenario 16: Collaborative Filtering ---
+# --- Scenario 16: Collaborative Filtering (Interactive) ---
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
     st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
 
     if not My_Ratings.empty:
-        # Filter only films you rated highly (8 or 9)
+        # Filter high-rated films (>= 8)
         high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
         if high_rated.empty:
             st.warning("No films with ratings >= 8 in your My Ratings table.")
         else:
-            # Merge with IMDb ratings to get Genre and Director
+            # Merge with IMDb to get Genre and Director
             merged = pd.merge(
                 high_rated,
                 IMDB_Ratings,
@@ -1652,10 +1652,7 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
                 suffixes=("_Mine", "_IMDb")
             )
 
-            # Check merged columns
-            st.write("Merged columns:", merged.columns.tolist())
-
-            # Create features for collaborative filtering using IMDb columns
+            # One-hot encode Genre and Director
             feature_cols = []
             if "Genre_IMDb" in merged.columns:
                 feature_cols.append("Genre_IMDb")
@@ -1665,37 +1662,69 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
             if not feature_cols:
                 st.warning("Genre and Director columns missing after merge.")
             else:
-                # One-hot encode Genre and Director
                 features = pd.get_dummies(merged[feature_cols], columns=feature_cols)
 
-                # Fit NearestNeighbors
-                nn = NearestNeighbors(n_neighbors=6, metric="cosine")  # 6 to include self
-                nn.fit(features)
-
-                # Select first film in high-rated list to get recommendations
-                idx = 0
-                distances, indices = nn.kneighbors([features.iloc[idx]])
-
-                recs = merged.iloc[indices[0]].copy()
-                recs["SimilarityScore"] = 1 - distances[0]
-
-                # Remove the original film from recommendations
-                recs = recs[recs["Movie ID"] != merged.iloc[idx]["Movie ID"]]
-
-                st.write(f"**Based on your high-rated films like '{merged.iloc[idx]['Title_Mine']}', you may also like:**")
-                st.dataframe(
-                    recs[["Title_IMDb", "Genre_IMDb", "Director_IMDb", "SimilarityScore"]],
-                    use_container_width=True
+                # --- Film selection ---
+                selected_film = st.selectbox(
+                    "Select a film to base recommendations on:",
+                    high_rated["Title"].tolist()
                 )
 
-                st.markdown("""
-                **Explanation:**  
-                - Uses your personal high-rated films (Your Rating >= 8).  
-                - Finds other films with similar genres and directors using collaborative filtering.  
-                - SimilarityScore: 1 means identical, 0 means completely different.  
-                """)
+                st.markdown("🔑 **Show Code**")
+                st.code("""
+# Filter high-rated films
+high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
+
+# Merge with IMDb ratings to get Genre and Director
+merged = pd.merge(high_rated, IMDB_Ratings, on="Movie ID", suffixes=("_Mine", "_IMDb"))
+
+# One-hot encode Genre and Director
+features = pd.get_dummies(merged[['Genre_IMDb','Director_IMDb']], columns=['Genre_IMDb','Director_IMDb'])
+
+# Fit NearestNeighbors
+nn = NearestNeighbors(n_neighbors=6, metric='cosine')
+nn.fit(features)
+
+# Get recommendations for selected film
+idx = merged[merged['Title_Mine'] == selected_film].index[0]
+distances, indices = nn.kneighbors([features.iloc[idx]])
+recs = merged.iloc[indices[0]].copy()
+recs["SimilarityScore"] = 1 - distances[0]
+recs = recs[recs["Movie ID"] != merged.iloc[idx]["Movie ID"]]
+""", language="python")
+
+                # --- Run Button ---
+                if st.button("Run Collaborative Filtering"):
+                    nn = NearestNeighbors(n_neighbors=6, metric="cosine")
+                    nn.fit(features)
+
+                    # Find index of selected film
+                    idx = merged[merged['Title_Mine'] == selected_film].index[0]
+
+                    distances, indices = nn.kneighbors([features.iloc[idx]])
+                    recs = merged.iloc[indices[0]].copy()
+                    recs["SimilarityScore"] = 1 - distances[0]
+
+                    # Remove the original film
+                    recs = recs[recs["Movie ID"] != merged.iloc[idx]["Movie ID"]]
+
+                    # Display table
+                    st.write(f"**Recommendations based on '{selected_film}':**")
+                    st.dataframe(
+                        recs[["Title_IMDb", "Genre_IMDb", "Director_IMDb", "SimilarityScore"]],
+                        use_container_width=True
+                    )
+
+                    # Explanation
+                    st.markdown("""
+                    **Explanation:**  
+                    - Uses your personal high-rated films (Your Rating >= 8).  
+                    - Finds other films with similar genres and directors using collaborative filtering.  
+                    - SimilarityScore: 1 means identical, 0 means completely different.  
+                    """)
     else:
         st.warning("My Ratings table is empty.")
+
 
 
 
