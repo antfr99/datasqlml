@@ -1633,11 +1633,7 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 
 # Scenario 16 # -------------------------------
 
-
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
-    import requests
-    from urllib.parse import quote
-
     st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
 
     if not My_Ratings.empty:
@@ -1659,53 +1655,42 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
 # Filter high-rated films
 high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
-# Use OMDb API to get director/actors of selected film
-# Then find other films with same director/actors
+# Use Excel table to find films with same director
 """, language="python")
 
             # --- Run button ---
             if st.button("Run Collaborative Filtering"):
-                OMDB_API_KEY = "YOUR_OMDB_API_KEY"
-                def fetch_film_details(title):
-                    url = f"http://www.omdbapi.com/?t={quote(title)}&apikey={OMDB_API_KEY}"
-                    resp = requests.get(url).json()
-                    director = resp.get("Director", "")
-                    actors = resp.get("Actors", "")
-                    return director, [a.strip() for a in actors.split(",")] if actors else []
-
-                # Get selected film details from OMDb
-                director, actors_list = fetch_film_details(selected_film)
-
-                if not director and not actors_list:
-                    st.warning("Could not fetch film details from OMDb.")
+                # Get selected film's director from My_Ratings
+                director = My_Ratings.loc[My_Ratings["Title"] == selected_film, "Director"].values
+                if len(director) == 0:
+                    st.warning("Selected film not found in My Ratings.")
                 else:
-                    st.write(f"**Selected Film:** {selected_film}")
-                    st.write(f"**Director:** {director}")
-                    st.write(f"**Actors:** {', '.join(actors_list)}")
+                    director = director[0]
 
-                    # Find recommendations from My_Ratings with same director or actors
-                    recs = My_Ratings[
-                        (My_Ratings["Director"] == director) |
-                        (My_Ratings["Title"].isin([title for title in My_Ratings["Title"] if any(actor in My_Ratings["Title"].tolist() for actor in actors_list)]))
+                    # Find other films in IMDB_Ratings with same director
+                    recs = IMDB_Ratings[
+                        (IMDB_Ratings["Director"] == director) &
+                        (IMDB_Ratings["Title"] != selected_film)
                     ]
 
-                    # Remove selected film itself
-                    recs = recs[recs["Title"] != selected_film]
-
                     if recs.empty:
-                        st.info("No recommendations found with same director or actors.")
+                        st.info("No recommendations found with the same director in your IMDB_Ratings table.")
                     else:
-                        st.write("**Recommendations:**")
-                        st.dataframe(recs[["Title", "Director", "Genre", "Your Rating"]], use_container_width=True)
+                        st.write(f"**Selected Film:** {selected_film}")
+                        st.write(f"**Director:** {director}")
+
+                        st.write("**Recommendations based on the same director:**")
+                        st.dataframe(recs[["Title", "Director", "Genre", "IMDb Rating"]], use_container_width=True)
 
                         st.markdown("""
                         **Explanation:**  
-                        - Fetches director and actors from OMDb for the selected film.  
-                        - Finds other films in your rated list with the same director or overlapping actors.  
-                        - Avoids clutter while giving insight into key influence connections.
+                        - Uses the director of the selected film to find other films in your IMDb Ratings table.  
+                        - Avoids slow API calls to OMDb and works entirely from your local Excel data.  
+                        - Shows films that may interest you based on similar creators.
                         """)
     else:
         st.warning("My Ratings table is empty.")
+
 
 
 # -------------------------------
