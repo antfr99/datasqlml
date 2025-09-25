@@ -1299,83 +1299,81 @@ def fetch_movie_data(title):
 
 # --- Scenario 13: Live Ratings Monitor ---
 
-elif scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.markdown("### Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
-
-    st.write("""
-    This scenario checks if **IMDb ratings have changed** compared to the ones stored in my personal ratings file.  
-    It highlights which movies have updated ratings, by how much, and logs the timestamp of the check.  
-    """)
-
-    # --- Grey code box (for demo only, API key hidden) ---
-    code = '''
-    # Pseudo-code example
-    import requests
-    import pandas as pd
-
-    # 1. Load my ratings (from Excel/GitHub)
-    my_ratings = pd.read_excel("myratings.xlsx")
-
-    # 2. Fetch live IMDb ratings from OMDb API
-    url = f"http://www.omdbapi.com/?i={movie_id}&apikey=XXXX"
-    response = requests.get(url).json()
-
-    # 3. Compare "Your Rating" vs IMDb rating
-    comparison["RatingDiff"] = comparison["IMDb Rating_Live"] - comparison["Your Rating"]
-
-    # 4. Add timestamp for monitoring
-    comparison["CheckedAt"] = pd.Timestamp.now()
-    '''
-    st.code(code, language="python")
-
-    # --- Button to run ---
-    if st.button("Run Live Ratings Monitor"):
-        if My_Ratings.empty:
-            st.warning("⚠️ My Ratings table is empty. Please load your myratings.xlsx.")
-        else:
-            # Merge IMDB_Ratings (updated with votes/2019) and My_Ratings
-            comparison = pd.merge(
-                IMDB_Ratings,
-                My_Ratings,
-                on="Movie ID",
-                suffixes=("_Live", "_Mine")
-            )
-
-            # Ensure numeric types
-            comparison["IMDb Rating_Live"] = pd.to_numeric(comparison["IMDb Rating_Live"], errors="coerce")
-            comparison["Your Rating"] = pd.to_numeric(comparison["Your Rating"], errors="coerce")
-
-            # Compute difference
-            comparison["RatingDiff"] = comparison["IMDb Rating_Live"] - comparison["Your Rating"]
-
-            # Timestamp
-            comparison["CheckedAt"] = pd.Timestamp.now()
-
-            # Show results
-            st.write("### Results: Changed Ratings")
-            st.dataframe(
-                comparison[["Title", "Your Rating", "IMDb Rating_Live", "RatingDiff", "CheckedAt"]],
-                width="stretch",
-                height=400
-            )
-
-            # Save log to CSV (optional for monitoring history)
-            comparison.to_csv("ratings_monitor_log.csv", mode="a", header=False, index=False)
-
-    # --- Explanation ---
+# --- Scenario 13: Live Ratings Monitor (MLOps + CI/CD + Monitoring) ---
+if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
+    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
-    **Explanation:**  
-    - Uses my static `myratings.xlsx` as the baseline.  
-    - Pulls updated IMDb ratings (`IMDb Rating_Live`).  
-    - Compares them with my ratings (`Your Rating`).  
-    - Shows how much they changed (`RatingDiff`).  
-    - Adds a timestamp (`CheckedAt`) for monitoring history.  
+    This scenario compares your **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for your **top 20 sci-fi films**.  
 
-    **MLOps/CI-CD angle:**  
-    - CI/CD keeps this script versioned in GitHub.  
-    - Monitoring is done by storing changes with timestamps (`ratings_monitor_log.csv`).  
-    - This gives me a reproducible and trackable ratings audit trail.  
+    The table shows:  
+    - Title  
+    - Original IMDb Rating  
+    - Live IMDb Rating  
+    - Rating difference  
+    - Timestamp of check
     """)
+
+    # --- Filter top 20 sci-fi films ---
+    if "Sci-Fi" not in IMDB_Ratings["Genre"].values:
+        st.warning("No Sci-Fi films found in your IMDb Ratings Excel.")
+    else:
+        top20_sci_fi = IMDB_Ratings[IMDB_Ratings["Genre"].str.contains("Sci-Fi")].sort_values(
+            by="IMDb Rating", ascending=False
+        ).head(20)
+
+        # --- Hidden API key in grey box ---
+        with st.expander("🔑 Show Code (API key hidden)", expanded=False):
+            st.code("""
+import requests
+OMDB_API_KEY = "YOUR_OMDB_API_KEY"  # Hidden
+
+def fetch_live_rating(title):
+    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    resp = requests.get(url).json()
+    return float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+            """, language="python")
+
+        # --- Run Button ---
+        if st.button("Run Live Ratings Check"):
+            import requests
+            from datetime import datetime
+
+            results = []
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            for _, row in top20_sci_fi.iterrows():
+                title = row["Title"]
+                static_rating = row["IMDb Rating"]
+
+                try:
+                    url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
+                    resp = requests.get(url).json()
+                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+                except Exception as e:
+                    live_rating = None
+
+                rating_diff = live_rating - static_rating if live_rating is not None else None
+
+                results.append({
+                    "Title": title,
+                    "IMDb Rating (Static)": static_rating,
+                    "IMDb Rating (Live)": live_rating,
+                    "Rating Difference": rating_diff,
+                    "CheckedAt": timestamp
+                })
+
+            df_results = pd.DataFrame(results)
+            st.success("Live ratings check complete ✅")
+            st.dataframe(df_results, use_container_width=True)
+
+            st.markdown("""
+            **Explanation:**  
+            - Each film's **static IMDb rating** from your Excel is compared with the **current live IMDb rating** from OMDb.  
+            - **Rating Difference** shows how much the rating changed.  
+            - **CheckedAt** shows when this check was performed.  
+            - Limiting to **top 20 Sci-Fi films** keeps the check fast and avoids API limits.  
+            - This scenario supports **MLOps + CI/CD + Monitoring** by tracking live rating changes over time and logging them.
+            """)
 
 
 
@@ -1576,34 +1574,79 @@ elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Dire
 # -------------------------------
 
 elif scenario == "Scenario 17 – Explainable AI: See Which Features Affect My Predicted Ratings (LIME)":
-    st.markdown("#### Explainable AI – Why Did the Model Predict My Rating?")
+    st.markdown("### Scenario 17 – Explainable AI with LIME")
 
-    if not My_Ratings.empty and "MyRating" in My_Ratings.columns:
-        # Merge IMDb + My Ratings
-        comparison = pd.merge(IMDB_Ratings, My_Ratings, on="Movie ID", suffixes=("_IMDb", "_Mine"))
+    st.write("""
+    This scenario uses **LIME (Local Interpretable Model-Agnostic Explanations)** to show which features most influence the prediction of **your personal ratings**.  
+    You will see a table with predicted ratings, actual ratings, and feature contributions.
+    """)
 
-        # Select features
-        X = pd.get_dummies(comparison[["Genre", "Director"]])
-        y = comparison["MyRating"]
+    # --- Grey code box ---
+    st.code("""
+# Example workflow:
+# 1. Use RandomForestRegressor to predict 'Your Rating' from numeric features.
+# 2. Apply LIME to see which features most influenced each prediction.
+# 3. Show contributions in a table for interpretability.
+    """, language="python")
 
-        # Train model
-        model = RandomForestRegressor(n_estimators=50, random_state=42)
-        model.fit(X, y)
+    # --- Button to run ---
+    if st.button("Run Explainable AI (LIME) Analysis"):
 
-        # Explain a sample film
-        explainer = LimeTabularExplainer(
-            training_data=np.array(X),
-            feature_names=X.columns,
-            mode="regression"
-        )
+        if My_Ratings.empty:
+            st.warning("My Ratings table is empty or missing data.")
+        else:
+            from sklearn.model_selection import train_test_split
+            from sklearn.preprocessing import LabelEncoder
 
-        i = 0  # first film
-        exp = explainer.explain_instance(X.iloc[i].to_numpy(), model.predict, num_features=5)
+            # --- Prepare dataset ---
+            df = My_Ratings.copy()
 
-        st.write("**Film explained:**", comparison.iloc[i]["Title"])
-        st.write("**My Rating:**", comparison.iloc[i]["MyRating"])
-        st.write("**IMDb Rating:**", comparison.iloc[i]["IMDb Rating"])
-        st.write("**Feature Contributions:**")
-        st.write(exp.as_list())
-    else:
-        st.warning("My Ratings table is empty or missing `MyRating` column.")
+            # Keep only relevant numeric features and encode categorical
+            features = ["Runtime (mins)", "Year"]
+            if "Genre" in df.columns:
+                df["Genre_Cat"] = LabelEncoder().fit_transform(df["Genre"])
+                features.append("Genre_Cat")
+            if "Director" in df.columns:
+                df["Director_Cat"] = LabelEncoder().fit_transform(df["Director"])
+                features.append("Director_Cat")
+
+            X = df[features].values
+            y = df["Your Rating"].values
+
+            # Split train/test (optional, here we use all for LIME demo)
+            model = RandomForestRegressor(n_estimators=100, random_state=42)
+            model.fit(X, y)
+
+            # --- Apply LIME ---
+            explainer = LimeTabularExplainer(
+                X,
+                feature_names=features,
+                mode="regression"
+            )
+
+            # Collect explanation for first 10 rows (for speed)
+            explanations = []
+            for i in range(min(10, len(X))):
+                exp = explainer.explain_instance(X[i], model.predict, num_features=len(features))
+                contributions = dict(exp.as_list())
+                row_result = {
+                    "Title": df.iloc[i]["Title"],
+                    "Your Rating": df.iloc[i]["Your Rating"],
+                    "Predicted Rating": model.predict(X[i].reshape(1, -1))[0]
+                }
+                # Add contributions
+                for f in features:
+                    row_result[f"{f}_contribution"] = contributions.get(f, 0)
+                explanations.append(row_result)
+
+            exp_df = pd.DataFrame(explanations)
+            st.write("### LIME Feature Contributions for Predicted Ratings")
+            st.dataframe(exp_df, width="stretch", height=400)
+
+            st.markdown("""
+            **Explanation:**  
+            - **LIME** approximates the model locally to explain each prediction.  
+            - Each `_contribution` column shows how much a feature increased or decreased the predicted rating.  
+            - This allows you to **understand why the model predicts a certain rating for each film**.  
+            - Even non-technical users can see which features drive predictions.
+            """)
