@@ -1297,24 +1297,25 @@ def fetch_movie_data(title):
 
 
 # --- Scenario 13: Live Ratings Monitor ---
+
 # --- Scenario 13: Live Ratings Monitor (MLOps + CI/CD + Monitoring) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
-    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating. Only basic framework created for various reasons**.  
+    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating**.  
 
     The table shows:  
     - Title  
     - Original IMDb Rating  
     - Live IMDb Rating  
-    - Rating difference  
+    - Rating Difference  
     - Timestamp of check
     """)
 
     # --- Select top 50 films ---
     top50_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(50)
 
-    # --- Hidden API key in grey box ---
+    # --- Hidden API key / fetch function in grey box ---
     with st.expander("🔑 Show Code", expanded=False):
         st.code("""
 import requests
@@ -1348,10 +1349,10 @@ def fetch_live_rating(title):
             static_rating = row["IMDb Rating"]
 
             try:
-                url = f"http://www.omdbapi.com/?t={title}&apikey=bcf17f38"
+                url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
                 resp = requests.get(url).json()
                 live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-            except Exception as e:
+            except Exception:
                 live_rating = None
 
             rating_diff = live_rating - static_rating if live_rating is not None else None
@@ -1366,7 +1367,7 @@ def fetch_live_rating(title):
 
         new_df = pd.DataFrame(results)
 
-        # Append to history and save CSV (this can be pushed to GitHub)
+        # Append to history and save CSV
         history_df = pd.concat([history_df, new_df], ignore_index=True)
         history_df.to_csv(history_file, index=False)
 
@@ -1379,9 +1380,9 @@ def fetch_live_rating(title):
         - **Rating Difference** shows how much the rating changed.  
         - **CheckedAt** shows when this check was performed.  
         - All results are saved to `live_ratings_history.csv`, supporting **MLOps + CI/CD + Monitoring** by logging changes over time.  
-        - The `live_ratings_history.csv` can be pushed to GitHub to keep versioned history and track ratings changes in selected branch.            
+        - The `live_ratings_history.csv` can be version-controlled on GitHub to track rating changes over time.
+        - True automated monitoring could be added by scheduling this script to run at regular intervals (e.g., daily or weekly) and pushing the results to a versioned repository.
         """)
-
 
 
 
