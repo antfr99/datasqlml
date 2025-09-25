@@ -1634,63 +1634,84 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 # Scenario 16 # -------------------------------
 
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
-    st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
+    st.markdown("#### Collaborative Filtering – Hybrid Director + Genre Recommendations")
 
     if not My_Ratings.empty:
-        # Filter high-rated films (>=8)
-        high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
+        # Filter only high-rated films
+        top_films = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
-        if high_rated.empty:
-            st.warning("No films with ratings >= 8 in your My Ratings table.")
+        if top_films.empty:
+            st.warning("No films rated 8 or higher in your data.")
         else:
-            # --- Film selection ---
+            # --- Film Selection ---
             selected_film = st.selectbox(
-                "Select a film to base recommendations on:",
-                high_rated["Title"].tolist()
+                "Select a film to get recommendations:",
+                top_films["Title"].tolist()
             )
 
             # --- Show code ---
-            with st.expander("🔑 Show Code"):
+            with st.expander("🔑 Show Code", expanded=False):
                 st.code("""
-# Filter high-rated films
-high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
+# Hybrid Collaborative Filtering
+# 1. Find films with the same director
+# 2. Supplement with films in the same genre
+selected_row = My_Ratings[My_Ratings["Title"] == selected_film]
+director = selected_row["Director"].values[0]
+genres = selected_row["Genre"].values[0].split(", ")
 
-# Use Excel table to find films with same director
-""", language="python")
+# Films with same director
+same_director = My_Ratings[(My_Ratings["Director"] == director) & (My_Ratings["Title"] != selected_film)]
+
+# Films with same genre (excluding duplicates)
+same_genre = My_Ratings[
+    My_Ratings["Title"] != selected_film
+]
+same_genre = same_genre[
+    same_genre["Title"].isin(
+        My_Ratings[My_Ratings["Genre"].apply(lambda g: any(genre in g for genre in genres))]["Title"]
+    )
+]
+# Combine and remove duplicates
+recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=["Title"])
+                """, language="python")
 
             # --- Run button ---
-            if st.button("Run Collaborative Filtering"):
-                # Get selected film's director from My_Ratings
-                director = My_Ratings.loc[My_Ratings["Title"] == selected_film, "Director"].values
-                if len(director) == 0:
-                    st.warning("Selected film not found in My Ratings.")
+            if st.button("Run Recommendations"):
+                selected_row = My_Ratings[My_Ratings["Title"] == selected_film]
+                director = selected_row["Director"].values[0]
+                genres = selected_row["Genre"].values[0].split(", ")
+
+                # Films with same director
+                same_director = My_Ratings[(My_Ratings["Director"] == director) & (My_Ratings["Title"] != selected_film)]
+
+                # Films with same genre (excluding duplicates)
+                same_genre = My_Ratings[My_Ratings["Title"] != selected_film]
+                same_genre = same_genre[
+                    same_genre["Title"].isin(
+                        My_Ratings[My_Ratings["Genre"].apply(lambda g: any(genre in g for genre in genres))]["Title"]
+                    )
+                ]
+
+                # Combine and remove duplicates
+                recommendations = pd.concat([same_director, same_genre]).drop_duplicates(subset=["Title"])
+
+                if recommendations.empty:
+                    st.info("No recommendations found for this film.")
                 else:
-                    director = director[0]
+                    st.write(f"**Based on '{selected_film}', you may also like:**")
+                    st.dataframe(
+                        recommendations[["Title", "Director", "Genre", "Your Rating", "IMDb Rating"]],
+                        use_container_width=True
+                    )
 
-                    # Find other films in IMDB_Ratings with same director
-                    recs = IMDB_Ratings[
-                        (IMDB_Ratings["Director"] == director) &
-                        (IMDB_Ratings["Title"] != selected_film)
-                    ]
-
-                    if recs.empty:
-                        st.info("No recommendations found with the same director in your IMDB_Ratings table.")
-                    else:
-                        st.write(f"**Selected Film:** {selected_film}")
-                        st.write(f"**Director:** {director}")
-
-                        st.write("**Recommendations based on the same director:**")
-                        st.dataframe(recs[["Title", "Director", "Genre", "IMDb Rating"]], use_container_width=True)
-
-                        st.markdown("""
-                        **Explanation:**  
-                        - Uses the director of the selected film to find other films in your IMDb Ratings table.  
-                        - Avoids slow API calls to OMDb and works entirely from your local Excel data.  
-                        - Shows films that may interest you based on similar creators.
-                        """)
+                    st.markdown("""
+                    **Explanation:**  
+                    - Films by the same director are prioritized.  
+                    - Additional films in the same genre are included.  
+                    - This hybrid approach balances **director-based** and **genre-based** recommendations for your top-rated films.
+                    """)
     else:
         st.warning("My Ratings table is empty.")
-
 
 
 # -------------------------------
