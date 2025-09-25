@@ -1633,40 +1633,69 @@ def counterfactual_rating(current_rating, director_boost, budget_boost, actor_bo
 
 # Scenario 16 # -------------------------------
 
+# --- Scenario 16: Collaborative Filtering ---
 elif scenario == "Scenario 16 – Collaborative Filtering: Recommend Genres/Directors Based on My Personal High Ratings":
     st.markdown("#### Collaborative Filtering – Recommend Films You Might Like")
 
-    if not My_Ratings.empty and "Your Rating" in My_Ratings.columns:
-        # Filter only films you rated highly
+    if not My_Ratings.empty:
+        # Filter only films you rated highly (8 or 9)
         high_rated = My_Ratings[My_Ratings["Your Rating"] >= 8]
 
         if high_rated.empty:
-            st.warning("No films with ratings >= 8 in your data.")
+            st.warning("No films with ratings >= 8 in your My Ratings table.")
         else:
-            # Merge with IMDb to get genres/directors
-            merged = pd.merge(high_rated, IMDB_Ratings, on="Movie ID", suffixes=("_Mine", "_IMDb"))
-
-            # Build features from Genre + Director
-            features = pd.get_dummies(
-                merged[["Genre", "Director"]],
-                columns=["Genre", "Director"]
+            # Merge with IMDb ratings to get Genre and Director
+            merged = pd.merge(
+                high_rated,
+                IMDB_Ratings,
+                on="Movie ID",
+                suffixes=("_Mine", "_IMDb")
             )
 
-            # Fit nearest neighbors on high-rated films
-            nn = NearestNeighbors(n_neighbors=5, metric="cosine")
-            nn.fit(features)
+            # Check merged columns
+            st.write("Merged columns:", merged.columns.tolist())
 
-            # Get recommendations for first film in your high-rated list
-            idx = 0
-            distances, indices = nn.kneighbors([features.iloc[idx]])
+            # Create features for collaborative filtering using IMDb columns
+            feature_cols = []
+            if "Genre_IMDb" in merged.columns:
+                feature_cols.append("Genre_IMDb")
+            if "Director_IMDb" in merged.columns:
+                feature_cols.append("Director_IMDb")
 
-            recs = merged.iloc[indices[0]].copy()
-            recs["SimilarityScore"] = 1 - distances[0]
+            if not feature_cols:
+                st.warning("Genre and Director columns missing after merge.")
+            else:
+                # One-hot encode Genre and Director
+                features = pd.get_dummies(merged[feature_cols], columns=feature_cols)
 
-            st.write("**Based on your high-rated films, you may also like:**")
-            st.dataframe(recs[["Title", "Genre", "Director", "SimilarityScore"]])
+                # Fit NearestNeighbors
+                nn = NearestNeighbors(n_neighbors=6, metric="cosine")  # 6 to include self
+                nn.fit(features)
+
+                # Select first film in high-rated list to get recommendations
+                idx = 0
+                distances, indices = nn.kneighbors([features.iloc[idx]])
+
+                recs = merged.iloc[indices[0]].copy()
+                recs["SimilarityScore"] = 1 - distances[0]
+
+                # Remove the original film from recommendations
+                recs = recs[recs["Movie ID"] != merged.iloc[idx]["Movie ID"]]
+
+                st.write(f"**Based on your high-rated films like '{merged.iloc[idx]['Title_Mine']}', you may also like:**")
+                st.dataframe(
+                    recs[["Title_IMDb", "Genre_IMDb", "Director_IMDb", "SimilarityScore"]],
+                    use_container_width=True
+                )
+
+                st.markdown("""
+                **Explanation:**  
+                - Uses your personal high-rated films (Your Rating >= 8).  
+                - Finds other films with similar genres and directors using collaborative filtering.  
+                - SimilarityScore: 1 means identical, 0 means completely different.  
+                """)
     else:
-        st.warning("My Ratings table is empty or missing `Your Rating` column.")
+        st.warning("My Ratings table is empty.")
 
 
 
