@@ -1381,16 +1381,16 @@ else:
 
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
+    import streamlit as st
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
-    from itertools import chain
 
     st.header("Scenario 14 – Network Influence Analysis")
     st.markdown("""
     Select a film from my **top-rated films** to see connections:
-    - Director and actors of the film
-    - Other films sharing the same director or actors (from my top-rated list)
+    - Director and up to 5 actors of the film
+    - Up to 5 other films sharing the same director or actors (from my top-rated list)
     - Visual network of relationships
     """)
 
@@ -1415,6 +1415,7 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 actors_list = [a.strip() for a in actors.split(",")] if actors else []
                 return director, actors_list[:5]  # Limit to 5 actors
 
+            # Fetch selected film details
             director, actors_list = fetch_film_details(selected_film)
 
             st.markdown(f"**Selected Film:** {selected_film}")
@@ -1424,8 +1425,12 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
             # Build network graph
             G = nx.Graph()
             G.add_node(selected_film, type="film")
+
+            # Connect director
             G.add_node(director, type="director")
-            G.add_edges_from([(selected_film, director)])
+            G.add_edge(selected_film, director)
+
+            # Connect actors
             for actor in actors_list:
                 G.add_node(actor, type="actor")
                 G.add_edge(selected_film, actor)
@@ -1439,7 +1444,7 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                     continue
                 related_title = row["Title"]
                 rel_director, rel_actors = fetch_film_details(related_title)
-                rel_actors = rel_actors[:5]  # Ensure max 5 actors
+                rel_actors = rel_actors[:5]  # Limit to 5 actors
                 added = False
 
                 # Connect if same director
@@ -1458,9 +1463,16 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 if added:
                     related_count += 1
 
-            # Draw network
+            # Draw network using shell layout
             plt.figure(figsize=(12, 8))
-            pos = nx.spring_layout(G, k=0.5, iterations=50)
+            film_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "film"]
+            actor_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "actor"]
+            director_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "director"]
+
+            # Shell layout: center = selected film, first ring = director + actors, second ring = related films
+            shells = [[selected_film], director_nodes + actor_nodes, [f for f in film_nodes if f != selected_film]]
+            pos = nx.shell_layout(G, nlist=shells)
+
             colors = []
             for n, data in G.nodes(data=True):
                 if data["type"] == "film":
@@ -1469,16 +1481,18 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                     colors.append("lightgreen")
                 else:
                     colors.append("lightpink")
+
             nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
             st.pyplot(plt)
 
             st.markdown("""
             **Explanation:**  
-            - The selected film connects to its **director** and up to **5 actors**.  
-            - Other films in my top-rated list are added if they share the **same director** or any **actors** (max 5 films).  
+            - The selected film is **central**.  
+            - Up to **5 actors** and the **director** are connected directly to the selected film.  
+            - Up to **5 related films** are connected via shared director or actors.  
             - Colors:  
                 - **Light blue** = film  
                 - **Light green** = director  
                 - **Light pink** = actors  
-            - This keeps the network readable and avoids clutter.
+            - Layout ensures readability without clutter.
             """)
