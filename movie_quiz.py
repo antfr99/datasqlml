@@ -1385,7 +1385,6 @@ def fetch_live_rating(title):
         """)
 
 
-
 # --- Scenario 7 Poster Analysis ---
 if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
     st.header("Scenario 7 – Poster Image & Mood Analysis")
@@ -1393,6 +1392,11 @@ if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
     Select a movie, then click **Fetch Poster & Analyze** to display the poster, 
     dominant colors, and an easy-to-understand mood analysis.
     """)
+
+    import requests
+    from PIL import Image
+    import numpy as np
+    from sklearn.cluster import KMeans
 
     # --- Editable code block ---
     poster_code = '''
@@ -1469,7 +1473,7 @@ else:
                 "OMDB_API_KEY": OMDB_API_KEY,
                 "st": st,
                 "np": np,
-                "KMeans": __import__('sklearn.cluster').cluster.KMeans,
+                "KMeans": KMeans,
                 "requests": requests,
                 "Image": Image
             }
