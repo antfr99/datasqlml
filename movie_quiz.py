@@ -1333,7 +1333,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # --- Show sorted results by Rating Difference ---
         if not new_df.empty:
-            st.subheader("📊 Current Run (English-language films only)")
+            st.subheader("📊 Current Run")
             st.dataframe(
                 new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
                 use_container_width=True
