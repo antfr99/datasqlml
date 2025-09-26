@@ -95,7 +95,7 @@ scenario = st.radio(
         "Scenario 6 – Review Analysis (Sentiment, Subjectivity)",
         "Scenario 7 – Poster Image Analysis (OMDb API)",
         "Scenario 8 – Graph Based Movie Relationships",
-        "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films", 
+        "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections", 
         "Scenario 10 – Predict My Ratings (ML)", 
         "Scenario 11 – Model Evaluation (Feature Importance)",
         "Scenario 12 – Feature Hypothesis Testing",
@@ -115,7 +115,7 @@ if scenario == "Scenario 1 – Highlight Disagreements (SQL)":
 
     default_query_1 = """SELECT 
        pr.Title,
-       pr.[Your Rating],
+       pr.[Your Rating] AS [My Rating],
        ir.[IMDb Rating],
        ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
        CASE 
@@ -1387,7 +1387,7 @@ def fetch_live_rating(title):
 
 
 # --- Scenario 9: Network Influence Analysis ---
-if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
+if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
