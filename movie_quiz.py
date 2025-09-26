@@ -1324,20 +1324,26 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
         results = []
 
         for _, row in top100_films.iterrows():
-            title = row["Title"]
+            movie_id = row["Movie ID"]  # IMDb ID like 'tt0043014'
             static_rating = row["IMDb Rating"]
 
             try:
-                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+                # Query OMDb using the unique Movie ID
+                url = f"http://www.omdbapi.com/?i={movie_id}&apikey={OMDB_API_KEY}"
                 resp = requests.get(url).json()
-                live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+                
+                # Only take the rating if the movie was found
+                if resp.get("Response") == "True":
+                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+                else:
+                    live_rating = None
             except Exception:
                 live_rating = None
 
             rating_diff = live_rating - static_rating if live_rating is not None else None
 
             results.append({
-                "Title": title,
+                "Title": row["Title"],
                 "IMDb Rating (Static)": static_rating,
                 "IMDb Rating (Live)": live_rating,
                 "Rating Difference": rating_diff,
