@@ -1333,13 +1333,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # --- Show sorted results by Rating Difference ---
         if not new_df.empty:
-            st.subheader("📊 Current Run (English-language films only)")
+            st.subheader("📊 Current Run")
             st.dataframe(
                 new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
                 use_container_width=True
             )
         else:
-            st.warning("No English-language films with rating changes found in this run.")
+            st.warning("Rating changes found in this run")
 
         # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
