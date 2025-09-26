@@ -1404,6 +1404,9 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
         film_options = top_films["Title"].astype(str).tolist()
         selected_film = st.selectbox("Select a film to inspect:", film_options)
 
+        # --- Hidden API key ---
+        OMDB_API_KEY = "bcf17f38"
+
         # --- Editable code block ---
         network_code = '''
 import requests
@@ -1413,7 +1416,6 @@ import matplotlib.pyplot as plt
 MAX_ACTORS = 5
 MAX_RELATED_FILMS = 5
 
-# --- Function to fetch director and actors ---
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
@@ -1434,7 +1436,7 @@ for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
-# --- Add related films (same director or shared actors) ---
+# --- Add related films ---
 related_count = 0
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film or related_count >= MAX_RELATED_FILMS:
@@ -1477,20 +1479,20 @@ for n, data in G.nodes(data=True):
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10, edge_color="gray")
 plt.show()
         '''
-        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
 
-        # --- Hidden API key ---
-        OMDB_API_KEY = "bcf17f38"
+        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
 
         # --- Run button ---
         if st.button("Run Network Analysis"):
             try:
-                local_vars = {
+                # Pass all variables, including OMDB_API_KEY, to the exec environment
+                exec_globals = {
                     "top_films": top_films,
                     "selected_film": selected_film,
-                    "OMDB_API_KEY": OMDB_API_KEY
+                    "OMDB_API_KEY": OMDB_API_KEY,
+                    "st": st
                 }
-                exec(user_network_code, {}, local_vars)
+                exec(user_network_code, exec_globals)
 
                 st.success("Network analysis executed successfully.")
                 st.markdown("""
