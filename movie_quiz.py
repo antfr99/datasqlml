@@ -1425,7 +1425,7 @@ def fetch_film_details(title):
 
 director, actors_list = fetch_film_details(selected_film)
 
-# Build network graph
+
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
