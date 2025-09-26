@@ -1237,7 +1237,7 @@ if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning 
             """)
 
 
-# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (USA & English only) ---
+# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (English only) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
@@ -1254,7 +1254,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "50bcb7e2"
+    OMDB_API_KEY = "e9476c0a"
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
@@ -1292,20 +1292,17 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 resp = requests.get(url).json()
 
                 if resp.get("Response") == "True":
-                    country = resp.get("Country", "Unknown")
                     language = resp.get("Language", "Unknown")
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
                 else:
-                    country = "Unknown"
                     language = "Unknown"
                     live_rating = None
             except Exception:
-                country = "Unknown"
                 language = "Unknown"
                 live_rating = None
 
-            # --- Only include USA films in English ---
-            if country != "USA" or "English" not in language:
+            # --- Only include English-language films ---
+            if "English" not in language:
                 continue
 
             rating_diff = live_rating - static_rating if live_rating is not None else None
@@ -1321,28 +1318,28 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 "Director": row.get("Director"),
                 "Year": row.get("Year"),
                 "Num Votes": row.get("Num Votes"),
-                "Country": country,
                 "Language": language
             })
 
         new_df = pd.DataFrame(results)
 
-        # Keep only rows with non-zero rating differences
-        new_df = new_df[new_df["Rating Difference"] != 0]
-
-        # Append, remove duplicates, and save CSV
-        history_df = pd.concat([history_df, new_df], ignore_index=True)
-        history_df.drop_duplicates(subset=["Movie ID", "CheckedAt"], keep="last", inplace=True)
-        history_df.to_csv(history_file, index=False)
+        # Only keep rows with non-zero rating differences if the column exists
+        if not new_df.empty and "Rating Difference" in new_df.columns:
+            new_df = new_df[new_df["Rating Difference"] != 0]
+        else:
+            new_df = pd.DataFrame()  # Ensure it’s still a DataFrame even if empty
 
         st.success("Live ratings check complete ✅")
 
         # --- Show sorted results by Rating Difference ---
-        st.subheader("📊 Current Run (USA films in English only)")
-        st.dataframe(
-            new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
-            use_container_width=True
-        )
+        if not new_df.empty:
+            st.subheader("📊 Current Run (English-language films only)")
+            st.dataframe(
+                new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
+                use_container_width=True
+            )
+        else:
+            st.warning("No English-language films with rating changes found in this run.")
 
         # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
@@ -1373,13 +1370,16 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         X_pred = predict_df[categorical_features + numerical_features]
         predict_df['Predicted Rating'] = model.predict(X_pred)
 
-        st.subheader("🤖 Predicted Ratings for Unseen USA Movies in English with Changed Ratings")
-        st.dataframe(
-            predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
-            .sort_values(by='Predicted Rating', ascending=False)
-            .reset_index(drop=True),
-            use_container_width=True
-        )
+        if not predict_df.empty:
+            st.subheader("🤖 Predicted Ratings for Unseen English-Language Movies with Changed Ratings")
+            st.dataframe(
+                predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .reset_index(drop=True),
+                use_container_width=True
+            )
+        else:
+            st.info("No new English-language movies available for prediction this run.")
 
         # --- Explain how Python and packages make predictions ---
         st.markdown("""
