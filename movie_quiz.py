@@ -1379,7 +1379,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 use_container_width=True
             )
         else:
-            st.info("No new movies available for prediction this run.")
+            st.info("No new English-language movies available for prediction this run.")
 
         # --- Explain how Python and packages make predictions ---
         st.markdown("""
@@ -1387,7 +1387,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 1. **Data Preparation**  
    - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
-   - `My Rating` is the target variable for supervised learning.
+   - `Your Rating` is the target variable for supervised learning.
 
 2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
    - Categorical features are converted to **one-hot encoded vectors**.  
@@ -1401,10 +1401,10 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
      - This reduces overfitting and improves accuracy.
 
 4. **Training**  
-   - Model learns patterns from movies I have rated (`My Rating`).  
+   - Model learns patterns from movies you have rated (`Your Rating`).  
 
 5. **Prediction**  
-   - Model predicts ratings for movies I haven’t rated based on learned patterns.  
+   - Model predicts ratings for movies you haven’t rated based on learned patterns.  
 
 6. **Why this works**  
    - Handles non-linear relationships and feature interactions naturally.  
