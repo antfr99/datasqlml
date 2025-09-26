@@ -96,12 +96,11 @@ scenario = st.radio(
         "Scenario 6 – Review Analysis (Sentiment, Subjectivity)",
         "Scenario 7 – Poster Image Analysis (OMDb API)",
         "Scenario 8 – Graph Based Movie Relationships",
-        "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections", 
-        "Scenario 10 – Predict My Ratings (ML)", 
-        "Scenario 11 – Model Evaluation (Feature Importance)",
-        "Scenario 12 – Feature Hypothesis Testing",
-        "Scenario 13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
-        "Scenario 14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",      
+        "Scenario 9 – Predict My Ratings (ML)", 
+        "Scenario 10 – Model Evaluation (Feature Importance)",
+        "Scenario 11 – Feature Hypothesis Testing",
+        "Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
+        "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",      
                 
     ]
 )
@@ -224,8 +223,8 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 
 # --- Scenario 10: Python ML ---
-if scenario == "Scenario 10 – Predict My Ratings (ML)":
-    st.header("Scenario 10 – Predict My Ratings (ML)")
+if scenario == "Scenario 9 – Predict My Ratings (ML)":
+    st.header("Scenario 9 – Predict My Ratings (ML)")
     st.write("""
     Predict my ratings for unseen movies using a machine learning model.
 
@@ -619,8 +618,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # --- Scenario 8 ---
-if scenario == "Scenario 11 – Model Evaluation (Feature Importance)":
-    st.header("Scenario 11 – Model Evaluation: Feature Importance")
+if scenario == "Scenario 10 – Model Evaluation (Feature Importance)":
+    st.header("Scenario 10 – Model Evaluation: Feature Importance")
 
     st.write("""
     We analyze which features matter most for predicting **my movie ratings** using a Random Forest model.  
@@ -635,7 +634,7 @@ if scenario == "Scenario 11 – Model Evaluation (Feature Importance)":
     # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
         st.warning("Model not found. Retrain here.")
-        if st.button("Run Scenario 10 ( Predit My Ratings ) Training Now"):
+        if st.button("Run Scenario 9 ( Predit My Ratings ) Training Now"):
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
             from sklearn.compose import ColumnTransformer
@@ -744,8 +743,8 @@ if scenario == "Scenario 11 – Model Evaluation (Feature Importance)":
 
 
 # --- Scenario 12: Feature Hypothesis Testing ---
-if scenario == "Scenario 12 – Feature Hypothesis Testing":
-    st.header("Scenario 12 – Feature Hypothesis Testing & Predictions")
+if scenario == "Scenario 11 – Feature Hypothesis Testing":
+    st.header("Scenario 11 – Feature Hypothesis Testing & Predictions")
 
     st.markdown("""
     Select features to test if they **improve model predictions** for your ratings.
@@ -1056,8 +1055,8 @@ This visualization helps you explore the movie dataset’s structure and uncover
 
 
 # --- Scenario 13: Deep Learning Semantic Genre Analysis ---
-if scenario == "Scenario 13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
-    st.header("Scenario 13 – Semantic Genre & Recommendations (Deep Learning / NLP)")
+if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)":
+    st.header("Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)")
     st.markdown("""
     This scenario uses **sentence embeddings** to determine the main genre of films by analyzing the plot.  
     The table shows:
@@ -1191,11 +1190,11 @@ def fetch_movie_data(title):
 
 
 
-# --- Scenario 14: Live Ratings Monitor ---
+# --- Scenario 13 Live Ratings Monitor ---
 
-# --- Scenario 14: Live Ratings Monitor (MLOps + CI/CD + Monitoring) ---
-if scenario == "Scenario 14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("Scenario 14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
+
+if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
+    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
     This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating**.  
 
@@ -1378,130 +1377,3 @@ else:
 
 
 
-
-# --- Scenario 9: Network Influence Analysis ---
-
-
-# --- Scenario 9: Network Influence Analysis ---
-if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
-    import streamlit as st
-    import networkx as nx
-    import matplotlib.pyplot as plt
-    import requests
-    import math
-
-    st.header("Scenario 9 – Network Influence Analysis")
-    st.markdown("""
-    Select a film from your **top-rated films** to see connections:
-    - Director and up to 5 actors of the film
-    - Up to 5 other films sharing the same director or actors (from your top-rated list)
-    - Visual network of relationships
-    """)
-
-    # --- Filter top-rated films (8 or 9) ---
-    top_films = My_Ratings[My_Ratings["Your Rating"] >= 8].copy()
-
-    if top_films.empty:
-        st.warning("No films with rating 8 or 9 found in your My_Ratings Excel.")
-    else:
-        # --- Film selection ---
-        film_options = top_films["Title"].astype(str).tolist()
-        selected_film = st.selectbox("Select a film to inspect:", film_options)
-
-        if st.button("Run Network Analysis"):
-
-            # --- Fetch film details ---
-            def fetch_film_details(title):
-                OMDB_API_KEY = "bcf17f38"  # Replace with your own
-                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-                resp = requests.get(url).json()
-                director = resp.get("Director", "")
-                actors = resp.get("Actors", "")
-                actors_list = [a.strip() for a in actors.split(",")] if actors else []
-                return director, actors_list[:5]
-
-            director, actors_list = fetch_film_details(selected_film)
-
-            st.markdown(f"**Selected Film:** {selected_film}")
-            st.markdown(f"**Director:** {director if director else 'N/A'}")
-            st.markdown(f"**Actors:** {', '.join(actors_list) if actors_list else 'N/A'}")
-
-            # --- Build network graph ---
-            G = nx.Graph()
-            G.add_node(selected_film, type="film")
-
-            if director:
-                G.add_node(director, type="director")
-                G.add_edge(selected_film, director)
-
-            for actor in actors_list:
-                G.add_node(actor, type="actor")
-                G.add_edge(selected_film, actor)
-
-            # --- Add related films (limit 5) ---
-            related_count = 0
-            for _, row in top_films.iterrows():
-                if related_count >= 5:
-                    break
-                if row["Title"] == selected_film:
-                    continue
-                related_title = row["Title"]
-                rel_director, rel_actors = fetch_film_details(related_title)
-                rel_actors = rel_actors[:5]
-
-                added = False
-                if director and rel_director == director:
-                    G.add_node(related_title, type="film")
-                    G.add_edge(related_title, director)
-                    added = True
-
-                shared_actors = set(rel_actors).intersection(set(actors_list))
-                for sa in shared_actors:
-                    G.add_node(related_title, type="film")
-                    G.add_edge(related_title, sa)
-                    added = True
-
-                if added:
-                    related_count += 1
-
-            # --- Layout ---
-            pos = {selected_film: (0, 0)}
-            first_ring = ([director] if director else []) + actors_list
-            second_ring = [n for n, d in G.nodes(data=True) if d["type"] == "film" and n != selected_film]
-
-            r1, r2 = 1.5, 3
-            for i, node in enumerate(first_ring):
-                angle = 2 * math.pi * i / len(first_ring)
-                pos[node] = (r1 * math.cos(angle), r1 * math.sin(angle))
-
-            for i, node in enumerate(second_ring):
-                angle = 2 * math.pi * i / len(second_ring)
-                pos[node] = (r2 * math.cos(angle), r2 * math.sin(angle))
-
-            # --- Node colors ---
-            colors = []
-            for n, d in G.nodes(data=True):
-                if d["type"] == "film":
-                    colors.append("lightblue")
-                elif d["type"] == "director":
-                    colors.append("lightgreen")
-                else:
-                    colors.append("lightpink")
-
-            # --- Draw graph ---
-            plt.figure(figsize=(12, 8))
-            nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10, edge_color="gray", linewidths=1.5)
-            plt.tight_layout()
-            st.pyplot(plt.gcf())
-            plt.clf()
-
-            st.markdown("""
-            **Explanation:**  
-            - The selected film is **central**.  
-            - Up to **5 actors** and the **director** are connected directly to the selected film.  
-            - Up to **5 related films** are connected via shared director or actors.  
-            - Colors:  
-                - **Light blue** = film  
-                - **Light green** = director  
-                - **Light pink** = actors  
-            """)
