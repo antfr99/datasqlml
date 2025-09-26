@@ -1379,6 +1379,7 @@ else:
 
 
 
+
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import streamlit as st
@@ -1416,6 +1417,7 @@ import matplotlib.pyplot as plt
 MAX_ACTORS = 5
 MAX_RELATED_FILMS = 5
 
+
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
@@ -1426,7 +1428,7 @@ def fetch_film_details(title):
 
 director, actors_list = fetch_film_details(selected_film)
 
-# --- Build graph ---
+
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
@@ -1436,7 +1438,7 @@ for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
-# --- Add related films ---
+
 related_count = 0
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film or related_count >= MAX_RELATED_FILMS:
@@ -1446,14 +1448,14 @@ for _, row in top_films.iterrows():
     rel_director, rel_actors = fetch_film_details(related_title)
     connected = False
 
-    # Connect via same director
+    
     if rel_director == director:
         if related_title not in G:
             G.add_node(related_title, type="film")
         G.add_edge(related_title, director)
         connected = True
 
-    # Connect via shared actors
+    
     shared_actors = set(rel_actors).intersection(actors_list)
     if shared_actors:
         if related_title not in G:
@@ -1465,7 +1467,7 @@ for _, row in top_films.iterrows():
     if connected:
         related_count += 1
 
-# --- Draw network ---
+
 plt.figure(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.5, iterations=50)
 colors = []
@@ -1476,8 +1478,11 @@ for n, data in G.nodes(data=True):
         colors.append("lightgreen")
     else:
         colors.append("lightpink")
+
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10, edge_color="gray")
-plt.show()
+
+# --- Display in Streamlit ---
+st.pyplot(plt.gcf())
         '''
 
         user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
@@ -1485,7 +1490,7 @@ plt.show()
         # --- Run button ---
         if st.button("Run Network Analysis"):
             try:
-                # Pass all variables, including OMDB_API_KEY, to the exec environment
+                # Pass all necessary variables to exec
                 exec_globals = {
                     "top_films": top_films,
                     "selected_film": selected_film,
