@@ -15,13 +15,13 @@ from sklearn.neighbors import NearestNeighbors
 
 # --- Page Config ---
 st.set_page_config(
-    layout="centered",
+    layout="wide",
     page_title="IMDb/SQL/PYTHON Data Project 🎬"
 )
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is an experimental project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers, Requests. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
+This is an experimental project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
@@ -548,7 +548,7 @@ df_reviews = pd.DataFrame(review_records)
 df_reviews.reset_index(drop=True, inplace=True)
 df_reviews['ReviewID'] = df_reviews.index + 1
 '''
-    st.subheader("Scenario 7 Code")
+    st.subheader("Scenario 6 Code")
     st.code(review_code, language="python")
 
     # --- Button below grey block ---
@@ -640,8 +640,8 @@ if scenario == "Scenario 11 – Model Evaluation (Feature Importance)":
 
     # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
-        st.warning("Model not found. Run Scenario 4 first or retrain here.")
-        if st.button("Run Scenario 4 Training Now"):
+        st.warning("Model not found. Retrain here.")
+        if st.button("Run Scenario 10 ( Predit My Ratings ) Training Now"):
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
             from sklearn.compose import ColumnTransformer
@@ -1526,7 +1526,7 @@ plt.show()
             st.markdown("""
             **Explanation:**  
             - The selected film connects to its **director** and **actors**.  
-            - Other films in your top-rated list are added if they share the **same director** or any **actors**.  
+            - Other films in  top-rated list are added if they share the **same director** or any **actors**.  
             - Colors:  
                 - **Light blue** = film  
                 - **Light green** = director  
