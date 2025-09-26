@@ -1287,6 +1287,7 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
+
 # --- Scenario 13: Fully Automated ML Live Rating Monitor ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Automated ML Live Rating Monitor")
@@ -1294,32 +1295,27 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     This scenario predicts your rating for top films using a **supervised ML model**, compares it with your previous rating, and tracks predicted changes over time.
     """)
 
-    # --- Merge Votes here ---
-    if not Votes.empty:
+    # --- Prepare Votes ---
+    if 'Votes' not in IMDB_Ratings.columns:
+        if 'Num Votes' in Votes.columns:
+            Votes = Votes.rename(columns={"Num Votes": "Votes"})
         try:
             IMDB_Ratings = IMDB_Ratings.merge(
-                Votes[['Movie ID', 'Votes']], 
-                on="Movie ID", 
-                how="left"
+                Votes[['Movie ID', 'Votes']], on="Movie ID", how="left"
             )
-            IMDB_Ratings['Votes'] = IMDB_Ratings['Votes'].fillna(0)
         except Exception as e:
             st.error(f"Error merging Votes into IMDB_Ratings: {e}")
-            IMDB_Ratings['Votes'] = 0
-    else:
-        st.warning("Votes file not loaded. Filling 'Votes' with 0.")
-        IMDB_Ratings['Votes'] = 0
+    if 'Votes' not in IMDB_Ratings.columns:
+        st.warning("'Votes' column not found in IMDB_Ratings. Filling with 0.")
+        IMDB_Ratings["Votes"] = 0
 
     # --- Filter top 100 movies ---
     top_movies = IMDB_Ratings[
-        (IMDB_Ratings['IMDb Rating'] > 0) & 
-        (IMDB_Ratings['Votes'] > 50000)
+        (IMDB_Ratings['IMDb Rating'] > 0) & (IMDB_Ratings['Votes'] > 50000)
     ].sort_values(by="IMDb Rating", ascending=False).head(100)
 
-    st.write(f"✅ Found {len(top_movies)} movies with >50,000 votes and IMDb Rating > 0")
-
     if top_movies.empty:
-        st.error("No movies meet the filter criteria. Please check that Votes.xlsx merged correctly.")
+        st.warning("No movies meet the criteria of IMDb Rating > 0 and Votes > 50,000. ML scenario cannot run.")
     else:
         # --- Merge with your ratings ---
         df = top_movies.merge(My_Ratings[['Movie ID', 'Your Rating']], on="Movie ID", how="left")
@@ -1386,9 +1382,7 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 
                 # Predict rating
                 predicted_rating = model.predict(feat)[0]
-                previous_my_rating = My_Ratings.loc[
-                    My_Ratings['Movie ID'] == movie_id, 'Your Rating'
-                ].values[0]
+                previous_my_rating = My_Ratings.loc[My_Ratings['Movie ID'] == movie_id, 'Your Rating'].values[0]
                 rating_diff = predicted_rating - previous_my_rating
 
                 results.append({
