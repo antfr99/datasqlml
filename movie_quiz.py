@@ -1287,21 +1287,26 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
-# --- Scenario 13: Live Ratings Monitor + ML Predictions ---
+# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
-    # --- Brief MLOps + CI/CD + Monitoring Note ---
+    # --- Brief MLOps + CI/CD + Monitoring Note + Supervised Learning ---
     st.markdown("""
 **MLOps + CI/CD + Monitoring (Brief)**  
 
 - **MLOps:** Automates data collection (live IMDb ratings), logs historical differences, and retrains ML models to predict future rating changes.  
 - **CI/CD:** Modular code can be version-controlled; in a full setup, changes would trigger automated testing and deployment. *(Note: currently illustrative, not connected to a remote repo.)*  
 - **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
+
+**Supervised Machine Learning:**  
+The model uses your existing ratings (`My_Ratings`) as training data to learn patterns in how you rate movies.  
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts your rating for unseen films.  
+This is a **supervised learning** setup because it learns from labeled examples (movies with your ratings).
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "50bcb7e2"  # ✅ your real API key
+    OMDB_API_KEY = "50bcb7e2"  # your real API key
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
@@ -1311,6 +1316,14 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
         import requests
         from datetime import datetime
         import os
+        import pandas as pd
+        import numpy as np
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import mean_squared_error
+        from sklearn.preprocessing import OneHotEncoder
+        from sklearn.compose import ColumnTransformer
+        from sklearn.pipeline import Pipeline
 
         history_file = "live_ratings_history.csv"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1323,16 +1336,15 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 
         results = []
 
+        # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
         for _, row in top100_films.iterrows():
-            movie_id = row["Movie ID"]  # IMDb ID like 'tt0043014'
+            movie_id = row["Movie ID"]
             static_rating = row["IMDb Rating"]
 
             try:
-                # Query OMDb using the unique Movie ID
                 url = f"http://www.omdbapi.com/?i={movie_id}&apikey={OMDB_API_KEY}"
                 resp = requests.get(url).json()
                 
-                # Only take the rating if the movie was found
                 if resp.get("Response") == "True":
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
                 else:
@@ -1347,17 +1359,22 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
                 "IMDb Rating (Static)": static_rating,
                 "IMDb Rating (Live)": live_rating,
                 "Rating Difference": rating_diff,
-                "CheckedAt": timestamp
+                "CheckedAt": timestamp,
+                "Movie ID": movie_id,
+                "Genre": row.get("Genre"),
+                "Director": row.get("Director"),
+                "Year": row.get("Year"),
+                "Num Votes": row.get("Num Votes")
             })
 
         new_df = pd.DataFrame(results)
 
-        # Keep only rows where there is a difference
+        # Keep only rows with non-zero rating differences
         new_df = new_df[new_df["Rating Difference"] != 0]
 
         # Append, remove duplicates, and save CSV
         history_df = pd.concat([history_df, new_df], ignore_index=True)
-        history_df.drop_duplicates(subset=["Title", "CheckedAt"], keep="last", inplace=True)
+        history_df.drop_duplicates(subset=["Movie ID", "CheckedAt"], keep="last", inplace=True)
         history_df.to_csv(history_file, index=False)
 
         st.success("Live ratings check complete ✅")
@@ -1369,54 +1386,42 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
             use_container_width=True
         )
 
-        # --- ML Predictions on Rating Differences ---
-        from sklearn.ensemble import RandomForestRegressor
-        from sklearn.model_selection import train_test_split
-        from sklearn.metrics import mean_squared_error
-        import numpy as np
+        # --- Supervised ML: Predict Your Ratings ---
+        # Merge your ratings
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 
-        ml_df = history_df.dropna(subset=["IMDb Rating (Live)", "Rating Difference"])
+        train_df = df_ml[df_ml['Your Rating'].notna()]
+        predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-        if not ml_df.empty:
-            # Extract temporal features
-            ml_df["Year"] = pd.to_datetime(ml_df["CheckedAt"]).dt.year
-            ml_df["Month"] = pd.to_datetime(ml_df["CheckedAt"]).dt.month
-            ml_df["Day"] = pd.to_datetime(ml_df["CheckedAt"]).dt.day
+        categorical_features = ['Genre', 'Director']
+        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-            X = ml_df[["IMDb Rating (Static)", "IMDb Rating (Live)", "Year", "Month", "Day"]]
-            y = ml_df["Rating Difference"]
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                ('num', 'passthrough', numerical_features)
+            ]
+        )
 
-            # Split train/test
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42
-            )
+        model = Pipeline([
+            ('prep', preprocessor),
+            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+        ])
 
-            model = RandomForestRegressor(n_estimators=100, random_state=42)
-            model.fit(X_train, y_train)
+        # Train supervised model
+        X_train = train_df[categorical_features + numerical_features]
+        y_train = train_df['Your Rating']
+        model.fit(X_train, y_train)
 
-            y_pred = model.predict(X_test)
-            rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        # Predict ratings for unseen movies
+        X_pred = predict_df[categorical_features + numerical_features]
+        predict_df['Predicted Rating'] = model.predict(X_pred)
 
-            st.subheader("🤖 Machine Learning Predictions on Rating Differences")
-            st.markdown(f"Model trained on rating differences. Test RMSE: **{rmse:.3f}**")
-
-            # Predict future difference for each film (latest record per title)
-            latest = ml_df.groupby("Title").tail(1).copy()
-            latest_X = latest[["IMDb Rating (Static)", "IMDb Rating (Live)", "Year", "Month", "Day"]]
-            latest["Predicted Future Diff"] = model.predict(latest_X)
-            latest["Predicted Future Rating"] = latest["IMDb Rating (Live)"] + latest["Predicted Future Diff"]
-
-            # Only show predictions where future diff ≠ 0
-            pred_df = latest[latest["Predicted Future Diff"] != 0].copy()
-
-            st.dataframe(
-                pred_df[[
-                    "Title",
-                    "IMDb Rating (Static)",
-                    "IMDb Rating (Live)",
-                    "Rating Difference",
-                    "Predicted Future Diff",
-                    "Predicted Future Rating"
-                ]].sort_values(by="Predicted Future Diff", ascending=False).reset_index(drop=True),
-                use_container_width=True
-            )
+        # Show top predictions
+        st.subheader("🤖 Predicted Ratings for Unseen Movies")
+        st.dataframe(
+            predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+            .sort_values(by='Predicted Rating', ascending=False)
+            .reset_index(drop=True),
+            use_container_width=True
+        )
