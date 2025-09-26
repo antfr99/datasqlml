@@ -1286,7 +1286,6 @@ else:
         except Exception as e:
             st.error(f"Error running poster analysis: {e}")
 
-
 # --- Scenario 13: Live Ratings Monitor + ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor + ML Predictions")
@@ -1303,19 +1302,6 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
-
-    # --- Hidden API key / fetch function in grey box ---
-    with st.expander("🔑 Show Code", expanded=False):
-        st.code(f"""
-import requests
-
-OMDB_API_KEY = "{OMDB_API_KEY}"  
-
-def fetch_live_rating(title):
-    url = f"http://www.omdbapi.com/?t={{title}}&apikey={{OMDB_API_KEY}}"
-    resp = requests.get(url).json()
-    return float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-        """, language="python")
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
