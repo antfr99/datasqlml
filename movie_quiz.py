@@ -609,91 +609,6 @@ df_reviews['ReviewID'] = df_reviews.index + 1
             st.error(f"Error running sentiment analysis: {e}")
 
 
-# --- Scenario 7: Poster Image Analysis ---
-if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
-    st.markdown("### Scenario 7 – Poster Image & Mood Analysis")
-    st.write("Select a movie, then click **Fetch Poster** to display the poster and analyze its mood/colors.")
-
-    # --- Select a movie ---
-    film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
-    selected_film = st.selectbox("Select a movie to analyze poster:", film_list)
-
-    # --- Editable code block ---
-    poster_code = '''
-import requests
-from PIL import Image
-import numpy as np
-from sklearn.cluster import KMeans
-
-# Fetch IMDb ID
-imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
-
-# Fetch poster from OMDb
-url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
-response = requests.get(url).json()
-poster_url = response.get('Poster')
-
-if poster_url and poster_url != "N/A":
-    img = Image.open(requests.get(poster_url, stream=True).raw).convert("RGB")
-    img_small = img.resize((150, 150))
-    img_array = np.array(img_small).reshape(-1, 3)
-
-    # Find dominant colors
-    kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
-    dominant_colors = kmeans.cluster_centers_
-
-    st.image(poster_url, width=300)
-    st.write("🎨 Dominant Colors:")
-    cols = st.columns(len(dominant_colors))
-    for idx, color in enumerate(dominant_colors.astype(int)):
-        hex_color = '#%02x%02x%02x' % tuple(color)
-        cols[idx].markdown(
-            f"<div style='width:60px; height:60px; background:{hex_color}; border-radius:8px; border:1px solid #000'></div>",
-            unsafe_allow_html=True
-        )
-
-    # Brightness-based mood
-    brightness = np.mean(img_array)
-    if brightness < 100:
-        mood = "dark and moody"
-        cluster_name = "Cluster 0 – Thriller / Horror style"
-        mood_tag = "🌑 Dark Thriller vibes"
-    elif brightness < 170:
-        mood = "balanced"
-        cluster_name = "Cluster 1 – Drama / Realistic style"
-        mood_tag = "🎭 Dramatic tone"
-    else:
-        mood = "bright and vivid"
-        cluster_name = "Cluster 2 – Comedy / Family style"
-        mood_tag = "😂 Lighthearted & Fun"
-
-    st.success(f"🎬 Poster assigned to: **{cluster_name}**")
-    st.info(f"The poster looks **{mood}**, suggesting **{cluster_name.split('–')[1].strip()}**.\n\n👉 Mood tag: **{mood_tag}**")
-else:
-    st.warning("Poster not found.")
-    '''
-
-    user_poster_code = st.text_area("Python Poster Analysis Code (editable)", poster_code, height=650)
-
-    # --- Hidden API key ---
-    OMDB_API_KEY = "cbbdb8f8"  # Hidden from user-editable code
-
-    # --- Run button ---
-    if st.button("Fetch Poster & Analyze"):
-        try:
-            local_vars = {
-                "IMDB_Ratings": IMDB_Ratings,
-                "selected_film": selected_film,
-                "OMDB_API_KEY": OMDB_API_KEY
-            }
-            exec(user_poster_code, {}, local_vars)
-            st.success("Poster analysis executed successfully.")
-        except Exception as e:
-            st.error(f"Error running poster analysis: {e}")
-
-
-
-
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import networkx as nx
@@ -1469,6 +1384,103 @@ def fetch_live_rating(title):
         - True automated monitoring could be added by scheduling this script to run at regular intervals (e.g., daily or weekly) and pushing the results to a versioned repository.
         """)
 
+
+# --- Scenario 7 Poster Analysis ---
+if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
+    st.header("Scenario 7 – Poster Image & Mood Analysis")
+    st.markdown("""
+    Select a movie, then click **Fetch Poster & Analyze** to display the poster, 
+    dominant colors, and an easy-to-understand mood analysis.
+    """)
+
+    # --- Editable code block ---
+    poster_code = '''
+import requests
+from PIL import Image
+import numpy as np
+from sklearn.cluster import KMeans
+import streamlit as st
+
+# Get IMDb ID
+imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
+
+# Fetch poster from OMDb
+url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+response = requests.get(url).json()
+poster_url = response.get('Poster')
+
+if poster_url and poster_url != "N/A":
+    img = Image.open(requests.get(poster_url, stream=True).raw).convert("RGB")
+    img_small = img.resize((150, 150))
+    img_array = np.array(img_small).reshape(-1, 3)
+
+    # Find dominant colors
+    kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
+    dominant_colors = kmeans.cluster_centers_
+
+    # Display poster
+    st.image(poster_url, width=300)
+
+    # Show dominant colors
+    st.write("🎨 Dominant Colors:")
+    cols = st.columns(len(dominant_colors))
+    for idx, color in enumerate(dominant_colors.astype(int)):
+        hex_color = '#%02x%02x%02x' % tuple(color)
+        cols[idx].markdown(
+            "<div style='width:60px; height:60px; background:{}; border-radius:8px; border:1px solid #000'></div>".format(hex_color),
+            unsafe_allow_html=True
+        )
+
+    # Determine brightness/mood
+    brightness = np.mean(img_array)
+    if brightness < 100:
+        mood = "dark and moody"
+        cluster_name = "Cluster 0 – Thriller / Horror style"
+        mood_tag = "🌑 Dark Thriller vibes"
+    elif brightness < 170:
+        mood = "balanced"
+        cluster_name = "Cluster 1 – Drama / Realistic style"
+        mood_tag = "🎭 Dramatic tone"
+    else:
+        mood = "bright and vivid"
+        cluster_name = "Cluster 2 – Comedy / Family style"
+        mood_tag = "😂 Lighthearted & Fun"
+
+    # Display human-friendly explanation
+    st.success("🎬 Poster assigned to: **{}**".format(cluster_name))
+    st.info("The poster looks **{}**, suggesting **{}**.\\n\\n👉 Mood tag: **{}**".format(
+        mood, cluster_name.split('–')[1].strip(), mood_tag
+    ))
+else:
+    st.warning("Poster not found.")
+'''
+
+    # --- Editable text area ---
+    user_poster_code = st.text_area("Python Poster Analysis Code (editable)", poster_code, height=650)
+
+    # --- Hidden API key ---
+    OMDB_API_KEY = "cbbdb8f8"  # Keep this hidden in production
+
+    # --- Movie selection ---
+    film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
+    selected_film = st.selectbox("Select a movie to analyze poster:", film_list)
+
+    # --- Run button ---
+    if st.button("Fetch Poster & Analyze"):
+        try:
+            local_vars = {
+                "IMDB_Ratings": IMDB_Ratings,
+                "selected_film": selected_film,
+                "OMDB_API_KEY": OMDB_API_KEY,
+                "st": st,
+                "np": np,
+                "KMeans": KMeans,
+                "requests": requests,
+                "Image": Image
+            }
+            exec(user_poster_code, {}, local_vars)
+        except Exception as e:
+            st.error(f"Error running poster analysis: {e}")
 
 
 
