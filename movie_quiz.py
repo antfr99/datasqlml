@@ -1253,7 +1253,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "50bcb7e2"
+    OMDB_API_KEY = "cbbdb8f8"
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
