@@ -1059,7 +1059,7 @@ if scenario == "Scenario 8 – Graph Based Movie Relationships":
 
     # --- Default Selections ---
     default_year = "All"
-    default_genre = "Comedy"
+    default_genre = "Drama"
     default_director = [d for d in ["Alfred Hitchcock", "Stanley Kubrick", "Francis Ford Coppola"] if d in directors]
 
     selected_year = st.selectbox(
