@@ -1287,7 +1287,6 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
-
 # --- Scenario 13: Live Ratings Monitor + ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor + ML Predictions")
@@ -1354,20 +1353,19 @@ def fetch_live_rating(title):
 
         new_df = pd.DataFrame(results)
 
-        # Append to history and save CSV
+        # Append, remove duplicates, and save CSV
         history_df = pd.concat([history_df, new_df], ignore_index=True)
+        history_df.drop_duplicates(subset=["Title", "CheckedAt"], keep="last", inplace=True)
         history_df.to_csv(history_file, index=False)
 
         st.success("Live ratings check complete ✅")
-        st.dataframe(history_df, use_container_width=True)
 
-        st.markdown("""
-        **Explanation:**  
-        - Each film's **static IMDb rating** is compared with the **current live IMDb rating** from OMDb.  
-        - **Rating Difference** shows how much the rating changed.  
-        - **CheckedAt** shows when this check was performed.  
-        - All results are saved to `live_ratings_history.csv` for monitoring over time.  
-        """)
+        # --- Show sorted results by Rating Difference ---
+        st.subheader("📊 Current Run – Sorted by Rating Difference")
+        st.dataframe(
+            new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
+            use_container_width=True
+        )
 
         # --- ML Predictions on Rating Differences ---
         from sklearn.ensemble import RandomForestRegressor
@@ -1397,7 +1395,7 @@ def fetch_live_rating(title):
             y_pred = model.predict(X_test)
             rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
-            st.subheader("📊 Machine Learning Predictions on Rating Differences")
+            st.subheader("🤖 Machine Learning Predictions on Rating Differences")
             st.markdown(f"Model trained on rating differences. Test RMSE: **{rmse:.3f}**")
 
             # Predict future difference for each film (latest record per title)
@@ -1406,14 +1404,17 @@ def fetch_live_rating(title):
             latest["Predicted Future Diff"] = model.predict(latest_X)
             latest["Predicted Future Rating"] = latest["IMDb Rating (Live)"] + latest["Predicted Future Diff"]
 
+            # Only show predictions where future diff ≠ 0
+            pred_df = latest[latest["Predicted Future Diff"] != 0].copy()
+
             st.dataframe(
-                latest[[
+                pred_df[[
                     "Title",
                     "IMDb Rating (Static)",
                     "IMDb Rating (Live)",
                     "Rating Difference",
                     "Predicted Future Diff",
                     "Predicted Future Rating"
-                ]].sort_values(by="Predicted Future Rating", ascending=False).reset_index(drop=True),
+                ]].sort_values(by="Predicted Future Diff", ascending=False).reset_index(drop=True),
                 use_container_width=True
             )
