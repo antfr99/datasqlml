@@ -628,7 +628,7 @@ if scenario == "Scenario 10 – Model Evaluation (Feature Importance)":
     - Higher score → stronger influence on predictions.  
     - Lower score → weaker influence.  
 
-    *(Requires a trained model from Scenario 4.)*
+    *(Requires a trained model from Scenario 9.)*
     """)
 
     # --- Retrain model if not in session ---
