@@ -75,10 +75,11 @@ if not IMDB_Ratings.empty:
 else:
     st.warning("IMDb Ratings table is empty or failed to load.")
 
-st.write("---")
 st.write("### My Ratings Table")
 if not My_Ratings.empty:
-    st.dataframe(My_Ratings, width="stretch", height=400)
+    # Rename column only for display
+    display_ratings = My_Ratings.rename(columns={"Your Rating": "My Ratings"})
+    st.dataframe(display_ratings, width="stretch", height=400)
 else:
     st.warning("My Ratings table is empty or failed to load.")
 
