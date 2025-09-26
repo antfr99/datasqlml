@@ -1378,11 +1378,8 @@ else:
 
 
 
-
-
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
-    import streamlit as st
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
@@ -1405,110 +1402,83 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
         film_options = top_films["Title"].astype(str).tolist()
         selected_film = st.selectbox("Select a film to inspect:", film_options)
 
-        # --- Hidden API key ---
-        OMDB_API_KEY = "bcf17f38"
+        # --- Parameters ---
+        MAX_ACTORS = 5
+        MAX_RELATED_FILMS = 5
+        OMDB_API_KEY = "bcf17f38"  # Hidden API key
 
-        # --- Editable code block ---
-        network_code = '''
-import requests
-import networkx as nx
-import matplotlib.pyplot as plt
+        # --- Function to fetch director and actors ---
+        def fetch_film_details(title):
+            url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+            resp = requests.get(url).json()
+            director = resp.get("Director", "")
+            actors = resp.get("Actors", "")
+            actor_list = [a.strip() for a in actors.split(",")] if actors else []
+            return director, actor_list[:MAX_ACTORS]
 
-MAX_ACTORS = 5
-MAX_RELATED_FILMS = 5
+        # --- Build network graph ---
+        try:
+            director, actors_list = fetch_film_details(selected_film)
 
+            G = nx.Graph()
+            G.add_node(selected_film, type="film")
+            G.add_node(director, type="director")
+            G.add_edges_from([(selected_film, director)])
+            for actor in actors_list:
+                G.add_node(actor, type="actor")
+                G.add_edge(selected_film, actor)
 
-def fetch_film_details(title):
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    resp = requests.get(url).json()
-    director = resp.get("Director", "").split(",")[0].strip()
-    actors = resp.get("Actors", "")
-    actors_list = [a.strip() for a in actors.split(",") if "uncredited" not in a.lower()]
-    return director, actors_list[:MAX_ACTORS]
+            # Add related films
+            related_count = 0
+            for _, row in top_films.iterrows():
+                if related_count >= MAX_RELATED_FILMS:
+                    break
+                if row["Title"] == selected_film:
+                    continue
+                related_title = row["Title"]
+                rel_director, rel_actors = fetch_film_details(related_title)
 
-director, actors_list = fetch_film_details(selected_film)
+                added = False
+                if rel_director == director:
+                    G.add_node(related_title, type="film")
+                    G.add_edge(related_title, director)
+                    added = True
 
+                shared_actors = set(rel_actors).intersection(set(actors_list))
+                if shared_actors:
+                    G.add_node(related_title, type="film")
+                    for sa in shared_actors:
+                        G.add_edge(related_title, sa)
+                    added = True
 
-G = nx.Graph()
-G.add_node(selected_film, type="film")
-G.add_node(director, type="director")
-G.add_edge(selected_film, director)
+                if added:
+                    related_count += 1
 
-for actor in actors_list:
-    G.add_node(actor, type="actor")
-    G.add_edge(selected_film, actor)
+            # Draw network
+            plt.figure(figsize=(12, 8))
+            pos = nx.spring_layout(G, k=0.5, iterations=50)
+            colors = []
+            for n, data in G.nodes(data=True):
+                if data["type"] == "film":
+                    colors.append("lightblue")
+                elif data["type"] == "director":
+                    colors.append("lightgreen")
+                else:
+                    colors.append("lightpink")
+            nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
+            st.pyplot(plt)
 
+            st.success("Network analysis executed successfully.")
+            st.markdown("""
+            **Explanation:**  
+            - The selected film connects to its **director** and **actors**.  
+            - Other films in your top-rated list are added if they share the **same director** or any **actors**.  
+            - Colors:  
+                - **Light blue** = film  
+                - **Light green** = director  
+                - **Light pink** = actors  
+            - This visualizes key influence connections interactively.
+            """)
+        except Exception as e:
+            st.error(f"Error running network analysis: {e}")
 
-related_count = 0
-for _, row in top_films.iterrows():
-    if row["Title"] == selected_film or related_count >= MAX_RELATED_FILMS:
-        continue
-
-    related_title = row["Title"]
-    rel_director, rel_actors = fetch_film_details(related_title)
-    connected = False
-
-    
-    if rel_director == director:
-        if related_title not in G:
-            G.add_node(related_title, type="film")
-        G.add_edge(related_title, director)
-        connected = True
-
-    
-    shared_actors = set(rel_actors).intersection(actors_list)
-    if shared_actors:
-        if related_title not in G:
-            G.add_node(related_title, type="film")
-        for sa in shared_actors:
-            G.add_edge(related_title, sa)
-        connected = True
-
-    if connected:
-        related_count += 1
-
-
-plt.figure(figsize=(12, 8))
-pos = nx.spring_layout(G, k=0.5, iterations=50)
-colors = []
-for n, data in G.nodes(data=True):
-    if data["type"] == "film":
-        colors.append("lightblue")
-    elif data["type"] == "director":
-        colors.append("lightgreen")
-    else:
-        colors.append("lightpink")
-
-nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10, edge_color="gray")
-
-# --- Display in Streamlit ---
-st.pyplot(plt.gcf())
-        '''
-
-        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
-
-        # --- Run button ---
-        if st.button("Run Network Analysis"):
-            try:
-                # Pass all necessary variables to exec
-                exec_globals = {
-                    "top_films": top_films,
-                    "selected_film": selected_film,
-                    "OMDB_API_KEY": OMDB_API_KEY,
-                    "st": st
-                }
-                exec(user_network_code, exec_globals)
-
-                st.success("Network analysis executed successfully.")
-                st.markdown("""
-                **Explanation:**  
-                - The selected film connects to its **director** and **actors**.  
-                - Other films in your top-rated list are added if they share the **same director** or any **actors**.  
-                - Colors:  
-                    - **Light blue** = film  
-                    - **Light green** = director  
-                    - **Light pink** = actors  
-                - This visualizes key influence connections interactively.
-                """)
-            except Exception as e:
-                st.error(f"Error running network analysis: {e}")
