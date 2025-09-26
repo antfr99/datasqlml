@@ -1378,25 +1378,22 @@ else:
 
 
 
-
-
-
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
+    import streamlit as st
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
-    from itertools import chain
 
     st.header("Scenario 9 – Network Influence Analysis")
     st.markdown("""
-    Select a film from my **top-rated films** to see connections:
+    Select a film from your **top-rated films** to see connections:
     - Director and actors of the film
-    - Other films sharing the same director or actors (from my top-rated list)
+    - Up to 5 other films sharing the same director or actors (from your top-rated list)
     - Visual network of relationships
     """)
 
-    # --- Filter top-rated films (8 or 9) ---
+    # --- Filter top-rated films (rating >= 8) ---
     top_films = My_Ratings[My_Ratings["Your Rating"] >= 8].copy()
 
     if top_films.empty:
@@ -1409,100 +1406,64 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
         # --- Show code in grey box ---
         with st.expander("🔑 Show Code", expanded=False):
             st.code("""
-
-import requests
-
-def fetch_film_details(title):
-    OMDB_API_KEY = "YOUR_OMDB_API_KEY"
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    resp = requests.get(url).json()
-    director = resp.get("Director", "")
-    actors = resp.get("Actors", "")
-    return director, [a.strip() for a in actors.split(",")] if actors else []
-
-director, actors_list = fetch_film_details(selected_film)
-
-
-import networkx as nx
-G = nx.Graph()
-G.add_node(selected_film, type="film")
-G.add_node(director, type="director")
-G.add_edges_from([(selected_film, director)])
-for actor in actors_list:
-    G.add_node(actor, type="actor")
-    G.add_edge(selected_film, actor)
-
-
-for _, row in top_films.iterrows():
-    if row["Title"] == selected_film:
-        continue
-    related_title = row["Title"]
-    rel_director, rel_actors = fetch_film_details(related_title)
-    # Connect if same director
-    if rel_director == director:
-        G.add_node(related_title, type="film")
-        G.add_edge(related_title, director)
-    # Connect if shared actor
-    shared_actors = set(rel_actors).intersection(set(actors_list))
-    for sa in shared_actors:
-        G.add_node(related_title, type="film")
-        G.add_edge(related_title, sa)
-
-
-import matplotlib.pyplot as plt
-pos = nx.spring_layout(G, k=0.5, iterations=50)
-colors = []
-for n, data in G.nodes(data=True):
-    if data["type"] == "film":
-        colors.append("lightblue")
-    elif data["type"] == "director":
-        colors.append("lightgreen")
-    else:
-        colors.append("lightpink")
-nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-plt.show()
+# Network analysis code (simplified for display)
+# Uses OMDb API to fetch director and actors, builds a network, and visualizes
             """, language="python")
 
         # --- Run button ---
         if st.button("Run Network Analysis"):
+
             def fetch_film_details(title):
-                OMDB_API_KEY = "bcf17f38"  # Replace with your own
+                OMDB_API_KEY = "bcf17f38"  # Replace with your own API key
                 url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
                 resp = requests.get(url).json()
                 director = resp.get("Director", "")
                 actors = resp.get("Actors", "")
                 return director, [a.strip() for a in actors.split(",")] if actors else []
 
+            # Fetch details for selected film
             director, actors_list = fetch_film_details(selected_film)
 
             st.markdown(f"**Selected Film:** {selected_film}")
             st.markdown(f"**Director:** {director}")
-            st.markdown(f"**Actors:** {', '.join(actors_list)}")
+            st.markdown(f"**Actors:** {', '.join(actors_list[:5])}")  # Limit to 5 actors
 
             # Build network graph
             G = nx.Graph()
             G.add_node(selected_film, type="film")
             G.add_node(director, type="director")
             G.add_edges_from([(selected_film, director)])
-            for actor in actors_list:
+
+            for actor in actors_list[:5]:  # Limit to 5 actors
                 G.add_node(actor, type="actor")
                 G.add_edge(selected_film, actor)
 
-            # Add related films
+            # Add related films (limit to 5 related movies)
+            related_count = 0
             for _, row in top_films.iterrows():
+                if related_count >= 5:
+                    break
                 if row["Title"] == selected_film:
                     continue
                 related_title = row["Title"]
                 rel_director, rel_actors = fetch_film_details(related_title)
+                connected = False
+
                 # Connect if same director
                 if rel_director == director:
                     G.add_node(related_title, type="film")
                     G.add_edge(related_title, director)
-                # Connect if shared actor
-                shared_actors = set(rel_actors).intersection(set(actors_list))
+                    connected = True
+
+                # Connect if shared actor (limit actors to 5)
+                shared_actors = list(set(rel_actors).intersection(set(actors_list)))[:5]
                 for sa in shared_actors:
                     G.add_node(related_title, type="film")
                     G.add_edge(related_title, sa)
+                    connected = True
+
+                if connected:
+                    related_count += 1
 
             # Draw network
             plt.figure(figsize=(12, 8))
@@ -1517,18 +1478,15 @@ plt.show()
                     colors.append("lightpink")
             nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
             st.pyplot(plt)
-            
+
             st.markdown("""
             **Explanation:**  
-            - The selected film connects to its **director** and **actors**.  
-            - Other films in  top-rated list are added if they share the **same director** or any **actors**.  
+            - The selected film connects to its **director** and **up to 5 actors**.  
+            - Up to **5 other films** in the top-rated list are added if they share the **same director** or any **actors**.  
             - Colors:  
                 - **Light blue** = film  
                 - **Light green** = director  
                 - **Light pink** = actors  
             - This visualizes key influence connections interactively without cluttering a full network graph.
             """)
-
-
-
 
