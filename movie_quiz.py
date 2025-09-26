@@ -1287,6 +1287,7 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
+
 # --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
@@ -1300,9 +1301,8 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 - **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
 
 **Supervised Machine Learning:**  
-The model uses your existing ratings (`My_Ratings`) as training data to learn patterns in how you rate movies.  
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts your rating for unseen films.  
-This is a **supervised learning** setup because it learns from labeled examples (movies with your ratings).
+The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.  
 """)
 
     # --- OMDb API key ---
@@ -1386,12 +1386,18 @@ This is a **supervised learning** setup because it learns from labeled examples 
             use_container_width=True
         )
 
-        # --- Supervised ML: Predict Your Ratings ---
-        # Merge your ratings
+        # --- Supervised ML: Predict Your Ratings for Movies with Changed Live Ratings ---
+        # Merge My_Ratings into IMDB_Ratings
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 
+        # Merge rating differences from current run
+        df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
+
+        # Keep only movies that have changed rating and are unseen
+        predict_df = df_ml[(df_ml['Rating Difference'].notna()) & (df_ml['Your Rating'].isna())].copy()
+
+        # Train supervised model on movies you have rated
         train_df = df_ml[df_ml['Your Rating'].notna()]
-        predict_df = df_ml[df_ml['Your Rating'].isna()]
 
         categorical_features = ['Genre', 'Director']
         numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
@@ -1408,19 +1414,17 @@ This is a **supervised learning** setup because it learns from labeled examples 
             ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
         ])
 
-        # Train supervised model
         X_train = train_df[categorical_features + numerical_features]
         y_train = train_df['Your Rating']
         model.fit(X_train, y_train)
 
-        # Predict ratings for unseen movies
+        # Predict ratings for eligible unseen movies
         X_pred = predict_df[categorical_features + numerical_features]
         predict_df['Predicted Rating'] = model.predict(X_pred)
 
-        # Show top predictions
-        st.subheader("🤖 Predicted Ratings for Unseen Movies")
+        st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
         st.dataframe(
-            predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+            predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
             .sort_values(by='Predicted Rating', ascending=False)
             .reset_index(drop=True),
             use_container_width=True
