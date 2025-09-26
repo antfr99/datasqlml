@@ -1236,7 +1236,6 @@ if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning 
             - This helps when OMDb lists multiple genres, showing the most semantically relevant one.
             """)
 
-
 # --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (English only) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
@@ -1254,7 +1253,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "e9476c0a"
+    OMDB_API_KEY = "50bcb7e2"
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
@@ -1292,18 +1291,19 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 resp = requests.get(url).json()
 
                 if resp.get("Response") == "True":
-                    language = resp.get("Language", "Unknown")
+                    # Normalize languages: split, strip, lowercase
+                    languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-                else:
-                    language = "Unknown"
-                    live_rating = None
-            except Exception:
-                language = "Unknown"
-                live_rating = None
 
-            # --- Only include English-language films ---
-            if "English" not in language:
-                continue
+                    # Only include English-language films
+                    if "english" not in languages:
+                        continue
+                else:
+                    live_rating = None
+                    languages = []
+            except Exception:
+                live_rating = None
+                languages = []
 
             rating_diff = live_rating - static_rating if live_rating is not None else None
 
@@ -1318,7 +1318,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 "Director": row.get("Director"),
                 "Year": row.get("Year"),
                 "Num Votes": row.get("Num Votes"),
-                "Language": language
+                "Language": ", ".join([lang.capitalize() for lang in languages])
             })
 
         new_df = pd.DataFrame(results)
