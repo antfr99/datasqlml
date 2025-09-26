@@ -1054,7 +1054,7 @@ This visualization helps you explore the movie dataset’s structure and uncover
 
 
 
-# --- Scenario 13: Deep Learning Semantic Genre Analysis ---
+# --- Scenario 12: Deep Learning Semantic Genre Analysis ---
 if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)":
     st.header("Scenario 12 – Semantic Genre & Recommendations (Deep Learning / NLP)")
     st.markdown("""
@@ -1190,95 +1190,6 @@ def fetch_movie_data(title):
 
 
 
-# --- Scenario 13 Live Ratings Monitor ---
-
-
-if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
-    st.markdown("""
-    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb for my **top 50 films by static rating**.  
-
-    The table shows:  
-    - Title  
-    - Original IMDb Rating  
-    - Live IMDb Rating  
-    - Rating Difference  
-    - Timestamp of check
-    """)
-
-    # --- Select top 50 films ---
-    top50_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(50)
-
-    # --- Hidden API key / fetch function in grey box ---
-    with st.expander("🔑 Show Code", expanded=False):
-        st.code("""
-import requests
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"  
-
-def fetch_live_rating(title):
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    resp = requests.get(url).json()
-    return float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-        """, language="python")
-
-    # --- Run Button ---
-    if st.button("Run Live Ratings Check"):
-        import requests
-        from datetime import datetime
-        import os
-
-        history_file = "live_ratings_history.csv"
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Load previous history
-        if os.path.exists(history_file):
-            history_df = pd.read_csv(history_file)
-        else:
-            history_df = pd.DataFrame()
-
-        results = []
-
-        for _, row in top50_films.iterrows():
-            title = row["Title"]
-            static_rating = row["IMDb Rating"]
-
-            try:
-                url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
-                resp = requests.get(url).json()
-                live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-            except Exception:
-                live_rating = None
-
-            rating_diff = live_rating - static_rating if live_rating is not None else None
-
-            results.append({
-                "Title": title,
-                "IMDb Rating (Static)": static_rating,
-                "IMDb Rating (Live)": live_rating,
-                "Rating Difference": rating_diff,
-                "CheckedAt": timestamp
-            })
-
-        new_df = pd.DataFrame(results)
-
-        # Append to history and save CSV
-        history_df = pd.concat([history_df, new_df], ignore_index=True)
-        history_df.to_csv(history_file, index=False)
-
-        st.success("Live ratings check complete ✅")
-        st.dataframe(history_df, use_container_width=True)
-
-        st.markdown("""
-        **Explanation:**  
-        - Each film's **static IMDb rating** from my Excel is compared with the **current live IMDb rating** from OMDb.  
-        - **Rating Difference** shows how much the rating changed.  
-        - **CheckedAt** shows when this check was performed.  
-        - All results are saved to `live_ratings_history.csv`, supporting **MLOps + CI/CD + Monitoring** by logging changes over time.  
-        - The `live_ratings_history.csv` can be version-controlled on GitHub to track rating changes over time.
-        - True automated monitoring could be added by scheduling this script to run at regular intervals (e.g., daily or weekly) and pushing the results to a versioned repository.
-        """)
-
-
 # --- Scenario 7 Poster Analysis ---
 if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
     st.header("Scenario 7 – Poster Image & Mood Analysis")
@@ -1377,3 +1288,110 @@ else:
 
 
 
+
+# --- Scenario 13: Fully Automated ML Live Rating Monitor ---
+if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
+    st.header("Scenario 13 – Automated ML Live Rating Monitor")
+    st.markdown("""
+    This scenario predicts your rating for top films using a **supervised ML model**, compares it with your previous rating, and tracks predicted changes over time.
+    """)
+
+    # --- Filter top 100 movies ---
+    top_movies = IMDB_Ratings[(IMDB_Ratings['IMDb Rating'] > 0) & 
+                              (IMDB_Ratings['Votes'] > 50000)].sort_values(by="IMDb Rating", ascending=False).head(100)
+
+    # --- Merge with your ratings ---
+    df = top_movies.merge(My_Ratings[['Movie ID', 'Your Rating']], on="Movie ID", how="left")
+    df = df.dropna(subset=['Your Rating'])
+
+    # --- Features and Target ---
+    X = df[['IMDb Rating', 'Votes', 'Year']].copy()
+    y = df['Your Rating']
+
+    # One-hot encode Genre and Director
+    cat_features = []
+    if 'Genre' in df.columns:
+        genre_dummies = pd.get_dummies(df['Genre'], prefix='Genre')
+        X = pd.concat([X, genre_dummies], axis=1)
+        cat_features += list(genre_dummies.columns)
+    if 'Director' in df.columns:
+        director_dummies = pd.get_dummies(df['Director'], prefix='Director')
+        X = pd.concat([X, director_dummies], axis=1)
+        cat_features += list(director_dummies.columns)
+
+    # --- Train ML Model ---
+    model = lgb.LGBMRegressor(n_estimators=200, random_state=42)
+    model.fit(X, y)
+    st.success("ML Model trained successfully ✅")
+
+    st.write("Top Features by Importance:")
+    importance_df = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values(by='Importance', ascending=False)
+    st.dataframe(importance_df)
+
+    # --- Run Live Check ---
+    if st.button("Check Predicted Ratings with Live IMDb Data"):
+        import requests
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        results = []
+
+        for _, row in top_movies.iterrows():
+            title = row['Title']
+            movie_id = row['Movie ID']
+            static_rating = row['IMDb Rating']
+            votes = row['Votes']
+            year = row['Year']
+
+            # Fetch live IMDb rating
+            try:
+                url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
+                resp = requests.get(url).json()
+                live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else static_rating
+            except:
+                live_rating = static_rating
+
+            # Prepare feature row for prediction
+            feat = pd.DataFrame({'IMDb Rating': [live_rating], 'Votes': [votes], 'Year': [year]})
+
+            # Add categorical features
+            for g in cat_features:
+                if g.startswith('Genre_'):
+                    feat[g] = 1 if g.replace('Genre_', '') in str(row.get('Genre', '')) else 0
+                elif g.startswith('Director_'):
+                    feat[g] = 1 if g.replace('Director_', '') == str(row.get('Director', '')) else 0
+
+            # Predict rating
+            predicted_rating = model.predict(feat)[0]
+            previous_my_rating = My_Ratings.loc[My_Ratings['Movie ID'] == movie_id, 'Your Rating'].values[0]
+            rating_diff = predicted_rating - previous_my_rating
+
+            results.append({
+                "Title": title,
+                "IMDb Rating (Static)": static_rating,
+                "IMDb Rating (Live)": live_rating,
+                "Previous My Rating": previous_my_rating,
+                "Predicted My Rating": predicted_rating,
+                "Predicted Change": rating_diff,
+                "CheckedAt": timestamp
+            })
+
+        results_df = pd.DataFrame(results).sort_values(by='Predicted Change', key=abs, ascending=False)
+
+        # --- Save and Display History ---
+        history_file = "predicted_ratings_history.csv"
+        if os.path.exists(history_file):
+            hist_df = pd.read_csv(history_file)
+            hist_df = pd.concat([hist_df, results_df], ignore_index=True)
+        else:
+            hist_df = results_df
+        hist_df.to_csv(history_file, index=False)
+
+        st.success("Predicted ratings check complete ✅")
+        st.dataframe(results_df, use_container_width=True)
+        st.markdown("""
+        **Explanation:**  
+        - Model predicts your personal rating based on live IMDb ratings and other features.  
+        - `Predicted Change` shows how much your rating might have shifted.  
+        - Results are saved to `predicted_ratings_history.csv` for tracking trends over time.  
+        - Can be fully automated and scheduled to monitor rating changes continuously.
+        """)
