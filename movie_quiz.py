@@ -1380,11 +1380,15 @@ else:
 
 
 # --- Scenario 9: Network Influence Analysis ---
+
+
+# --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import streamlit as st
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
+    import math
 
     st.header("Scenario 14 – Network Influence Analysis")
     st.markdown("""
@@ -1463,16 +1467,30 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 if added:
                     related_count += 1
 
-            # Draw network using shell layout
+            # --- Manual layout to force selected film in center ---
+            pos = {}
+            pos[selected_film] = (0, 0)  # Center
+
+            director_nodes = [director]
+            actor_nodes = actors_list
+            film_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "film" and n != selected_film]
+
+            # First ring: director + actors
+            first_ring = director_nodes + actor_nodes
+            r1 = 1.5
+            for i, node in enumerate(first_ring):
+                angle = 2 * math.pi * i / len(first_ring)
+                pos[node] = (r1 * math.cos(angle), r1 * math.sin(angle))
+
+            # Second ring: related films
+            second_ring = film_nodes
+            r2 = 3
+            for i, node in enumerate(second_ring):
+                angle = 2 * math.pi * i / len(second_ring)
+                pos[node] = (r2 * math.cos(angle), r2 * math.sin(angle))
+
+            # Draw network
             plt.figure(figsize=(12, 8))
-            film_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "film"]
-            actor_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "actor"]
-            director_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "director"]
-
-            # Shell layout: center = selected film, first ring = director + actors, second ring = related films
-            shells = [[selected_film], director_nodes + actor_nodes, [f for f in film_nodes if f != selected_film]]
-            pos = nx.shell_layout(G, nlist=shells)
-
             colors = []
             for n, data in G.nodes(data=True):
                 if data["type"] == "film":
