@@ -609,99 +609,196 @@ df_reviews['ReviewID'] = df_reviews.index + 1
             st.error(f"Error running sentiment analysis: {e}")
 
 
-  # --- Scenario 7 Poster Analysis (Editable Code) ---
+# --- Scenario 7: Poster Image Analysis ---
 if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
     st.markdown("### Scenario 7 – Poster Image & Mood Analysis")
-    st.write("Select a movie, then click **Fetch Poster** to display the poster and an easy-to-understand analysis.")
-
-    # --- Hidden API key ---
-    OMDB_API_KEY = "cbbdb8f8"  # Keep this hidden or move to a config file
+    st.write("Select a movie, then click **Fetch Poster** to display the poster and analyze its mood/colors.")
 
     # --- Select a movie ---
     film_list = IMDB_Ratings['Title'].dropna().unique().tolist()
     selected_film = st.selectbox("Select a movie to analyze poster:", film_list)
 
     # --- Editable code block ---
-    poster_code = f'''
+    poster_code = '''
 import requests
 from PIL import Image
 import numpy as np
 from sklearn.cluster import KMeans
-import streamlit as st
 
-# --- Ensure a movie is selected ---
-if selected_film:
-    # Get IMDb ID
-    imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
+# Fetch IMDb ID
+imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
 
-    # Fetch poster from OMDb
-    url = f"http://www.omdbapi.com/?i={{imdb_id}}&apikey={OMDB_API_KEY}"
-    response = requests.get(url).json()
-    poster_url = response.get('Poster')
+# Fetch poster from OMDb
+url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
+response = requests.get(url).json()
+poster_url = response.get('Poster')
 
-    if poster_url and poster_url != "N/A":
-        # Show poster
-        st.image(poster_url, width=300)
+if poster_url and poster_url != "N/A":
+    img = Image.open(requests.get(poster_url, stream=True).raw).convert("RGB")
+    img_small = img.resize((150, 150))
+    img_array = np.array(img_small).reshape(-1, 3)
 
-        # --- Extract poster features ---
-        img = Image.open(requests.get(poster_url, stream=True).raw).convert("RGB")
-        img_small = img.resize((150, 150))
-        img_array = np.array(img_small).reshape(-1, 3)
+    # Find dominant colors
+    kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
+    dominant_colors = kmeans.cluster_centers_
 
-        # Find dominant colors
-        kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
-        dominant_colors = kmeans.cluster_centers_
-
-        st.write("🎨 Dominant Colors:")
-        cols = st.columns(len(dominant_colors))
-        for idx, color in enumerate(dominant_colors.astype(int)):
-            hex_color = '#%02x%02x%02x' % tuple(color)
-            cols[idx].markdown(
-                f"<div style='width:60px; height:60px; background:{{hex_color}}; border-radius:8px; border:1px solid #000'></div>",
-                unsafe_allow_html=True,
-            )
-
-        # Brightness feature
-        brightness = np.mean(img_array)
-        if brightness < 100:
-            mood = "dark and moody"
-            cluster_name = "Cluster 0 – Thriller / Horror style"
-            mood_tag = "🌑 Dark Thriller vibes"
-        elif brightness < 170:
-            mood = "balanced"
-            cluster_name = "Cluster 1 – Drama / Realistic style"
-            mood_tag = "🎭 Dramatic tone"
-        else:
-            mood = "bright and vivid"
-            cluster_name = "Cluster 2 – Comedy / Family style"
-            mood_tag = "😂 Lighthearted & Fun"
-
-        # Human-friendly explanation
-        st.success(f"🎬 Poster assigned to: **{{cluster_name}}**")
-        st.info(
-            f"The poster looks **{{mood}}**, with the main colors shown above. "
-            f"This suggests the movie has **{{cluster_name.split('–')[1].strip()}}**.\\n\\n"
-            f"👉 Mood tag: **{{mood_tag}}**"
+    st.image(poster_url, width=300)
+    st.write("🎨 Dominant Colors:")
+    cols = st.columns(len(dominant_colors))
+    for idx, color in enumerate(dominant_colors.astype(int)):
+        hex_color = '#%02x%02x%02x' % tuple(color)
+        cols[idx].markdown(
+            f"<div style='width:60px; height:60px; background:{hex_color}; border-radius:8px; border:1px solid #000'></div>",
+            unsafe_allow_html=True
         )
-    else:
-        st.warning("Poster not found.")
-'''
 
-    # --- Editable text area ---
-    user_poster_code = st.text_area(
-        "Python Poster Analysis Code (editable)",
-        poster_code,
-        height=600
-    )
+    # Brightness-based mood
+    brightness = np.mean(img_array)
+    if brightness < 100:
+        mood = "dark and moody"
+        cluster_name = "Cluster 0 – Thriller / Horror style"
+        mood_tag = "🌑 Dark Thriller vibes"
+    elif brightness < 170:
+        mood = "balanced"
+        cluster_name = "Cluster 1 – Drama / Realistic style"
+        mood_tag = "🎭 Dramatic tone"
+    else:
+        mood = "bright and vivid"
+        cluster_name = "Cluster 2 – Comedy / Family style"
+        mood_tag = "😂 Lighthearted & Fun"
+
+    st.success(f"🎬 Poster assigned to: **{cluster_name}**")
+    st.info(f"The poster looks **{mood}**, suggesting **{cluster_name.split('–')[1].strip()}**.\n\n👉 Mood tag: **{mood_tag}**")
+else:
+    st.warning("Poster not found.")
+    '''
+
+    user_poster_code = st.text_area("Python Poster Analysis Code (editable)", poster_code, height=650)
+
+    # --- Hidden API key ---
+    OMDB_API_KEY = "cbbdb8f8"  # Hidden from user-editable code
 
     # --- Run button ---
-    if st.button("Run Poster Analysis", key="run_poster7"):
+    if st.button("Fetch Poster & Analyze"):
         try:
-            local_vars = {"IMDB_Ratings": IMDB_Ratings, "selected_film": selected_film, "OMDB_API_KEY": OMDB_API_KEY, "st": st}
+            local_vars = {
+                "IMDB_Ratings": IMDB_Ratings,
+                "selected_film": selected_film,
+                "OMDB_API_KEY": OMDB_API_KEY
+            }
             exec(user_poster_code, {}, local_vars)
+            st.success("Poster analysis executed successfully.")
         except Exception as e:
             st.error(f"Error running poster analysis: {e}")
 
+
+
+
+# --- Scenario 9: Network Influence Analysis ---
+if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
+    import networkx as nx
+    import matplotlib.pyplot as plt
+    import requests
+
+    st.header("Scenario 9 – Network Influence Analysis")
+    st.markdown("""
+    Select a film from your **top-rated films** to see connections:
+    - Director and actors of the film
+    - Other films sharing the same director or actors (from your top-rated list)
+    - Visual network of relationships
+    """)
+
+    # --- Filter top-rated films ---
+    top_films = My_Ratings[My_Ratings["Your Rating"] >= 8].copy()
+
+    if top_films.empty:
+        st.warning("No films with rating >= 8 found in your My_Ratings Excel.")
+    else:
+        # --- Film selection ---
+        film_options = top_films["Title"].astype(str).tolist()
+        selected_film = st.selectbox("Select a film to inspect:", film_options)
+
+        # --- Editable code block ---
+        network_code = '''
+import requests
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Function to fetch director and actors from OMDb
+def fetch_film_details(title):
+    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    resp = requests.get(url).json()
+    director = resp.get("Director", "")
+    actors = resp.get("Actors", "")
+    return director, [a.strip() for a in actors.split(",")] if actors else []
+
+director, actors_list = fetch_film_details(selected_film)
+
+# Build network graph
+G = nx.Graph()
+G.add_node(selected_film, type="film")
+G.add_node(director, type="director")
+G.add_edges_from([(selected_film, director)])
+for actor in actors_list:
+    G.add_node(actor, type="actor")
+    G.add_edge(selected_film, actor)
+
+# Add related films
+for _, row in top_films.iterrows():
+    if row["Title"] == selected_film:
+        continue
+    related_title = row["Title"]
+    rel_director, rel_actors = fetch_film_details(related_title)
+    if rel_director == director:
+        G.add_node(related_title, type="film")
+        G.add_edge(related_title, director)
+    shared_actors = set(rel_actors).intersection(set(actors_list))
+    for sa in shared_actors:
+        G.add_node(related_title, type="film")
+        G.add_edge(related_title, sa)
+
+# Draw network
+plt.figure(figsize=(12, 8))
+pos = nx.spring_layout(G, k=0.5, iterations=50)
+colors = []
+for n, data in G.nodes(data=True):
+    if data["type"] == "film":
+        colors.append("lightblue")
+    elif data["type"] == "director":
+        colors.append("lightgreen")
+    else:
+        colors.append("lightpink")
+nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
+plt.show()
+        '''
+        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
+
+        # --- Hidden API key ---
+        OMDB_API_KEY = "bcf17f38"  # Hidden from editable block
+
+        # --- Run button ---
+        if st.button("Run Network Analysis"):
+            try:
+                local_vars = {
+                    "top_films": top_films,
+                    "selected_film": selected_film,
+                    "OMDB_API_KEY": OMDB_API_KEY
+                }
+                exec(user_network_code, {}, local_vars)
+
+                st.success("Network analysis executed successfully.")
+                st.markdown("""
+                **Explanation:**  
+                - The selected film connects to its **director** and **actors**.  
+                - Other films in your top-rated list are added if they share the **same director** or any **actors**.  
+                - Colors:  
+                    - **Light blue** = film  
+                    - **Light green** = director  
+                    - **Light pink** = actors  
+                - This visualizes key influence connections interactively.
+                """)
+            except Exception as e:
+                st.error(f"Error running network analysis: {e}")
 
 
 # --- Scenario 11---
@@ -1371,159 +1468,6 @@ def fetch_live_rating(title):
         - The `live_ratings_history.csv` can be version-controlled on GitHub to track rating changes over time.
         - True automated monitoring could be added by scheduling this script to run at regular intervals (e.g., daily or weekly) and pushing the results to a versioned repository.
         """)
-
-
-
-
-
-
-# --- Scenario 9: Network Influence Analysis ---
-if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
-    import networkx as nx
-    import matplotlib.pyplot as plt
-    import requests
-    from itertools import chain
-
-    st.header("Scenario 9 – Network Influence Analysis")
-    st.markdown("""
-    Select a film from my **top-rated films** to see connections:
-    - Director and actors of the film
-    - Other films sharing the same director or actors (from my top-rated list)
-    - Visual network of relationships
-    """)
-
-    # --- Filter top-rated films (8 or 9) ---
-    top_films = My_Ratings[My_Ratings["Your Rating"] >= 8].copy()
-
-    if top_films.empty:
-        st.warning("No films with rating 8 or 9 found in your My_Ratings Excel.")
-    else:
-        # --- Film selection ---
-        film_options = top_films["Title"].astype(str).tolist()
-        selected_film = st.selectbox("Select a film to inspect:", film_options)
-
-        # --- Show code in grey box ---
-        with st.expander("🔑 Show Code", expanded=False):
-            st.code("""
-
-import requests
-
-def fetch_film_details(title):
-    OMDB_API_KEY = "YOUR_OMDB_API_KEY"
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    resp = requests.get(url).json()
-    director = resp.get("Director", "")
-    actors = resp.get("Actors", "")
-    return director, [a.strip() for a in actors.split(",")] if actors else []
-
-director, actors_list = fetch_film_details(selected_film)
-
-
-import networkx as nx
-G = nx.Graph()
-G.add_node(selected_film, type="film")
-G.add_node(director, type="director")
-G.add_edges_from([(selected_film, director)])
-for actor in actors_list:
-    G.add_node(actor, type="actor")
-    G.add_edge(selected_film, actor)
-
-
-for _, row in top_films.iterrows():
-    if row["Title"] == selected_film:
-        continue
-    related_title = row["Title"]
-    rel_director, rel_actors = fetch_film_details(related_title)
-    # Connect if same director
-    if rel_director == director:
-        G.add_node(related_title, type="film")
-        G.add_edge(related_title, director)
-    # Connect if shared actor
-    shared_actors = set(rel_actors).intersection(set(actors_list))
-    for sa in shared_actors:
-        G.add_node(related_title, type="film")
-        G.add_edge(related_title, sa)
-
-
-import matplotlib.pyplot as plt
-pos = nx.spring_layout(G, k=0.5, iterations=50)
-colors = []
-for n, data in G.nodes(data=True):
-    if data["type"] == "film":
-        colors.append("lightblue")
-    elif data["type"] == "director":
-        colors.append("lightgreen")
-    else:
-        colors.append("lightpink")
-nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-plt.show()
-            """, language="python")
-
-        # --- Run button ---
-        if st.button("Run Network Analysis"):
-            def fetch_film_details(title):
-                OMDB_API_KEY = "bcf17f38"  # Replace with your own
-                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-                resp = requests.get(url).json()
-                director = resp.get("Director", "")
-                actors = resp.get("Actors", "")
-                return director, [a.strip() for a in actors.split(",")] if actors else []
-
-            director, actors_list = fetch_film_details(selected_film)
-
-            st.markdown(f"**Selected Film:** {selected_film}")
-            st.markdown(f"**Director:** {director}")
-            st.markdown(f"**Actors:** {', '.join(actors_list)}")
-
-            # Build network graph
-            G = nx.Graph()
-            G.add_node(selected_film, type="film")
-            G.add_node(director, type="director")
-            G.add_edges_from([(selected_film, director)])
-            for actor in actors_list:
-                G.add_node(actor, type="actor")
-                G.add_edge(selected_film, actor)
-
-            # Add related films
-            for _, row in top_films.iterrows():
-                if row["Title"] == selected_film:
-                    continue
-                related_title = row["Title"]
-                rel_director, rel_actors = fetch_film_details(related_title)
-                # Connect if same director
-                if rel_director == director:
-                    G.add_node(related_title, type="film")
-                    G.add_edge(related_title, director)
-                # Connect if shared actor
-                shared_actors = set(rel_actors).intersection(set(actors_list))
-                for sa in shared_actors:
-                    G.add_node(related_title, type="film")
-                    G.add_edge(related_title, sa)
-
-            # Draw network
-            plt.figure(figsize=(12, 8))
-            pos = nx.spring_layout(G, k=0.5, iterations=50)
-            colors = []
-            for n, data in G.nodes(data=True):
-                if data["type"] == "film":
-                    colors.append("lightblue")
-                elif data["type"] == "director":
-                    colors.append("lightgreen")
-                else:
-                    colors.append("lightpink")
-            nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-            st.pyplot(plt)
-            
-            st.markdown("""
-            **Explanation:**  
-            - The selected film connects to its **director** and **actors**.  
-            - Other films in  top-rated list are added if they share the **same director** or any **actors**.  
-            - Colors:  
-                - **Light blue** = film  
-                - **Light green** = director  
-                - **Light pink** = actors  
-            - This visualizes key influence connections interactively without cluttering a full network graph.
-            """)
 
 
 
