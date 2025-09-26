@@ -1292,7 +1292,7 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     st.header("Scenario 13 – Live Ratings Monitor + ML Predictions")
     st.markdown("""
     This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb 
-    for my **top 50 films by static rating**.  
+    for my **top 100 films by static rating**.  
 
     Then it applies **machine learning** on the historical rating differences to predict 
     how my ratings might evolve in the future.
@@ -1301,8 +1301,8 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     # --- OMDb API key ---
     OMDB_API_KEY = "50bcb7e2"  # ✅ your real API key
 
-    # --- Select top 50 films ---
-    top50_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(50)
+    # --- Select top 100 films ---
+    top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
 
     # --- Hidden API key / fetch function in grey box ---
     with st.expander("🔑 Show Code", expanded=False):
@@ -1334,7 +1334,7 @@ def fetch_live_rating(title):
 
         results = []
 
-        for _, row in top50_films.iterrows():
+        for _, row in top100_films.iterrows():
             title = row["Title"]
             static_rating = row["IMDb Rating"]
 
@@ -1357,6 +1357,9 @@ def fetch_live_rating(title):
 
         new_df = pd.DataFrame(results)
 
+        # Keep only rows where there is a difference
+        new_df = new_df[new_df["Rating Difference"] != 0]
+
         # Append, remove duplicates, and save CSV
         history_df = pd.concat([history_df, new_df], ignore_index=True)
         history_df.drop_duplicates(subset=["Title", "CheckedAt"], keep="last", inplace=True)
@@ -1365,7 +1368,7 @@ def fetch_live_rating(title):
         st.success("Live ratings check complete ✅")
 
         # --- Show sorted results by Rating Difference ---
-        st.subheader("📊 Current Run – Sorted by Rating Difference")
+        st.subheader("📊 Current Run – Sorted by Rating Difference (Non-zero only)")
         st.dataframe(
             new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
             use_container_width=True
