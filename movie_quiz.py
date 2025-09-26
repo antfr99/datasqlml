@@ -1295,10 +1295,10 @@ if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
 
     # --- Editable code block ---
     poster_code = '''
-# Get IMDb ID
+
 imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
 
-# Fetch poster from OMDb
+
 url = f"http://www.omdbapi.com/?i={imdb_id}&apikey={OMDB_API_KEY}"
 response = requests.get(url).json()
 poster_url = response.get('Poster')
@@ -1308,14 +1308,14 @@ if poster_url and poster_url != "N/A":
     img_small = img.resize((150, 150))
     img_array = np.array(img_small).reshape(-1, 3)
 
-    # Find dominant colors
+    
     kmeans = KMeans(n_clusters=3, random_state=42).fit(img_array)
     dominant_colors = kmeans.cluster_centers_
 
-    # Display poster
+    
     st.image(poster_url, width=300)
 
-    # Show dominant colors
+    
     st.write("🎨 Dominant Colors:")
     cols = st.columns(len(dominant_colors))
     for idx, color in enumerate(dominant_colors.astype(int)):
@@ -1325,7 +1325,7 @@ if poster_url and poster_url != "N/A":
             unsafe_allow_html=True
         )
 
-    # Determine brightness/mood
+    
     brightness = np.mean(img_array)
     if brightness < 100:
         mood = "dark and moody"
@@ -1340,7 +1340,7 @@ if poster_url and poster_url != "N/A":
         cluster_name = "Cluster 2 – Comedy / Family style"
         mood_tag = "😂 Lighthearted & Fun"
 
-    # Display human-friendly explanation
+    
     st.success("🎬 Poster assigned to: **{}**".format(cluster_name))
     st.info("The poster looks **{}**, suggesting **{}**.\\n\\n👉 Mood tag: **{}**".format(
         mood, cluster_name.split('–')[1].strip(), mood_tag
@@ -1383,25 +1383,19 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
+    import pandas as pd
 
     st.header("Scenario 9 – Network Influence Analysis")
     st.markdown("""
-    This scenario focuses on **connections between a selected film, its director, and actors**, as well as relationships to other films in your **top-rated list**.  
+    This scenario performs a **film-specific influence network analysis**. Given a selected film from your **top-rated list**, it visualizes **how that film connects to its director and actors** and explores relationships to other films in the same dataset.  
 
-    **How this differs from Scenario 8 – Collaborative Graph Analysis:**  
-    - **Scenario 8** shows **all movies, directors, and actors** in a large network graph to explore general patterns and clusters across the dataset.  
-    - **Scenario 9** is **interactive and film-specific**:  
-      - You select **one film**, and the network graph shows only its **director, actors, and any top-rated films sharing the same director or actors**.  
-      - It is much more **focused** and easier to interpret for influence or collaboration of a single film.  
+    **Technical Differences from Scenario 8 – Collaborative Graph Analysis:**  
+    - **Scenario 8** constructs a **full network graph** of all films, directors, and actors in the dataset to study global collaboration patterns, clusters, or communities.  
+    - **Scenario 9** is **focused and interactive**:  
+      1. **Single Film-centric Graph** – Only the selected film, its director, and actors are added initially.  
+      2. **Related Films** – Other top-rated films are dynamically connected if they share the same director or any actors.  
 
-    **Key Outputs:**  
-    - Director and actor nodes connected to the selected film  
-    - Related films sharing the director or actors  
-    - Node colors:  
-      - **Light blue** = films  
-      - **Light green** = directors  
-      - **Light pink** = actors  
-    - Interactive visual exploration without clutter
+    - **Outcome:** You get a **concise, interpretable subgraph** for influence and collaboration analysis of a single film, avoiding clutter from the full dataset graph.
     """)
 
     # --- Filter top-rated films ---
@@ -1420,7 +1414,6 @@ import requests
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Function to fetch director and actors from OMDb
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
@@ -1428,9 +1421,10 @@ def fetch_film_details(title):
     actors = resp.get("Actors", "")
     return director, [a.strip() for a in actors.split(",")] if actors else []
 
+
 director, actors_list = fetch_film_details(selected_film)
 
-# Build network graph
+
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
@@ -1439,7 +1433,7 @@ for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
-# Add related films
+
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film:
         continue
@@ -1453,7 +1447,7 @@ for _, row in top_films.iterrows():
         G.add_node(related_title, type="film")
         G.add_edge(related_title, sa)
 
-# Draw network
+
 plt.figure(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.5, iterations=50)
 colors = []
@@ -1467,7 +1461,9 @@ for n, data in G.nodes(data=True):
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
 plt.show()
         '''
-        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
+        user_network_code = st.text_area(
+            "Python Network Analysis Code (editable)", network_code, height=650
+        )
 
         # --- Hidden API key ---
         OMDB_API_KEY = "bcf17f38"  # Hidden from editable block
