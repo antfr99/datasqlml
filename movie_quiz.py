@@ -442,7 +442,7 @@ df_results = df_results.sort_values(by="p_value")
 
 
 
-# --- Remove subprocess and sys imports related to runtime download ---
+# --- SCENARIO 6 ---
 
 from textblob import TextBlob
 import pandas as pd
@@ -511,14 +511,15 @@ This is a phenomenal film, full of details, full of symbolism and references to 
 I have never watch a movie about it :).Dont try to learn something about the film before watching. Actually, it tells very good the whole life, and theatral aspect was wonderful in the movie. I strongly suggest that movie but, first, you have to leave your superstitions and prejudice . Just watch as an art and movie. But this movie, is not for superhero lovers and childs.
     """
 
-    # --- Convert multi-line text to list of reviews ---
-    reviews = [r.strip() for r in reviews_text.split("\n\n") if r.strip()]
-
-    # --- Show code block first ---
-    review_code = '''
+    # --- Full editable code block for this scenario ---
+    review_code = f'''
 from textblob import TextBlob
 import pandas as pd
 
+# --- Reviews input ---
+reviews_text = """{reviews_text.strip()}"""
+
+# Convert multi-line text to list of reviews
 reviews = [r.strip() for r in reviews_text.split("\\n\\n") if r.strip()]
 
 review_records = []
@@ -536,86 +537,76 @@ for review in reviews:
     if not snippet:
         continue
 
-    review_records.append({
+    review_records.append({{
         "ReviewID": review_counter,
         "Words": len(words),
         "Sentiment": round(sentiment, 3),
         "Subjectivity": round(subjectivity, 3),
         "Snippet": snippet + ("..." if len(review) > 500 else "")
-    })
+    }})
     review_counter += 1
 
 df_reviews = pd.DataFrame(review_records)
 df_reviews.reset_index(drop=True, inplace=True)
 df_reviews['ReviewID'] = df_reviews.index + 1
 '''
-    st.subheader("Scenario 6 Code")
-    st.code(review_code, language="python")
 
-    # --- Button below grey block ---
-    if st.button("Run Sentiment Analysis"):
-        review_records = []
-        review_counter = 1
-        for review in reviews:
-            words = review.split()
-            if len(words) < 5:
-                continue
-            tb = TextBlob(review)
-            sentiment = tb.sentiment.polarity
-            subjectivity = tb.sentiment.subjectivity
-            snippet = review[:500].strip()
-            if not snippet:
-                continue
-            review_records.append({
-                "ReviewID": review_counter,
-                "Words": len(words),
-                "Sentiment": round(sentiment, 3),
-                "Subjectivity": round(subjectivity, 3),
-                "Snippet": snippet + ("..." if len(review) > 500 else "")
-            })
-            review_counter += 1
+    # --- Editable code input (like Scenario 5) ---
+    user_review_code = st.text_area(
+        "Python Review Sentiment Code (editable)",
+        review_code,
+        height=700
+    )
 
-        df_reviews = pd.DataFrame(review_records)
-        df_reviews.reset_index(drop=True, inplace=True)
-        df_reviews['ReviewID'] = df_reviews.index + 1
+    # --- Run button ---
+    if st.button("Run Sentiment Analysis", key="run_sentiment6"):
+        try:
+            local_vars = {}
+            exec(user_review_code, {}, local_vars)
 
-        st.subheader("Reviews Overview")
-        st.dataframe(df_reviews, width="stretch", height=400)
+            if "df_reviews" in local_vars:
+                df_reviews = local_vars["df_reviews"]
 
-        st.subheader("Aggregate Insights")
-        st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
-        st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
+                st.subheader("Reviews Overview")
+                st.dataframe(df_reviews, width="stretch", height=400)
 
-        st.markdown("""
-        **What these metrics mean:**
-        - **Sentiment**: ranges from -1 (negative) to +1 (positive).  
-        - **Subjectivity**: ranges from 0 (objective) to 1 (subjective/opinionated).  
-        - **Snippet**: first 500 characters of the review.  
-        """)
+                st.subheader("Aggregate Insights")
+                st.write(f"**Average sentiment:** {df_reviews['Sentiment'].mean():.3f}")
+                st.write(f"**Average subjectivity:** {df_reviews['Subjectivity'].mean():.3f}")
 
-        st.markdown("""
-        ---
-        **How TextBlob works (in simple terms):**  
-        - TextBlob uses a built-in **lexicon** (a dictionary of words) where each word has a sentiment score  
-          (e.g., *"great"* → +0.8, *"boring"* → -0.6).  
-        - When it processes a review, it breaks the text into words and phrases, looks them up in the lexicon,  
-          and then averages the scores to estimate overall **sentiment**.  
-        - For **subjectivity**, it checks how opinion-based the words are. Words like *"amazing"* or *"terrible"*  
-          are subjective, while factual words like *"movie length"* are objective.  
-        - The result is a quick, automated way of measuring tone and bias without needing manual labeling.  
+                st.markdown("""
+                **What these metrics mean:**
+                - **Sentiment**: ranges from -1 (negative) to +1 (positive).  
+                - **Subjectivity**: ranges from 0 (objective) to 1 (subjective/opinionated).  
+                - **Snippet**: first 500 characters of the review.  
+                """)
 
-        ⚠️ **Note:** TextBlob is rule-based and doesn’t “understand” context deeply.  
-        For example, sarcasm or irony might confuse it (e.g., *"What a masterpiece..."* said negatively will still be read as **positive**). 
-        """)
+                st.markdown("""
+                ---
+                **How TextBlob works (in simple terms):**  
+                - TextBlob uses a built-in **lexicon** (a dictionary of words) where each word has a sentiment score  
+                  (e.g., *"great"* → +0.8, *"boring"* → -0.6).  
+                - When it processes a review, it breaks the text into words and phrases, looks them up in the lexicon,  
+                  and then averages the scores to estimate overall **sentiment**.  
+                - For **subjectivity**, it checks how opinion-based the words are. Words like *"amazing"* or *"terrible"*  
+                  are subjective, while factual words like *"movie length"* are objective.  
+                - The result is a quick, automated way of measuring tone and bias without needing manual labeling.  
 
+                ⚠️ **Note:** TextBlob is rule-based and doesn’t “understand” context deeply.  
+                For example, sarcasm or irony might confuse it (e.g., *"What a masterpiece..."* said negatively will still be read as **positive**). 
+                """)
 
+                # --- Full reviews ---
+                st.markdown("---")
+                with st.expander("Full Reviews (click to expand)"):
+                    for r in local_vars["reviews"]:
+                        if len(r.split()) >= 5:
+                            st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
+            else:
+                st.warning("No dataframe named 'df_reviews' was produced. Please check your code.")
 
-        # --- Full reviews ---
-        st.markdown("---")
-        with st.expander("Full Reviews (click to expand)"):
-            for r in reviews:
-                if len(r.split()) >= 5:
-                    st.markdown(f"<div style='color:gray; padding:5px;'>{r}</div>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error running sentiment analysis: {e}")
 
 
 # --- Scenario 11---
