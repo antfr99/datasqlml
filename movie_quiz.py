@@ -1298,17 +1298,21 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     how my ratings might evolve in the future.
     """)
 
+    # --- OMDb API key ---
+    OMDB_API_KEY = "50bcb7e2"  # ✅ your real API key
+
     # --- Select top 50 films ---
     top50_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(50)
 
     # --- Hidden API key / fetch function in grey box ---
     with st.expander("🔑 Show Code", expanded=False):
-        st.code("""
+        st.code(f"""
 import requests
-OMDB_API_KEY = "YOUR_OMDB_API_KEY"  
+
+OMDB_API_KEY = "{OMDB_API_KEY}"  
 
 def fetch_live_rating(title):
-    url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    url = f"http://www.omdbapi.com/?t={{title}}&apikey={{OMDB_API_KEY}}"
     resp = requests.get(url).json()
     return float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
         """, language="python")
@@ -1335,7 +1339,7 @@ def fetch_live_rating(title):
             static_rating = row["IMDb Rating"]
 
             try:
-                url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
+                url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
                 resp = requests.get(url).json()
                 live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
             except Exception:
