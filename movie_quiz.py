@@ -1286,16 +1286,19 @@ else:
         except Exception as e:
             st.error(f"Error running poster analysis: {e}")
 
+
 # --- Scenario 13: Live Ratings Monitor + ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
-    st.markdown("""
-    This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb 
-    for my **top 100 films by static rating**.  
 
-    Then it applies **machine learning** on the historical rating differences to predict 
-    how my ratings might evolve in the future.
-    """)
+    # --- Brief MLOps + CI/CD + Monitoring Note ---
+    st.markdown("""
+**MLOps + CI/CD + Monitoring (Brief)**  
+
+- **MLOps:** Automates data collection (live IMDb ratings), logs historical differences, and retrains ML models to predict future rating changes.  
+- **CI/CD:** Modular code can be version-controlled; in a full setup, changes would trigger automated testing and deployment. *(Note: currently illustrative, not connected to a remote repo.)*  
+- **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
+""")
 
     # --- OMDb API key ---
     OMDB_API_KEY = "50bcb7e2"  # ✅ your real API key
@@ -1411,28 +1414,3 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
                 ]].sort_values(by="Predicted Future Diff", ascending=False).reset_index(drop=True),
                 use_container_width=True
             )
-
-        # --- Explanation of MLOps + CI/CD + Monitoring (with note) ---
-        st.markdown("""
----
-
-### 🛠 How this implements MLOps + CI/CD + Monitoring (Theoretical)
-
-1. **MLOps (Machine Learning Operations)**  
-   - The pipeline automatically collects **live ratings** from OMDb.  
-   - Historical rating differences are logged in `live_ratings_history.csv`.  
-   - ML model (Random Forest) is retrained on new data every run, learning how ratings change over time.  
-
-2. **CI/CD (Continuous Integration / Continuous Deployment) – Theoretical**  
-   - The code is modular and can be version-controlled.  
-   - In a full CI/CD setup, changes would trigger automatic testing and redeployment.  
-   - **Note:** This demo does not currently link the output CSV to a remote repository; the CI/CD concept is for **illustration only**.
-
-3. **Monitoring**  
-   - Rating differences and predicted future ratings are saved with timestamps.  
-   - Tracking over time allows detection of trends, anomalies, or unexpected changes in IMDb ratings.  
-   - Visualizations provide immediate feedback for analysis.  
-
-**Summary:**  
-This scenario demonstrates a **self-contained pipeline** that fetches live data, logs changes, retrains ML models, and provides insights — showing how MLOps, CI/CD, and Monitoring **concepts** can be applied, even if remote deployment and automated pipelines are not currently implemented.
-""")
