@@ -1382,7 +1382,7 @@ else:
 
 
 # --- Scenario 9: Network Influence Analysis ---
-if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections in My Top 100 Personal Films":
+if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
