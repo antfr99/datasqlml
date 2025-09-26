@@ -1333,13 +1333,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # --- Show sorted results by Rating Difference ---
         if not new_df.empty:
-            st.subheader("📊 Current Run")
+            st.subheader("📊 Current Run (English-language films only)")
             st.dataframe(
                 new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
                 use_container_width=True
             )
         else:
-            st.warning("Rating changes found in this run")
+            st.warning("No English-language films with rating changes found in this run.")
 
         # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
@@ -1371,7 +1371,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         predict_df['Predicted Rating'] = model.predict(X_pred)
 
         if not predict_df.empty:
-            st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
+            st.subheader("🤖 Predicted Ratings for Unseen English-Language Movies with Changed Ratings")
             st.dataframe(
                 predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
@@ -1387,7 +1387,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 1. **Data Preparation**  
    - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
-   - `Your Rating` is the target variable for supervised learning.
+   - `My Rating` is the target variable for supervised learning.
 
 2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
    - Categorical features are converted to **one-hot encoded vectors**.  
@@ -1401,10 +1401,10 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
      - This reduces overfitting and improves accuracy.
 
 4. **Training**  
-   - Model learns patterns from movies you have rated (`Your Rating`).  
+   - Model learns patterns from movies I have rated (`Your Rating`).  
 
 5. **Prediction**  
-   - Model predicts ratings for movies you haven’t rated based on learned patterns.  
+   - Model predicts ratings for movies I haven’t rated based on learned patterns.  
 
 6. **Why this works**  
    - Handles non-linear relationships and feature interactions naturally.  
