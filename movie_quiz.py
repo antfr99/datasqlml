@@ -1288,7 +1288,7 @@ else:
 
 # --- Scenario 13: Live Ratings Monitor + ML Predictions ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("Scenario 13 – Live Ratings Monitor + ML Predictions")
+    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
     st.markdown("""
     This scenario compares my **static IMDb ratings** (from Excel) with the **current live IMDb ratings** from OMDb 
     for my **top 100 films by static rating**.  
