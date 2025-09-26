@@ -1385,6 +1385,7 @@ def fetch_live_rating(title):
         """)
 
 
+
 # --- Scenario 7 Poster Analysis ---
 if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
     st.header("Scenario 7 – Poster Image & Mood Analysis")
@@ -1395,12 +1396,6 @@ if scenario == "Scenario 7 – Poster Image Analysis (OMDb API)":
 
     # --- Editable code block ---
     poster_code = '''
-import requests
-from PIL import Image
-import numpy as np
-from sklearn.cluster import KMeans
-import streamlit as st
-
 # Get IMDb ID
 imdb_id = IMDB_Ratings.loc[IMDB_Ratings['Title'] == selected_film, 'Movie ID'].values[0]
 
@@ -1474,13 +1469,10 @@ else:
                 "OMDB_API_KEY": OMDB_API_KEY,
                 "st": st,
                 "np": np,
-                "KMeans": KMeans,
+                "KMeans": __import__('sklearn.cluster').cluster.KMeans,
                 "requests": requests,
                 "Image": Image
             }
             exec(user_poster_code, {}, local_vars)
         except Exception as e:
             st.error(f"Error running poster analysis: {e}")
-
-
-
