@@ -1371,7 +1371,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         predict_df['Predicted Rating'] = model.predict(X_pred)
 
         if not predict_df.empty:
-            st.subheader("🤖 Predicted Ratings for Unseen English-Language Movies with Changed Ratings")
+            st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
             st.dataframe(
                 predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
