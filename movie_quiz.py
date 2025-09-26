@@ -1377,13 +1377,13 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
+
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import streamlit as st
     import networkx as nx
     import matplotlib.pyplot as plt
     import requests
-    import pandas as pd
 
     st.header("Scenario 9 – Network Influence Analysis")
     st.markdown("""
@@ -1413,6 +1413,7 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
 import requests
 import networkx as nx
 import matplotlib.pyplot as plt
+
 
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -1461,22 +1462,22 @@ for n, data in G.nodes(data=True):
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
 plt.show()
         '''
-        user_network_code = st.text_area(
-            "Python Network Analysis Code (editable)", network_code, height=650
-        )
+
+        user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
 
         # --- Hidden API key ---
-        OMDB_API_KEY = "bcf17f38"  # Hidden from editable block
+        OMDB_API_KEY = "bcf17f38"  # hidden, not editable
 
         # --- Run button ---
         if st.button("Run Network Analysis"):
             try:
-                local_vars = {
+                # Inject API key and other variables into exec globals
+                exec_globals = {
                     "top_films": top_films,
                     "selected_film": selected_film,
-                    "OMDB_API_KEY": OMDB_API_KEY
+                    "OMDB_API_KEY": OMDB_API_KEY,
                 }
-                exec(user_network_code, {}, local_vars)
+                exec(user_network_code, exec_globals)
 
                 st.success("Network analysis executed successfully.")
                 st.markdown("""
