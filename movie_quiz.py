@@ -1376,6 +1376,8 @@ else:
         except Exception as e:
             st.error(f"Error running poster analysis: {e}")
 
+
+
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import streamlit as st
@@ -1416,7 +1418,7 @@ def fetch_film_details(title):
 
 director, actors_list = fetch_film_details(selected_film)
 
-# --- Build graph ---
+
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
@@ -1426,7 +1428,7 @@ for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
-# --- Add related films (same director or shared actor) ---
+
 related_count = 0
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film:
@@ -1449,7 +1451,7 @@ for _, row in top_films.iterrows():
     if add_film:
         related_count += 1
 
-# --- Draw network ---
+
 plt.figure(figsize=(12, 8))
 pos = nx.spring_layout(G, k=0.5, iterations=50)
 colors = []
