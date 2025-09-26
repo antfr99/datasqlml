@@ -1386,15 +1386,7 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
 
     st.header("Scenario 9 – Network Influence Analysis")
     st.markdown("""
-    This scenario performs a **film-specific influence network analysis**. Given a selected film from your **top-rated list**, it visualizes **how that film connects to its director and actors** and explores relationships to other films in the same dataset.  
-
-    **Technical Differences from Scenario 8 – Collaborative Graph Analysis:**  
-    - **Scenario 8** constructs a **full network graph** of all films, directors, and actors in the dataset to study global collaboration patterns, clusters, or communities.  
-    - **Scenario 9** is **focused and interactive**:  
-      1. **Single Film-centric Graph** – Only the selected film, its director, and actors are added initially.  
-      2. **Related Films** – Other top-rated films are dynamically connected if they share the same director or any actors.  
-
-    - **Outcome:** You get a **concise, interpretable subgraph** for influence and collaboration analysis of a single film, avoiding clutter from the full dataset graph.
+    This scenario performs a **film-specific influence network analysis**. Given a selected film, it visualizes **how that film connects to its director and main actors** and optionally shows other top-rated films sharing the same director or actors.  
     """)
 
     # --- Filter top-rated films ---
@@ -1412,41 +1404,55 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
 import requests
 import networkx as nx
 import matplotlib.pyplot as plt
-import streamlit as st  # needed for st.pyplot inside exec
 
+MAX_ACTORS = 5       
+MAX_RELATED_FILMS = 5  
 
 def fetch_film_details(title):
     url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
     resp = requests.get(url).json()
-    director = resp.get("Director", "")
+    director = resp.get("Director", "").split(",")[0].strip()  # only first director
     actors = resp.get("Actors", "")
-    return director, [a.strip() for a in actors.split(",")] if actors else []
-
+    actors_list = [a.strip() for a in actors.split(",") if "uncredited" not in a.lower()]
+    return director, actors_list[:MAX_ACTORS]
 
 director, actors_list = fetch_film_details(selected_film)
 
-
+-
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
-G.add_edges_from([(selected_film, director)])
+G.add_edge(selected_film, director)
+
 for actor in actors_list:
     G.add_node(actor, type="actor")
     G.add_edge(selected_film, actor)
 
 
+related_count = 0
 for _, row in top_films.iterrows():
     if row["Title"] == selected_film:
         continue
+    if related_count >= MAX_RELATED_FILMS:
+        break
     related_title = row["Title"]
     rel_director, rel_actors = fetch_film_details(related_title)
+
+    add_film = False
     if rel_director == director:
+        add_film = True
         G.add_node(related_title, type="film")
         G.add_edge(related_title, director)
+
     shared_actors = set(rel_actors).intersection(set(actors_list))
-    for sa in shared_actors:
+    if shared_actors:
+        add_film = True
         G.add_node(related_title, type="film")
-        G.add_edge(related_title, sa)
+        for sa in shared_actors:
+            G.add_edge(related_title, sa)
+
+    if add_film:
+        related_count += 1
 
 
 plt.figure(figsize=(12, 8))
@@ -1459,8 +1465,9 @@ for n, data in G.nodes(data=True):
         colors.append("lightgreen")
     else:
         colors.append("lightpink")
+
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-st.pyplot(plt.gcf())  # <-- use st.pyplot instead of plt.show()
+st.pyplot(plt.gcf())
         '''
 
         user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
@@ -1471,20 +1478,19 @@ st.pyplot(plt.gcf())  # <-- use st.pyplot instead of plt.show()
         # --- Run button ---
         if st.button("Run Network Analysis"):
             try:
-                # Inject API key and other variables into exec globals
                 exec_globals = {
                     "top_films": top_films,
                     "selected_film": selected_film,
                     "OMDB_API_KEY": OMDB_API_KEY,
-                    "st": st,  # needed for st.pyplot inside exec
+                    "st": st,
                 }
                 exec(user_network_code, exec_globals)
 
                 st.success("Network analysis executed successfully.")
                 st.markdown("""
                 **Explanation:**  
-                - The selected film connects to its **director** and **actors**.  
-                - Other films in your top-rated list are added if they share the **same director** or any **actors**.  
+                - The graph shows the selected film with its **director** and up to **5 main actors**.  
+                - Other top-rated films are added **only if they share the director or actors**, limited to 5 films.  
                 - Node colors:  
                     - **Light blue** = film  
                     - **Light green** = director  
