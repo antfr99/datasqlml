@@ -110,7 +110,7 @@ scenario = st.radio(
 
 # --- Scenario 1: SQL Playground ---
 if scenario == "Scenario 1 – Highlight Disagreements (SQL)":
-    st.markdown('<h3 style="color:green;">Scenario 1 (My Ratings vs IMDb)</h3>', unsafe_allow_html=True)
+    st.header("Scenario 1 – Highlight Disagreements (SQL)")
     st.write("Movies where my rating differs from IMDb by more than 2 points.")
 
     default_query_1 = """SELECT 
@@ -139,7 +139,7 @@ LIMIT 1000;"""
 
 # --- Scenario 2: SQL Playground ---
 if scenario == "Scenario 2 – Hybrid Recommendations (SQL)":
-    st.markdown('<h3 style="color:green;">Scenario 2 (Recommend Unseen Movies)</h3>', unsafe_allow_html=True)
+    st.header("Scenario 2 – Hybrid Recommendations (SQL)")
     st.write("""
     Recommend movies I haven't seen yet with a bonus point system:  
     - Director I liked before → +1 point  
@@ -177,7 +177,7 @@ LIMIT 10000;"""
 
 # --- Scenario 3: SQL Playground ---
 if scenario == "Scenario 3 – Top Unseen Films by Decade (SQL)":
-    st.markdown('<h3 style="color:green;">Scenario 3 (Decade Discovery – Top Unseen Films)</h3>', unsafe_allow_html=True)
+    st.header("Scenario 3 – Top Unseen Films by Decade (SQL)")
     st.write("""
     Shows the highest-rated unseen films grouped by decade.  
     Uses Python deduplication and limits results to the top 20 per decade.
@@ -224,7 +224,7 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 # --- Scenario 10: Python ML ---
 if scenario == "Scenario 10 – Predict My Ratings (ML)":
-    st.markdown('<h3 style="color:green;">Scenario 4 (Predict My Ratings – ML):</h3>', unsafe_allow_html=True)
+    st.header("Scenario 10 – Predict My Ratings (ML)")
     st.write("""
     Predict my ratings for unseen movies using a machine learning model.
 
@@ -304,7 +304,7 @@ predict_df
 
 # --- Scenario 4: Statistical Insights ---
 if scenario == "Scenario 4 – Statistical Insights by Genre (Agreement)":
-    st.markdown('<h3 style="color:green;">Scenario 5 (Agreement % per Genre):</h3>', unsafe_allow_html=True)
+    st.header("Scenario 4 – Statistical Insights by Genre (Agreement)")
     st.write("""
     This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
     Results are grouped by genre, showing agreements, disagreements, and overall percentages.
@@ -364,7 +364,7 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
 # --- Scenario 5: Statistical Insights (t-test per Director) ---
 if scenario == "Scenario 5 – Statistical Insights by Director (t-test)":
-    st.markdown('<h3 style="color:green;">Scenario 6 (t-test per Director)</h3>', unsafe_allow_html=True)
+    st.header("Scenario 5 – Statistical Insights by Director (t-test)")
     st.write("""
 This analysis compares my ratings with IMDb ratings on a director-by-director basis using a **paired t-test**.  
 The test checks whether the differences between my ratings and IMDb’s are statistically significant for each director.  
@@ -449,7 +449,7 @@ import streamlit as st
 
 
 if scenario == "Scenario 6 – Review Analysis (Sentiment, Subjectivity)":
-    st.header("Scenario 6 — Film Review Analysis - Mother! (2017)")
+    st.header("Scenario 6 – Review Analysis (Sentiment, Subjectivity)")
 
     # --- Short explanation ---
     st.markdown("""
@@ -1038,7 +1038,7 @@ if scenario == "Scenario 12 – Feature Hypothesis Testing":
 
 # --- Scenario 8: Graph-Based Movie Relationships ---
 if scenario == "Scenario 8 – Graph Based Movie Relationships":
-    st.markdown('<h3 style="color:green;">Scenario 11 (Graph Nodes & Edges):</h3>', unsafe_allow_html=True)
+    st.header("Scenario 8 – Graph-Based Movie Relationships")
     st.write("""
     This scenario models the dataset as a **graph**:
     - **Nodes**: Movies, Directors, Genres  
