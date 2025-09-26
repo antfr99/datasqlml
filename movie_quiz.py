@@ -1288,7 +1288,6 @@ else:
 
 
 
-
 # --- Scenario 13: Fully Automated ML Live Rating Monitor ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Automated ML Live Rating Monitor")
@@ -1296,102 +1295,113 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
     This scenario predicts your rating for top films using a **supervised ML model**, compares it with your previous rating, and tracks predicted changes over time.
     """)
 
+    # --- Ensure Votes column exists ---
+    if 'Votes' not in IMDB_Ratings.columns:
+        st.warning("'Votes' column not found in IMDB_Ratings. Filling with 0.")
+        IMDB_Ratings['Votes'] = 0
+    else:
+        # Fill any missing votes with 0
+        IMDB_Ratings['Votes'] = IMDB_Ratings['Votes'].fillna(0)
+
     # --- Filter top 100 movies ---
     top_movies = IMDB_Ratings[(IMDB_Ratings['IMDb Rating'] > 0) & 
                               (IMDB_Ratings['Votes'] > 50000)].sort_values(by="IMDb Rating", ascending=False).head(100)
 
-    # --- Merge with your ratings ---
-    df = top_movies.merge(My_Ratings[['Movie ID', 'Your Rating']], on="Movie ID", how="left")
-    df = df.dropna(subset=['Your Rating'])
+    if top_movies.empty:
+        st.error("No movies meet the criteria of IMDb Rating > 0 and Votes > 50,000. ML scenario cannot run.")
+    else:
+        # --- Merge with your ratings ---
+        df = top_movies.merge(My_Ratings[['Movie ID', 'Your Rating']], on="Movie ID", how="left")
+        df = df.dropna(subset=['Your Rating'])
 
-    # --- Features and Target ---
-    X = df[['IMDb Rating', 'Votes', 'Year']].copy()
-    y = df['Your Rating']
+        # --- Features and Target ---
+        X = df[['IMDb Rating', 'Votes', 'Year']].copy()
+        y = df['Your Rating']
 
-    # One-hot encode Genre and Director
-    cat_features = []
-    if 'Genre' in df.columns:
-        genre_dummies = pd.get_dummies(df['Genre'], prefix='Genre')
-        X = pd.concat([X, genre_dummies], axis=1)
-        cat_features += list(genre_dummies.columns)
-    if 'Director' in df.columns:
-        director_dummies = pd.get_dummies(df['Director'], prefix='Director')
-        X = pd.concat([X, director_dummies], axis=1)
-        cat_features += list(director_dummies.columns)
+        # One-hot encode Genre and Director
+        cat_features = []
+        if 'Genre' in df.columns:
+            genre_dummies = pd.get_dummies(df['Genre'], prefix='Genre')
+            X = pd.concat([X, genre_dummies], axis=1)
+            cat_features += list(genre_dummies.columns)
+        if 'Director' in df.columns:
+            director_dummies = pd.get_dummies(df['Director'], prefix='Director')
+            X = pd.concat([X, director_dummies], axis=1)
+            cat_features += list(director_dummies.columns)
 
-    # --- Train ML Model ---
-    model = lgb.LGBMRegressor(n_estimators=200, random_state=42)
-    model.fit(X, y)
-    st.success("ML Model trained successfully ✅")
+        # --- Train ML Model ---
+        model = lgb.LGBMRegressor(n_estimators=200, random_state=42)
+        model.fit(X, y)
+        st.success("ML Model trained successfully ✅")
 
-    st.write("Top Features by Importance:")
-    importance_df = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values(by='Importance', ascending=False)
-    st.dataframe(importance_df)
+        st.write("Top Features by Importance:")
+        importance_df = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_}).sort_values(by='Importance', ascending=False)
+        st.dataframe(importance_df)
 
-    # --- Run Live Check ---
-    if st.button("Check Predicted Ratings with Live IMDb Data"):
-        import requests
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        results = []
+        # --- Run Live Check ---
+        if st.button("Check Predicted Ratings with Live IMDb Data"):
+            import requests
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            results = []
 
-        for _, row in top_movies.iterrows():
-            title = row['Title']
-            movie_id = row['Movie ID']
-            static_rating = row['IMDb Rating']
-            votes = row['Votes']
-            year = row['Year']
+            for _, row in top_movies.iterrows():
+                title = row['Title']
+                movie_id = row['Movie ID']
+                static_rating = row['IMDb Rating']
+                votes = row['Votes']
+                year = row['Year']
 
-            # Fetch live IMDb rating
-            try:
-                url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
-                resp = requests.get(url).json()
-                live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else static_rating
-            except:
-                live_rating = static_rating
+                # Fetch live IMDb rating
+                try:
+                    url = f"http://www.omdbapi.com/?t={title}&apikey=YOUR_OMDB_API_KEY"
+                    resp = requests.get(url).json()
+                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else static_rating
+                except:
+                    live_rating = static_rating
 
-            # Prepare feature row for prediction
-            feat = pd.DataFrame({'IMDb Rating': [live_rating], 'Votes': [votes], 'Year': [year]})
+                # Prepare feature row for prediction
+                feat = pd.DataFrame({'IMDb Rating': [live_rating], 'Votes': [votes], 'Year': [year]})
 
-            # Add categorical features
-            for g in cat_features:
-                if g.startswith('Genre_'):
-                    feat[g] = 1 if g.replace('Genre_', '') in str(row.get('Genre', '')) else 0
-                elif g.startswith('Director_'):
-                    feat[g] = 1 if g.replace('Director_', '') == str(row.get('Director', '')) else 0
+                # Add categorical features
+                for g in cat_features:
+                    if g.startswith('Genre_'):
+                        feat[g] = 1 if g.replace('Genre_', '') in str(row.get('Genre', '')) else 0
+                    elif g.startswith('Director_'):
+                        feat[g] = 1 if g.replace('Director_', '') == str(row.get('Director', '')) else 0
 
-            # Predict rating
-            predicted_rating = model.predict(feat)[0]
-            previous_my_rating = My_Ratings.loc[My_Ratings['Movie ID'] == movie_id, 'Your Rating'].values[0]
-            rating_diff = predicted_rating - previous_my_rating
+                # Predict rating
+                predicted_rating = model.predict(feat)[0]
+                previous_my_rating = My_Ratings.loc[My_Ratings['Movie ID'] == movie_id, 'Your Rating'].values[0]
+                rating_diff = predicted_rating - previous_my_rating
 
-            results.append({
-                "Title": title,
-                "IMDb Rating (Static)": static_rating,
-                "IMDb Rating (Live)": live_rating,
-                "Previous My Rating": previous_my_rating,
-                "Predicted My Rating": predicted_rating,
-                "Predicted Change": rating_diff,
-                "CheckedAt": timestamp
-            })
+                results.append({
+                    "Title": title,
+                    "IMDb Rating (Static)": static_rating,
+                    "IMDb Rating (Live)": live_rating,
+                    "Previous My Rating": previous_my_rating,
+                    "Predicted My Rating": predicted_rating,
+                    "Predicted Change": rating_diff,
+                    "CheckedAt": timestamp
+                })
 
-        results_df = pd.DataFrame(results).sort_values(by='Predicted Change', key=abs, ascending=False)
+            results_df = pd.DataFrame(results).sort_values(by='Predicted Change', key=abs, ascending=False)
 
-        # --- Save and Display History ---
-        history_file = "predicted_ratings_history.csv"
-        if os.path.exists(history_file):
-            hist_df = pd.read_csv(history_file)
-            hist_df = pd.concat([hist_df, results_df], ignore_index=True)
-        else:
-            hist_df = results_df
-        hist_df.to_csv(history_file, index=False)
+            # --- Save and Display History ---
+            history_file = "predicted_ratings_history.csv"
+            if os.path.exists(history_file):
+                hist_df = pd.read_csv(history_file)
+                hist_df = pd.concat([hist_df, results_df], ignore_index=True)
+            else:
+                hist_df = results_df
+            hist_df.to_csv(history_file, index=False)
 
-        st.success("Predicted ratings check complete ✅")
-        st.dataframe(results_df, use_container_width=True)
-        st.markdown("""
-        **Explanation:**  
-        - Model predicts your personal rating based on live IMDb ratings and other features.  
-        - `Predicted Change` shows how much your rating might have shifted.  
-        - Results are saved to `predicted_ratings_history.csv` for tracking trends over time.  
-        - Can be fully automated and scheduled to monitor rating changes continuously.
-        """)
+            st.success("Predicted ratings check complete ✅")
+            st.dataframe(results_df, use_container_width=True)
+            st.markdown("""
+            **Explanation:**  
+            - Model predicts your personal rating based on live IMDb ratings and other features.  
+            - `Predicted Change` shows how much your rating might have shifted.  
+            - Results are saved to `predicted_ratings_history.csv` for tracking trends over time.  
+            - Can be fully automated and scheduled to monitor rating changes continuously.
+            """)
