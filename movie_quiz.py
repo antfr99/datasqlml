@@ -1377,7 +1377,6 @@ else:
             st.error(f"Error running poster analysis: {e}")
 
 
-
 # --- Scenario 9: Network Influence Analysis ---
 if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Director Connections":
     import streamlit as st
@@ -1413,6 +1412,7 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
 import requests
 import networkx as nx
 import matplotlib.pyplot as plt
+import streamlit as st  # needed for st.pyplot inside exec
 
 
 def fetch_film_details(title):
@@ -1425,7 +1425,7 @@ def fetch_film_details(title):
 
 director, actors_list = fetch_film_details(selected_film)
 
-
+# Build network graph
 G = nx.Graph()
 G.add_node(selected_film, type="film")
 G.add_node(director, type="director")
@@ -1460,7 +1460,7 @@ for n, data in G.nodes(data=True):
     else:
         colors.append("lightpink")
 nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-plt.show()
+st.pyplot(plt.gcf())  # <-- use st.pyplot instead of plt.show()
         '''
 
         user_network_code = st.text_area("Python Network Analysis Code (editable)", network_code, height=650)
@@ -1476,6 +1476,7 @@ plt.show()
                     "top_films": top_films,
                     "selected_film": selected_film,
                     "OMDB_API_KEY": OMDB_API_KEY,
+                    "st": st,  # needed for st.pyplot inside exec
                 }
                 exec(user_network_code, exec_globals)
 
