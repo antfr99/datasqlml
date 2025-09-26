@@ -1390,11 +1390,11 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
     import requests
     import math
 
-    st.header("Scenario 14 – Network Influence Analysis")
+    st.header("Scenario 9 – Network Influence Analysis")
     st.markdown("""
-    Select a film from my **top-rated films** to see connections:
+    Select a film from your **top-rated films** to see connections:
     - Director and up to 5 actors of the film
-    - Up to 5 other films sharing the same director or actors (from my top-rated list)
+    - Up to 5 other films sharing the same director or actors (from your top-rated list)
     - Visual network of relationships
     """)
 
@@ -1408,8 +1408,9 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
         film_options = top_films["Title"].astype(str).tolist()
         selected_film = st.selectbox("Select a film to inspect:", film_options)
 
-        # --- Run button ---
         if st.button("Run Network Analysis"):
+
+            # --- Fetch film details ---
             def fetch_film_details(title):
                 OMDB_API_KEY = "bcf17f38"  # Replace with your own
                 url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
@@ -1417,29 +1418,27 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 director = resp.get("Director", "")
                 actors = resp.get("Actors", "")
                 actors_list = [a.strip() for a in actors.split(",")] if actors else []
-                return director, actors_list[:5]  # Limit to 5 actors
+                return director, actors_list[:5]
 
-            # Fetch selected film details
             director, actors_list = fetch_film_details(selected_film)
 
             st.markdown(f"**Selected Film:** {selected_film}")
-            st.markdown(f"**Director:** {director}")
-            st.markdown(f"**Actors:** {', '.join(actors_list)}")
+            st.markdown(f"**Director:** {director if director else 'N/A'}")
+            st.markdown(f"**Actors:** {', '.join(actors_list) if actors_list else 'N/A'}")
 
-            # Build network graph
+            # --- Build network graph ---
             G = nx.Graph()
             G.add_node(selected_film, type="film")
 
-            # Connect director
-            G.add_node(director, type="director")
-            G.add_edge(selected_film, director)
+            if director:
+                G.add_node(director, type="director")
+                G.add_edge(selected_film, director)
 
-            # Connect actors
             for actor in actors_list:
                 G.add_node(actor, type="actor")
                 G.add_edge(selected_film, actor)
 
-            # Add related films (limit to 5)
+            # --- Add related films (limit 5) ---
             related_count = 0
             for _, row in top_films.iterrows():
                 if related_count >= 5:
@@ -1448,16 +1447,14 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                     continue
                 related_title = row["Title"]
                 rel_director, rel_actors = fetch_film_details(related_title)
-                rel_actors = rel_actors[:5]  # Limit to 5 actors
-                added = False
+                rel_actors = rel_actors[:5]
 
-                # Connect if same director
-                if rel_director == director:
+                added = False
+                if director and rel_director == director:
                     G.add_node(related_title, type="film")
                     G.add_edge(related_title, director)
                     added = True
 
-                # Connect if shared actor
                 shared_actors = set(rel_actors).intersection(set(actors_list))
                 for sa in shared_actors:
                     G.add_node(related_title, type="film")
@@ -1467,41 +1464,36 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 if added:
                     related_count += 1
 
-            # --- Manual layout to force selected film in center ---
-            pos = {}
-            pos[selected_film] = (0, 0)  # Center
+            # --- Layout ---
+            pos = {selected_film: (0, 0)}
+            first_ring = ([director] if director else []) + actors_list
+            second_ring = [n for n, d in G.nodes(data=True) if d["type"] == "film" and n != selected_film]
 
-            director_nodes = [director]
-            actor_nodes = actors_list
-            film_nodes = [n for n, d in G.nodes(data=True) if d["type"] == "film" and n != selected_film]
-
-            # First ring: director + actors
-            first_ring = director_nodes + actor_nodes
-            r1 = 1.5
+            r1, r2 = 1.5, 3
             for i, node in enumerate(first_ring):
                 angle = 2 * math.pi * i / len(first_ring)
                 pos[node] = (r1 * math.cos(angle), r1 * math.sin(angle))
 
-            # Second ring: related films
-            second_ring = film_nodes
-            r2 = 3
             for i, node in enumerate(second_ring):
                 angle = 2 * math.pi * i / len(second_ring)
                 pos[node] = (r2 * math.cos(angle), r2 * math.sin(angle))
 
-            # Draw network
-            plt.figure(figsize=(12, 8))
+            # --- Node colors ---
             colors = []
-            for n, data in G.nodes(data=True):
-                if data["type"] == "film":
+            for n, d in G.nodes(data=True):
+                if d["type"] == "film":
                     colors.append("lightblue")
-                elif data["type"] == "director":
+                elif d["type"] == "director":
                     colors.append("lightgreen")
                 else:
                     colors.append("lightpink")
 
-            nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10)
-            st.pyplot(plt)
+            # --- Draw graph ---
+            plt.figure(figsize=(12, 8))
+            nx.draw(G, pos, with_labels=True, node_color=colors, node_size=1500, font_size=10, edge_color="gray", linewidths=1.5)
+            plt.tight_layout()
+            st.pyplot(plt.gcf())
+            plt.clf()
 
             st.markdown("""
             **Explanation:**  
@@ -1512,5 +1504,4 @@ if scenario == "Scenario 9 – Network Influence Analysis: Identify Key Actor-Di
                 - **Light blue** = film  
                 - **Light green** = director  
                 - **Light pink** = actors  
-            - Layout ensures readability without clutter.
             """)
