@@ -222,7 +222,7 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 
 
-# --- Scenario 10: Python ML ---
+# --- Scenario 9: Python ML ---
 if scenario == "Scenario 9 – Predict My Ratings (ML)":
     st.header("Scenario 9 – Predict My Ratings (ML)")
     st.write("""
@@ -1253,7 +1253,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "cbbdb8f8"
+    OMDB_API_KEY = "50bcb7e2"
 
     # --- Select top 100 films ---
     top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
