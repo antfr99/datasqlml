@@ -77,9 +77,11 @@ else:
 
 st.write("### My Ratings Table")
 if not My_Ratings.empty:
-    My_Ratings_sorted = My_Ratings.sort_values(by="Year", ascending=False)
-    # Rename column only for display
+    My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
+    My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
+        # Rename column only for display
     display_ratings = My_Ratings.rename(columns={"Your Rating": "My Ratings"})
+    display_ratings = display_ratings.drop(columns=['Year_Sort'])
     st.dataframe(display_ratings, width="stretch", height=400)
 else:
     st.warning("My Ratings table is empty or failed to load.")
