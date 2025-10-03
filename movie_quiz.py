@@ -1240,9 +1240,9 @@ if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning 
             """)
 
 
-# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (English only) ---
+# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (Horror Films) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
+    st.header("Scenario 13 – Live Ratings Monitor (Top 100 Horror Films)")
 
     st.markdown("""
     **MLOps + CI/CD + Monitoring (Brief)**  
@@ -1253,7 +1253,7 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 
     **Supervised Machine Learning:**  
     The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
-    Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.  
+    Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen Horror films.  
     """)
 
     # --- OMDb API key ---
@@ -1278,8 +1278,8 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
         from sklearn.compose import ColumnTransformer
         from sklearn.pipeline import Pipeline
 
-        history_file = "live_ratings_history.csv"
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        history_file = "live_ratings_history.csv"
 
         # Load previous history
         if os.path.exists(history_file):
@@ -1299,7 +1299,6 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
                 resp = requests.get(url).json()
 
                 if resp.get("Response") == "True":
-                    # Normalize languages: split, strip, lowercase
                     languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
@@ -1331,20 +1330,62 @@ if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring
 
         new_df = pd.DataFrame(results)
 
-        # Only keep rows with non-zero rating differences if the column exists
-        if not new_df.empty and "Rating Difference" in new_df.columns:
-            new_df = new_df[new_df["Rating Difference"] != 0]
-        else:
-            new_df = pd.DataFrame()  # Ensure it’s still a DataFrame even if empty
-
-        st.success("Live ratings check complete ✅")
-
-        # --- Show sorted results by Rating Difference ---
+        # --- Show Current Run Table (Rating Differences) ---
         if not new_df.empty:
-            st.subheader("📊 Current Run")
+            st.subheader("📊 Current Run – Live Rating Differences")
             st.dataframe(
                 new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
                 use_container_width=True
             )
         else:
-            st.warning("No English-language films with rating changes found in this run.")
+            st.warning("No English-language Horror films with rating changes found in this run.")
+
+        # --- Supervised ML: Predict My Ratings for Unseen Horror Films ---
+        df_ml = top100_films.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='left')
+
+        train_df = df_ml[df_ml['Your Rating'].notna()]
+        predict_df = df_ml[df_ml['Your Rating'].isna()].copy()
+
+        categorical_features = ['Genre', 'Director']
+        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                ('num', 'passthrough', numerical_features)
+            ]
+        )
+
+        model = Pipeline([
+            ('prep', preprocessor),
+            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+        ])
+
+        if not train_df.empty and not predict_df.empty:
+            X_train = train_df[categorical_features + numerical_features]
+            y_train = train_df['Your Rating']
+            model.fit(X_train, y_train)
+
+            X_pred = predict_df[categorical_features + numerical_features]
+            predict_df['Predicted Rating'] = model.predict(X_pred)
+
+            st.subheader("🤖 Predicted Ratings for Unseen Horror Movies")
+            st.dataframe(
+                predict_df[['Title','IMDb Rating','Genre','Director','Predicted Rating']]
+                .sort_values(by='Predicted Rating', ascending=False)
+                .reset_index(drop=True),
+                use_container_width=True
+            )
+        else:
+            st.info("No new Horror movies available for prediction this run.")
+
+        # --- Explanation ---
+        st.markdown("""
+        **How the Predictions Work (Technical Explanation):**  
+
+        1. **Data Preparation**: Uses `Genre`, `Director` (categorical) and `IMDb Rating`, `Num Votes`, `Year` (numerical).  
+        2. **Feature Encoding**: `OneHotEncoder` handles categorical features, numerical features are passed through.  
+        3. **Pipeline with RandomForestRegressor**: Trains ensemble of decision trees on your ratings.  
+        4. **Prediction**: Predicts ratings for Horror movies you haven't rated.  
+        5. **Why it works**: Handles non-linear relationships, feature interactions, and generalizes well.
+        """)
