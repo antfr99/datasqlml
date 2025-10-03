@@ -1383,7 +1383,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 use_container_width=True
             )
         else:
-            st.info("No new English-language movies available for prediction this run.")
+            st.info("No new movies available for prediction this run.")
 
         # --- Explain how Python and packages make predictions ---
         st.markdown("""
