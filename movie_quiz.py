@@ -1299,8 +1299,8 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                     languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
-                    # Only include English-language films
-                    if "italian" not in languages:
+                   
+                    if "french" not in languages:
                         continue
                 else:
                     live_rating = None
