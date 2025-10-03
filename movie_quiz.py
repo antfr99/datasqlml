@@ -1300,7 +1300,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                     live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
                    
-                    if "french" not in languages:
+                    if "english" not in languages:
                         continue
                 else:
                     live_rating = None
