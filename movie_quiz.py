@@ -1239,33 +1239,32 @@ if scenario == "Scenario 12 – Semantic Genre & Recommendations (Deep Learning 
             - This helps when OMDb lists multiple genres, showing the most semantically relevant one.
             """)
 
+
 # --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (English only) ---
 if scenario == "Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("Scenario 13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
     st.markdown("""
-**MLOps + CI/CD + Monitoring (Brief)**  
+    **MLOps + CI/CD + Monitoring (Brief)**  
 
-- **MLOps:** Automates data collection (live IMDb ratings), logs historical differences, and retrains ML models to predict future rating changes.  
-- **CI/CD:** Modular code can be version-controlled; in a full setup, changes would trigger automated testing and deployment.  
-- **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
+    - **MLOps:** Automates data collection (live IMDb ratings), logs historical differences, and retrains ML models to predict future rating changes.  
+    - **CI/CD:** Modular code can be version-controlled; in a full setup, changes would trigger automated testing and deployment.  
+    - **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
 
-**Supervised Machine Learning:**  
-The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.  
-""")
+    **Supervised Machine Learning:**  
+    The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
+    Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.  
+    """)
 
     # --- OMDb API key ---
     OMDB_API_KEY = "50bcb7e2"
 
-    # --- Select top 100 films ---
     # --- Select top 100 Horror films ---
-top100_films = (
-    IMDB_Ratings[IMDB_Ratings["Genre"].str.contains("Horror", case=False, na=False)]
-    .sort_values(by="IMDb Rating", ascending=False)
-    .head(100)
-)
-
+    top100_films = (
+        IMDB_Ratings[IMDB_Ratings["Genre"].str.contains("Horror", case=False, na=False)]
+        .sort_values(by="IMDb Rating", ascending=False)
+        .head(100)
+    )
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
@@ -1349,74 +1348,3 @@ top100_films = (
             )
         else:
             st.warning("No English-language films with rating changes found in this run.")
-
-        # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
-        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-        df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
-
-        predict_df = df_ml[(df_ml['Rating Difference'].notna()) & (df_ml['Your Rating'].isna())].copy()
-        train_df = df_ml[df_ml['Your Rating'].notna()]
-
-        categorical_features = ['Genre', 'Director']
-        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
-
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-                ('num', 'passthrough', numerical_features)
-            ]
-        )
-
-        model = Pipeline([
-            ('prep', preprocessor),
-            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-        ])
-
-        X_train = train_df[categorical_features + numerical_features]
-        y_train = train_df['Your Rating']
-        model.fit(X_train, y_train)
-
-        X_pred = predict_df[categorical_features + numerical_features]
-        predict_df['Predicted Rating'] = model.predict(X_pred)
-
-        if not predict_df.empty:
-            st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
-            st.dataframe(
-                predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
-                .sort_values(by='Predicted Rating', ascending=False)
-                .reset_index(drop=True),
-                use_container_width=True
-            )
-        else:
-            st.info("No new English-language movies available for prediction this run.")
-
-        # --- Explain how Python and packages make predictions ---
-        st.markdown("""
-**How the Predictions Work (Technical Explanation):**  
-
-1. **Data Preparation**  
-   - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
-   - `My Rating` is the target variable for supervised learning.
-
-2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
-   - Categorical features are converted to **one-hot encoded vectors**.  
-   - Numerical features are passed through unchanged.  
-
-3. **Pipeline with `RandomForestRegressor`**  
-   - Combines preprocessing and model training.  
-   - Random forest is an **ensemble of decision trees**:  
-     - Each tree predicts independently.  
-     - The final prediction is the average across all trees.  
-     - This reduces overfitting and improves accuracy.
-
-4. **Training**  
-   - Model learns patterns from movies I have rated (`Your Rating`).  
-
-5. **Prediction**  
-   - Model predicts ratings for movies I haven’t rated based on learned patterns.  
-
-6. **Why this works**  
-   - Handles non-linear relationships and feature interactions naturally.  
-   - One-hot encoding allows categorical variables like directors and genres to be used.  
-   - Random forests are robust to overfitting and can generalize well to unseen movies.
-""")
