@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a dat project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb. Antonio Friguglietti
+This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb. Antonio Friguglietti
 """)
 
 st.markdown("""
@@ -1439,7 +1439,31 @@ if scenario.startswith("14"):
 
     st.subheader("📝 Scenario 14: Smart Q&A (Keyword / Local SQL)")
 
-    # Load data
+    # --- Short explanation ---
+    st.markdown("""
+This scenario allows you to ask simple questions about your personal film ratings and IMDb ratings.
+You can filter by **genre**, **director**, or both, and see the films sorted by your rating or IMDb rating.
+The system works by matching keywords in your question to your data.
+""")
+
+    # --- Suggested example questions ---
+    st.markdown("**Example questions you can ask:**")
+    suggestions = [
+        "Which of my comedy films have the highest rating?",
+        "Which of my horror films have the lowest rating?",
+        "Highest rated films by Spielberg",
+        "My top 5 action films by Nolan",
+        "Films where my rating is higher than IMDb rating",
+        "Which of my drama films from 2020 have the highest rating?",
+        "Top-rated sci-fi films by Ridley Scott",
+        "My best-rated romance films",
+        "Which films do I disagree most with IMDb ratings?",
+        "Highest rated films by last name 'Anderson'"
+    ]
+    for q in suggestions:
+        st.write(f"- {q}")
+
+    # --- Load data ---
     try:
         My_Ratings = pd.read_excel("myratings.xlsx")
         IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
@@ -1448,60 +1472,42 @@ if scenario.startswith("14"):
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # User question
+    # --- User question ---
     user_question = st.text_input(
-        "Ask about your ratings, genres, directors, or IMDb:",
+        "Ask a question about your ratings, votes, or IMDb:",
         placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
     )
 
     if user_question and not My_Ratings.empty:
-
-        # Lowercase for matching
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
 
-        # Filter by genre if mentioned
+        # Filter by genre
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]  # extend as needed
-        genre_found = None
         for g in genres:
             if g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
-                genre_found = g
                 break
 
-        # Filter by director if mentioned (partial match on last name)
+        # Filter by director (partial match on last name)
         directors = filtered['Director'].dropna().unique()
-        director_found = None
         for d in directors:
             last_name = d.split()[-1].lower()
             if last_name in question_lower:
                 filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
-                director_found = d
                 break
 
-        # Determine which rating to sort by
-        sort_col = None
-        if "my" in question_lower:
-            sort_col = "Your Rating"
-        elif "imdb" in question_lower:
-            sort_col = "IMDb Rating"
-        else:
-            sort_col = "Your Rating"  # default
+        # Sort by Your Rating or IMDb Rating
+        sort_col = "Your Rating" if "my" in question_lower else "IMDb Rating" if "imdb" in question_lower else "Your Rating"
 
         if not filtered.empty:
             filtered_sorted = filtered.sort_values(by=sort_col, ascending=False)
-            # Heading
-            heading = "My"
-            if genre_found:
-                heading += f" {genre_found.capitalize()}"
-            if director_found:
-                heading += f" films by {director_found}"
-            heading += f" by Highest {sort_col}"
-
-            st.write(f"### {heading}")
+            # Display table without extra heading
             st.dataframe(filtered_sorted)
         else:
-            st.info("No matching films found. Try different genre or director keywords.")
+            st.info("No matching films found. Try a different genre or director keyword.")
+
+
 
 
 
