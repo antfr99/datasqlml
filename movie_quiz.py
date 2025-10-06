@@ -105,8 +105,7 @@ scenario = st.radio(
         "11 – Feature Hypothesis Testing",
         "12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
         "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "14 – Smart Q&A (Keyword / Local SQL Assistant)",   
-
+        "14 – Q&A (Keyword / Local SQL Assistant)",   
                 
     ]
 )
@@ -1436,7 +1435,7 @@ if scenario.startswith("14"):
     import streamlit as st
     import pandas as pd
 
-    st.subheader("📝 Scenario 14: Smart Q&A (Keyword / Local SQL)")
+    st.subheader("📝 Scenario 14: Q&A (Keyword / Local SQL)")
 
     # --- Short explanation ---
     st.markdown("""
