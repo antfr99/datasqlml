@@ -1545,6 +1545,7 @@ if scenario.startswith("15"):
 
         if user_question:
             try:
+                # --- Prepare prompt for OpenAI ---
                 prompt = f"""
 You are an AI assistant for a movie data project. The user has two datasets:
 
@@ -1555,7 +1556,8 @@ Answer the user's question as clearly as possible. If a pandas DataFrame query i
 
 Question: {user_question}
 """
-                response = openai.ChatCompletion.create(
+
+                response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
