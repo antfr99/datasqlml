@@ -1430,18 +1430,28 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 # --- Scenario 14: Keyword / Local SQL Assistant ---
 
-# --- Scenario 14: Smart Q&A (Keyword / Local SQL Assistant) ---
+# --- Scenario 14: Keyword / Local SQL Assistant ---
 if scenario.startswith("14"):
     import streamlit as st
     import pandas as pd
 
     st.subheader("📝 Scenario 14: Q&A (Keyword / Local SQL)")
 
-    # --- Short explanation ---
+    # --- Expanded explanation ---
     st.markdown("""
-This scenario allows you to ask simple questions about my personal film ratings and IMDb ratings.
-You can filter by **genre**, **director**, or both, and see the films sorted by your intent (highest, lowest, top, worst).  
-The system works by matching keywords in your questions to your data.
+This scenario allows you to ask **natural-language questions** about my personal film ratings and IMDb ratings.  
+
+It works as a **local SQL/keyword assistant**, meaning:
+1. You can filter films by **genre** (e.g., comedy, horror, action) or by **director** (full name or last name).  
+2. You can indicate your intent with keywords like **highest**, **lowest**, **top**, or **worst**, which will determine how the results are sorted.  
+3. The system scans your question for **matching keywords** and applies them to your dataset to produce a sorted table of films.  
+
+**How it handles words in your question:**
+- Words not recognized as a genre, director, or sorting intent are ignored.  
+- For example, words like *which*, *of*, *my*, or irrelevant words (*fake*, *music*) will have no effect.  
+- Only genres, director names, and intent keywords influence the results.  
+
+You can use this tool to quickly find my top-rated films, see where my ratings differ from IMDb, or explore my collection by director or genre.
 """)
 
     # --- Suggested example questions ---
@@ -1470,7 +1480,7 @@ The system works by matching keywords in your questions to your data.
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # --- User question ---
+    # --- User question input ---
     user_question = st.text_input(
         "Ask a question about your ratings, votes, or IMDb:",
         placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
@@ -1498,7 +1508,7 @@ The system works by matching keywords in your questions to your data.
         # --- Determine sort column ---
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
 
-        # --- Determine sort order based on keywords ---
+        # --- Determine sort order based on intent keywords ---
         if any(w in question_lower for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_lower for w in ["lowest", "worst", "bottom"]):
