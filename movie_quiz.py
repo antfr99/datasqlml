@@ -1429,15 +1429,14 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         
 
 
-# --- Scenario 14: Keyword / Local SQL Assistant ---
 
 
-# --- Scenario 14: Keyword / Local SQL Assistant ---
-if scenario.startswith("14"):
+# --- Scenario 9: Keyword / Local SQL Assistant ---
+if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
 
-    st.subheader("14 – Q&A (Natural-Language Questions / Local SQL)")
+    st.subheader("9 – Q&A (Natural-Language Questions / Local SQL)")
 
     # --- Expanded explanation ---
     st.markdown("""
