@@ -1432,133 +1432,78 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 # --- Scenario 14: Keyword / Local SQL Assistant ---
 
-# --- Scenario 14: Smart Q&A (Keyword / Local SQL Assistant) ---
+# Scenario 14: Smart Q&A (Keyword / Local SQL Assistant)
 if scenario.startswith("14"):
-    st.subheader("🎬 Smart Q&A (Keyword / Local SQL Assistant)")
+    import streamlit as st
+    import pandas as pd
 
-    st.markdown("""
-    **💡 Example questions:**  
-    - Which of my comedy films have the highest rating?  
-    - Which of my comedy films by Spielberg have the highest rating?  
-    - Which of my action films from 2020 have the lowest rating?  
-    - Highest rated films by Nolan.  
-    - Which films do I rate higher than IMDb?  
-    - Which films do I rate lower than IMDb?
-    """)
+    st.subheader("📝 Scenario 14: Smart Q&A (Keyword / Local SQL)")
 
-    user_question = st.text_input(
-        "Ask a question about your ratings, votes, or IMDb data:",
-        placeholder="e.g., 'Which of my comedy films by Spielberg from 2020 have the highest rating?'"
-    )
-
-    if user_question:
-        question_lower = user_question.lower()
-        response = "🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, directors, or year."
-
-        df_filtered = My_Ratings.copy()
-
-        # --- Dynamic Genre Detection (substring match) ---
-        all_genres = My_Ratings['Genre'].dropna().unique()
-        matched_genres = [g for g in all_genres if g.lower() in question_lower]
-        if matched_genres:
-            df_filtered = df_filtered[df_filtered['Genre'].str.contains('|'.join(matched_genres), case=False, na=False)]
-
-        # --- Dynamic Director Detection (substring match for surname/partial) ---
-        all_directors = My_Ratings['Director'].dropna().unique()
-        matched_directors = [d for d in all_directors if d.lower() in question_lower or any(part.lower() in question_lower for part in d.split())]
-        if matched_directors:
-            df_filtered = df_filtered[df_filtered['Director'].str.contains('|'.join(matched_directors), case=False, na=False)]
-
-        # --- Year Detection ---
-        import re
-        years_in_question = re.findall(r'\b(19|20)\d{2}\b', user_question)
-        if years_in_question:
-            df_filtered = df_filtered[df_filtered['Year'].astype(str).isin(years_in_question)]
-
-        # --- IMDb Comparison ---
-        if "my" in question_lower and "higher" in question_lower and "imdb" in question_lower:
-            df_filtered = pd.merge(df_filtered, IMDB_Ratings, on="Movie ID")
-            df_filtered = df_filtered[df_filtered['Your Rating'] > df_filtered['IMDb Rating']]
-            subheader_text = "Films You Rated Higher Than IMDb"
-        elif "my" in question_lower and "lower" in question_lower and "imdb" in question_lower:
-            df_filtered = pd.merge(df_filtered, IMDB_Ratings, on="Movie ID")
-            df_filtered = df_filtered[df_filtered['Your Rating'] < df_filtered['IMDb Rating']]
-            subheader_text = "Films You Rated Lower Than IMDb"
-        else:
-            # --- Sorting by rating ---
-            if "highest" in question_lower:
-                df_filtered = df_filtered.sort_values(by="Your Rating", ascending=False)
-            elif "lowest" in question_lower:
-                df_filtered = df_filtered.sort_values(by="Your Rating", ascending=True)
-
-            # --- Dynamic Subheader ---
-            parts = []
-            if matched_genres:
-                parts.append(f"{', '.join(matched_genres)} Films")
-            if matched_directors:
-                parts.append(f"by {', '.join(matched_directors)}")
-            if years_in_question:
-                parts.append(f"from {', '.join(years_in_question)}")
-            if "highest" in question_lower:
-                parts.append("by Highest Rating")
-            elif "lowest" in question_lower:
-                parts.append("by Lowest Rating")
-            subheader_text = "My " + " ".join(parts) if parts else "My Films"
-
-        # --- Show results ---
-        if not df_filtered.empty:
-            st.subheader(subheader_text)
-            display_cols = ['Title','Your Rating','Genre','Director','Year']
-            if 'IMDb Rating' in df_filtered.columns:
-                display_cols.insert(2,'IMDb Rating')
-            st.dataframe(df_filtered[display_cols])
-            response = None
-
-        # --- Fallback guidance ---
-        if response:
-            st.info(response)
-
-
-# --- Scenario 15  ---
-
-elif scenario.startswith("15"):
-    st.subheader("🤖 True AI Q&A (OpenAI-Powered)")
-
-    # Access OpenAI key here
+    # Load data
     try:
-        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-        openai.api_key = OPENAI_API_KEY
+        My_Ratings = pd.read_excel("myratings.xlsx")
+        IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
     except Exception as e:
-        st.warning("OpenAI API key not found in secrets.toml. Scenario 15 will not work.")
-        OPENAI_API_KEY = None
+        st.error(f"Error loading Excel files: {e}")
+        My_Ratings = pd.DataFrame()
+        IMDB_Ratings = pd.DataFrame()
 
+    # User question
     user_question = st.text_input(
-        "Ask any question about your ratings, votes, or IMDb data:",
-        placeholder="e.g., 'Which horror films do I rate the highest?'"
+        "Ask about your ratings, genres, directors, or IMDb:",
+        placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
     )
 
-    if user_question and OPENAI_API_KEY:
-        try:
-            prompt = f"""
-            You are analyzing my movie data. My_Ratings columns: {list(My_Ratings.columns)}.
-            IMDB_Ratings columns: {list(IMDB_Ratings.columns)}.
-            Votes columns: ['Movie ID','Num Votes'].
-            Answer the user's question using the available data.
-            Question: {user_question}
-            """
-            completion = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            answer = completion.choices[0].message.content
-            st.info(answer)
-        except Exception as e:
-            st.error(f"OpenAI API error: {e}")
-    elif user_question:
-        st.warning("OpenAI API key not found. Scenario 15 cannot run without it.")
+    if user_question and not My_Ratings.empty:
+
+        # Lowercase for matching
+        question_lower = user_question.lower()
+        filtered = My_Ratings.copy()
+
+        # Filter by genre if mentioned
+        genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]  # extend as needed
+        genre_found = None
+        for g in genres:
+            if g in question_lower:
+                filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
+                genre_found = g
+                break
+
+        # Filter by director if mentioned (partial match on last name)
+        directors = filtered['Director'].dropna().unique()
+        director_found = None
+        for d in directors:
+            last_name = d.split()[-1].lower()
+            if last_name in question_lower:
+                filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
+                director_found = d
+                break
+
+        # Determine which rating to sort by
+        sort_col = None
+        if "my" in question_lower:
+            sort_col = "Your Rating"
+        elif "imdb" in question_lower:
+            sort_col = "IMDb Rating"
+        else:
+            sort_col = "Your Rating"  # default
+
+        if not filtered.empty:
+            filtered_sorted = filtered.sort_values(by=sort_col, ascending=False)
+            # Heading
+            heading = "My"
+            if genre_found:
+                heading += f" {genre_found.capitalize()}"
+            if director_found:
+                heading += f" films by {director_found}"
+            heading += f" by Highest {sort_col}"
+
+            st.write(f"### {heading}")
+            st.dataframe(filtered_sorted)
+        else:
+            st.info("No matching films found. Try different genre or director keywords.")
 
 
-# --- Scenario 15: True AI Q&A (OpenAI-Powered) ---
 
 # --- Scenario 15: True AI Q&A (Natural Language to SQL / OpenAI) ---
 if scenario.startswith("15"):
