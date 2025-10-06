@@ -4,7 +4,7 @@ pandasql
 numpy
 scipy
 scikit-learn
-spacy>=3.0
+spacy>=3.5.0
 textblob
 python-docx
 openpyxl
@@ -14,8 +14,6 @@ lightgbm
 networkx
 shap
 requests
-sentence_transformers
-logging
-os
+sentence-transformers
 lime
 openai
