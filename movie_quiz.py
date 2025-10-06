@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
+This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
@@ -105,8 +105,7 @@ scenario = st.radio(
         "11 – Feature Hypothesis Testing",
         "12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
         "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "14 – Smart Q&A (Keyword / Local SQL Assistant)",
-        "15 – True AI Q&A (Natural Language to SQL / OpenAI)"
+        "14 – Smart Q&A (Keyword / Local SQL Assistant)",   
 
                 
     ]
@@ -1509,64 +1508,3 @@ The system works by matching keywords in your questions to my data.
 
 
 
-
-
-# --- Scenario 15: True AI Q&A (Natural Language to SQL / OpenAI) ---
-
-# --- Scenario 15: True AI Q&A (OpenAI >=1.0) ---
-if scenario.startswith("15"):
-    import streamlit as st
-    import pandas as pd
-    import openai
-
-    st.subheader("🤖 True AI Q&A (OpenAI)")
-
-    # --- Load your data ---
-    try:
-        My_Ratings = pd.read_excel("myratings.xlsx")
-        IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
-    except Exception as e:
-        st.error(f"Error loading Excel files: {e}")
-        My_Ratings = pd.DataFrame()
-        IMDB_Ratings = pd.DataFrame()
-
-    # --- Access OpenAI API key from Streamlit Cloud secrets ---
-    try:
-        openai.api_key = st.secrets["OPENAI"]["OPENAI_API_KEY"]
-    except Exception:
-        st.warning("OpenAI API key not found in Streamlit Cloud secrets. Scenario 15 will not work.")
-        openai.api_key = None
-
-    if openai.api_key:
-        user_question = st.text_input(
-            "Ask a question about your ratings, votes, or IMDb data:",
-            placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
-        )
-
-        if user_question:
-            try:
-                # --- Prepare prompt for OpenAI ---
-                prompt = f"""
-You are an AI assistant for a movie data project. The user has two datasets:
-
-1) My_Ratings (columns: Movie ID, Your Rating, Title, URL, IMDb Rating, Runtime (mins), Year, Director, Genre)  
-2) IMDB_Ratings (columns: Movie ID, Title, Movie URL, IMDb Rating, Runtime (mins), Year, Genre, Director)
-
-Answer the user's question as clearly as possible. If a pandas DataFrame query is appropriate, provide the Python code to generate it. Otherwise, provide a short answer.
-
-Question: {user_question}
-"""
-
-                response = openai.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0,
-                    max_tokens=500
-                )
-
-                answer = response.choices[0].message.content.strip()
-                st.markdown("**AI Response:**")
-                st.write(answer)
-
-            except Exception as e:
-                st.error(f"Error calling OpenAI API: {e}")
