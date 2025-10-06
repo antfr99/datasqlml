@@ -100,12 +100,13 @@ scenario = st.radio(
         "6 – Review Analysis (Sentiment, Subjectivity)",
         "7 – Poster Image Analysis (OMDb API)",
         "8 – Graph Based Movie Relationships",
-        "9 – Predict My Ratings (ML)", 
-        "10 – Model Evaluation (Feature Importance)",
-        "11 – Feature Hypothesis Testing",
-        "12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
-        "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "14 – Q&A (Natural-Language Questions / Local SQL)",        
+        "9 – Q&A (Natural-Language Questions / Local SQL)",
+        "10 – Predict My Ratings (ML)", 
+        "11 – Model Evaluation (Feature Importance)",
+        "12 – Feature Hypothesis Testing",
+        "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
+        "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
+                
                 
     ]
 )
@@ -228,8 +229,8 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 
 # --- Scenario 9: Python ML ---
-if scenario == "9 – Predict My Ratings (ML)":
-    st.header("9 – Predict My Ratings (ML)")
+if scenario == "10 – Predict My Ratings (ML)":
+    st.header("10 – Predict My Ratings (ML)")
     st.write("""
     Predict my ratings for unseen movies using a machine learning model.
 
@@ -622,9 +623,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# --- Scenario 8 ---
-if scenario == "10 – Model Evaluation (Feature Importance)":
-    st.header("10 – Model Evaluation: Feature Importance")
+# --- Scenario 11 ---
+if scenario == "11 – Model Evaluation (Feature Importance)":
+    st.header("11 – Model Evaluation: Feature Importance")
 
     st.write("""
     We analyze which features matter most for predicting **my movie ratings** using a Random Forest model.  
@@ -747,9 +748,9 @@ if scenario == "10 – Model Evaluation (Feature Importance)":
 
 
 
-# --- Scenario 11: Feature Hypothesis Testing ---
-if scenario == "11 – Feature Hypothesis Testing":
-    st.header("11 – Feature Hypothesis Testing & Predictions")
+# --- Scenario 12: Feature Hypothesis Testing ---
+if scenario == "12 – Feature Hypothesis Testing":
+    st.header("12 – Feature Hypothesis Testing & Predictions")
 
     st.markdown("""
     Select features to test if they **improve model predictions** for your ratings.
@@ -1159,9 +1160,9 @@ else:
 
 
 
-# --- Scenario 12: Deep Learning Semantic Genre Analysis (Dynamic) ---
-if scenario == "12 – Semantic Genre & Recommendations (Deep Learning / NLP)":
-    st.header("12 – Semantic Genre & Recommendations (Deep Learning / NLP)")
+# --- Scenario 13: Deep Learning Semantic Genre Analysis (Dynamic) ---
+if scenario == "13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
+    st.header("13 – Semantic Genre & Recommendations (Deep Learning / NLP)")
     st.markdown("""
     This scenario uses **sentence embeddings** to determine the main genre of films by analyzing the plot.  
     The table shows:
@@ -1242,9 +1243,9 @@ if scenario == "12 – Semantic Genre & Recommendations (Deep Learning / NLP)":
             """)
 
 
-# --- Scenario 13: Live Ratings Monitor + Supervised ML Predictions (English only) ---
-if scenario == "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
+# --- Scenario 14: Live Ratings Monitor + Supervised ML Predictions (English only) ---
+if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
+    st.header("14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
     st.markdown("""
 **MLOps + CI/CD + Monitoring (Brief)**  
