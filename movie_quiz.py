@@ -1457,7 +1457,7 @@ It works as a **local SQL/keyword assistant**, meaning:
     suggestions = [
         "Which Hitchcock films did I rate the highest ?",
         "Top films by Spielberg ?",
-        "Which of my drama films have the lowest rating?"
+        "Which drama films did I rate the lowest?"
     ]
     for q in suggestions:
         st.write(f"- {q}")
