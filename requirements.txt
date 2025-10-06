@@ -15,3 +15,7 @@ networkx
 shap
 requests
 sentence_transformers
+logging
+os
+lime
+openai

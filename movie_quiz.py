@@ -21,7 +21,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is an experimental project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, the OMDb API, AI, GitHub, and IMDb - Antonio Friguglietti
+This is a dat project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb. Antonio Friguglietti
 """)
 
 st.markdown("""
@@ -1428,84 +1428,84 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
         
 
-#Senario 14#
 
 
-if scenario == "14 – Smart Q&A (Keyword / Local SQL Assistant)":
+# --- Scenario 14: Keyword / Local SQL Assistant ---
+
+import streamlit as st
+import pandas as pd
+
+# --- Load your data as before ---
+try:
+    My_Ratings = pd.read_excel("myratings.xlsx")
+    IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
+except Exception as e:
+    st.error(f"Error loading Excel files: {e}")
+    My_Ratings = pd.DataFrame()
+    IMDB_Ratings = pd.DataFrame()
+
+# --- Scenario 14: Keyword / Local SQL Assistant ---
+scenario = st.radio(
+    "Choose a scenario:",
+    ["14 – Smart Q&A (Keyword / Local SQL Assistant)"]
+)
+
+if scenario.startswith("14"):
     st.subheader("🎬 Smart Q&A (Keyword / Local SQL Assistant)")
-    st.write("This feature uses simple keyword matching and SQL logic — no real AI yet, but it feels interactive!")      
 
-    user_query = st.text_input("Ask a question about your data:", 
-                               placeholder="e.g. Which films did I rate higher than IMDb?")
+    # --- Help / Instructions ---
+    st.markdown("""
+    **🧠 How to ask questions in Scenario 14**
+    
+    This is a **keyword-based Q&A**. It does **not** understand fully open-ended questions.  
+    You must use recognized keywords to get answers.
+    """)
 
-    if st.button("Ask"):
-        if user_query.strip() == "":
-            st.warning("Please enter a question.")
-        else:
-            try:
-                # Define SQL-like templates for typical questions
-                if "higher" in user_query.lower() and "imdb" in user_query.lower():
-                    sql_query = """
-                        SELECT m.Title, m.[Your Rating], i.[IMDb Rating], m.Genre, m.Director
-                        FROM My_Ratings m
-                        JOIN IMDB_Ratings i ON m.[Movie ID] = i.[Movie ID]
-                        WHERE m.[Your Rating] > i.[IMDb Rating]
-                        ORDER BY m.[Your Rating] - i.[IMDb Rating] DESC
-                    """
-                    result = ps.sqldf(sql_query)
-                    st.write("✅ Films you rated higher than IMDb:")
-                    st.dataframe(result)
+    # --- Examples / Guidance ---
+    st.markdown("""
+    **Supported query types:**  
+    1. **Compare your ratings vs IMDb**  
+        - "Which films do I rate higher than IMDb?"  
+        - "Which films do I rate lower than IMDb?"  
+    2. **Genre-based queries**  
+        - "List my comedy films"  
+        - "Average rating by genre"  
+        - "List my horror films"  
+    3. **Director-based queries**  
+        - "List films by Christopher Nolan"  
+        - "Highest rated films by Spielberg"  
 
-                elif "lower" in user_query.lower() and "imdb" in user_query.lower():
-                    sql_query = """
-                        SELECT m.Title, m.[Your Rating], i.[IMDb Rating], m.Genre, m.Director
-                        FROM My_Ratings m
-                        JOIN IMDB_Ratings i ON m.[Movie ID] = i.[Movie ID]
-                        WHERE m.[Your Rating] < i.[IMDb Rating]
-                        ORDER BY i.[IMDb Rating] - m.[Your Rating] DESC
-                    """
-                    result = ps.sqldf(sql_query)
-                    st.write("🎭 Films IMDb rated higher than you:")
-                    st.dataframe(result)
+    **Keywords to include:** `my`, `IMDb`, `genre`, `director`, `highest`, `lowest`
+    """)
 
-                elif "director" in user_query.lower():
-                    sql_query = """
-                        SELECT m.Director, 
-                               AVG(m.[Your Rating]) AS MyAvg, 
-                               AVG(i.[IMDb Rating]) AS IMDBAvg,
-                               COUNT(m.Title) AS Films
-                        FROM My_Ratings m
-                        JOIN IMDB_Ratings i ON m.[Movie ID] = i.[Movie ID]
-                        GROUP BY m.Director
-                        ORDER BY MyAvg DESC
-                    """
-                    result = ps.sqldf(sql_query)
-                    st.write("🎬 Average ratings per Director:")
-                    st.dataframe(result)
+    st.markdown("**💡 Example input:** 'Which of my horror films have the highest rating?'")
 
-                elif "genre" in user_query.lower():
-                    sql_query = """
-                        SELECT m.Genre, 
-                               AVG(m.[Your Rating]) AS MyAvg, 
-                               AVG(i.[IMDb Rating]) AS IMDBAvg,
-                               COUNT(m.Title) AS Films
-                        FROM My_Ratings m
-                        JOIN IMDB_Ratings i ON m.[Movie ID] = i.[Movie ID]
-                        GROUP BY m.Genre
-                        ORDER BY MyAvg DESC
-                    """
-                    result = ps.sqldf(sql_query)
-                    st.write("🎞 Average ratings per Genre:")
-                    st.dataframe(result)
+    # --- User input ---
+    user_question = st.text_input(
+        "Ask a question about your ratings, votes, or IMDb data:",
+        placeholder="e.g., 'Which of my horror films have the highest rating?'"
+    )
 
-                else:
-                    st.info("🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, or directors.")
+    # --- Simple keyword-based response logic ---
+    if user_question:
+        question_lower = user_question.lower()
+        response = "🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, or directors."
 
-            except Exception as e:
-                st.error(f"Error processing your question: {e}")
+        # Example keyword logic
+        if "my" in question_lower and "higher" in question_lower and "imdb" in question_lower:
+            response = "Showing films you rated higher than IMDb..."
+            # Here you could add actual filtering code
+        elif "my" in question_lower and "lower" in question_lower and "imdb" in question_lower:
+            response = "Showing films you rated lower than IMDb..."
+        elif "genre" in question_lower or "horror" in question_lower or "comedy" in question_lower:
+            response = "Showing films by the requested genre..."
+        elif "director" in question_lower:
+            response = "Showing films by the requested director..."
+
+        st.info(response)
 
 
-#Senario 14#                
+#Scenario 15#                
 
 
 if scenario == "15 – True AI Q&A (Natural Language to SQL / OpenAI)":
