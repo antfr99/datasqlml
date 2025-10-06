@@ -105,7 +105,7 @@ scenario = st.radio(
         "11 – Feature Hypothesis Testing",
         "12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
         "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "14 – Q&A (Keyword / Local SQL Assistant)",        
+        "14 – Q&A (Natural-Language Questions / Local SQL)",        
                 
     ]
 )
@@ -1430,12 +1430,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 # --- Scenario 14: Keyword / Local SQL Assistant ---
 
+
 # --- Scenario 14: Keyword / Local SQL Assistant ---
 if scenario.startswith("14"):
     import streamlit as st
     import pandas as pd
 
-    st.subheader("📝 Scenario 14: Q&A (Keyword / Local SQL)")
+    st.subheader("14 – Q&A (Natural-Language Questions / Local SQL)")
 
     # --- Expanded explanation ---
     st.markdown("""
@@ -1448,25 +1449,17 @@ It works as a **local SQL/keyword assistant**, meaning:
 
 **How it handles words in your question:**
 - Words not recognized as a genre, director, or sorting intent are ignored.  
-- For example, words like *which*, *of*, *my*, or irrelevant words (*fake*, *music*) will have no effect.  
 - Only genres, director names, and intent keywords influence the results.  
-
-You can use this tool to quickly find my top-rated films, see where my ratings differ from IMDb, or explore my collection by director or genre.
 """)
 
     # --- Suggested example questions ---
     st.markdown("**Example questions you can ask:**")
     suggestions = [
         "Which of my comedy films have the highest rating?",
-        "Which of my horror films have the lowest rating?",
-        "Highest rated films by Spielberg",
-        "My top 5 action films by Nolan",
+        "Worst rated horror films by last name 'Nolan'",
+        "Top action films by Spielberg",
         "Films where my rating is higher than IMDb rating",
-        "Which of my drama films from 2020 have the highest rating?",
-        "Top-rated sci-fi films by Ridley Scott",
-        "My best-rated romance films",
-        "Which films do I disagree most with IMDb ratings?",
-        "Worst rated films by last name 'Anderson'"
+        "Which of my drama films have the lowest rating?"
     ]
     for q in suggestions:
         st.write(f"- {q}")
@@ -1491,7 +1484,7 @@ You can use this tool to quickly find my top-rated films, see where my ratings d
         filtered = My_Ratings.copy()
 
         # --- Filter by genre ---
-        genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]  # extend as needed
+        genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
@@ -1522,4 +1515,3 @@ You can use this tool to quickly find my top-rated films, see where my ratings d
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different genre or director keyword.")
-
