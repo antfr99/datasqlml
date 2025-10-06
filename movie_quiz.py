@@ -1430,7 +1430,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 # --- Scenario 14: Keyword / Local SQL Assistant ---
 
-# Scenario 14: Smart Q&A (Keyword / Local SQL Assistant)
+# --- Scenario 14: Smart Q&A (Keyword / Local SQL Assistant) ---
 if scenario.startswith("14"):
     import streamlit as st
     import pandas as pd
@@ -1440,8 +1440,8 @@ if scenario.startswith("14"):
     # --- Short explanation ---
     st.markdown("""
 This scenario allows you to ask simple questions about my personal film ratings and IMDb ratings.
-You can filter by **genre**, **director**, or both, and see the films sorted by my ratings or IMDb ratings.
-The system works by matching keywords in your questions to my data.
+You can filter by **genre**, **director**, or both, and see the films sorted by your intent (highest, lowest, top, worst).  
+The system works by matching keywords in your questions to your data.
 """)
 
     # --- Suggested example questions ---
@@ -1456,7 +1456,7 @@ The system works by matching keywords in your questions to my data.
         "Top-rated sci-fi films by Ridley Scott",
         "My best-rated romance films",
         "Which films do I disagree most with IMDb ratings?",
-        "Highest rated films by last name 'Anderson'"
+        "Worst rated films by last name 'Anderson'"
     ]
     for q in suggestions:
         st.write(f"- {q}")
@@ -1480,14 +1480,14 @@ The system works by matching keywords in your questions to my data.
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
 
-        # Filter by genre
+        # --- Filter by genre ---
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]  # extend as needed
         for g in genres:
             if g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
                 break
 
-        # Filter by director (partial match on last name)
+        # --- Filter by director (partial match on last name) ---
         directors = filtered['Director'].dropna().unique()
         for d in directors:
             last_name = d.split()[-1].lower()
@@ -1495,15 +1495,20 @@ The system works by matching keywords in your questions to my data.
                 filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
                 break
 
-        # Sort by Your Rating or IMDb Rating
-        sort_col = "Your Rating" if "my" in question_lower else "IMDb Rating" if "imdb" in question_lower else "Your Rating"
+        # --- Determine sort column ---
+        sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
 
+        # --- Determine sort order based on keywords ---
+        if any(w in question_lower for w in ["highest", "top", "best"]):
+            ascending = False
+        elif any(w in question_lower for w in ["lowest", "worst", "bottom"]):
+            ascending = True
+        else:
+            ascending = False  # default
+
+        # --- Display results ---
         if not filtered.empty:
-            filtered_sorted = filtered.sort_values(by=sort_col, ascending=False)
-            # Display table without extra heading
+            filtered_sorted = filtered.sort_values(by=sort_col, ascending=ascending)
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different genre or director keyword.")
-
-
-
