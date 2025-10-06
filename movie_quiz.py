@@ -11,6 +11,7 @@ import logging
 import os
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import NearestNeighbors
+import openai
 
 
 # --- Page Config ---
@@ -1429,131 +1430,101 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         
 
 
-
 # --- Scenario 14: Keyword / Local SQL Assistant ---
-
-import streamlit as st
-import pandas as pd
-
-# --- Load your data as before ---
-try:
-    My_Ratings = pd.read_excel("myratings.xlsx")
-    IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
-except Exception as e:
-    st.error(f"Error loading Excel files: {e}")
-    My_Ratings = pd.DataFrame()
-    IMDB_Ratings = pd.DataFrame()
-
-# --- Scenario 14: Keyword / Local SQL Assistant ---
-scenario = st.radio(
-    "Choose a scenario:",
-    ["14 – Smart Q&A (Keyword / Local SQL Assistant)"]
-)
-
 if scenario.startswith("14"):
     st.subheader("🎬 Smart Q&A (Keyword / Local SQL Assistant)")
 
-    # --- Help / Instructions ---
     st.markdown("""
     **🧠 How to ask questions in Scenario 14**
-    
-    This is a **keyword-based Q&A**. It does **not** understand fully open-ended questions.  
-    You must use recognized keywords to get answers.
+
+    Supported query types:
+    - Compare your ratings vs IMDb
+    - Genre-based queries
+    - Director-based queries
+
+    Keywords to include: `my`, `IMDb`, `genre`, `director`, `highest`, `lowest`
     """)
 
-    # --- Examples / Guidance ---
-    st.markdown("""
-    **Supported query types:**  
-    1. **Compare your ratings vs IMDb**  
-        - "Which films do I rate higher than IMDb?"  
-        - "Which films do I rate lower than IMDb?"  
-    2. **Genre-based queries**  
-        - "List my comedy films"  
-        - "Average rating by genre"  
-        - "List my horror films"  
-    3. **Director-based queries**  
-        - "List films by Christopher Nolan"  
-        - "Highest rated films by Spielberg"  
-
-    **Keywords to include:** `my`, `IMDb`, `genre`, `director`, `highest`, `lowest`
-    """)
-
-    st.markdown("**💡 Example input:** 'Which of my horror films have the highest rating?'")
-
-    # --- User input ---
     user_question = st.text_input(
         "Ask a question about your ratings, votes, or IMDb data:",
         placeholder="e.g., 'Which of my horror films have the highest rating?'"
     )
 
-    # --- Simple keyword-based response logic ---
     if user_question:
         question_lower = user_question.lower()
         response = "🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, or directors."
 
-        # Example keyword logic
-        if "my" in question_lower and "higher" in question_lower and "imdb" in question_lower:
-            response = "Showing films you rated higher than IMDb..."
-            # Here you could add actual filtering code
+        # Genre queries
+        if "horror" in question_lower and "highest" in question_lower and "my" in question_lower:
+            df_horror = My_Ratings[My_Ratings['Genre'].str.contains("Horror", case=False, na=False)]
+            df_horror_sorted = df_horror.sort_values(by="Your Rating", ascending=False)
+            st.subheader("🎬 Your Horror Films by Highest Rating")
+            st.dataframe(df_horror_sorted[['Title', 'Your Rating', 'Genre', 'Year']])
+            response = None
+
+        # Director queries
+        elif "director" in question_lower or any(d.lower() in question_lower for d in My_Ratings['Director'].dropna().unique()):
+            matched_directors = [d for d in My_Ratings['Director'].dropna().unique() if d.lower() in question_lower]
+            if matched_directors:
+                df_director = My_Ratings[My_Ratings['Director'].isin(matched_directors)]
+                df_director_sorted = df_director.sort_values(by="Your Rating", ascending=False)
+                st.subheader(f"🎬 Films by {', '.join(matched_directors)} Sorted by Your Rating")
+                st.dataframe(df_director_sorted[['Title', 'Your Rating', 'Director', 'Genre', 'Year']])
+                response = None
+
+        # IMDb comparisons
+        elif "my" in question_lower and "higher" in question_lower and "imdb" in question_lower:
+            df_higher = pd.merge(My_Ratings, IMDB_Ratings, on="Movie ID")
+            df_higher = df_higher[df_higher['Your Rating'] > df_higher['IMDb Rating']]
+            st.subheader("🎬 Films You Rated Higher Than IMDb")
+            st.dataframe(df_higher[['Title', 'Your Rating', 'IMDb Rating', 'Genre', 'Director', 'Year']])
+            response = None
+
         elif "my" in question_lower and "lower" in question_lower and "imdb" in question_lower:
-            response = "Showing films you rated lower than IMDb..."
-        elif "genre" in question_lower or "horror" in question_lower or "comedy" in question_lower:
-            response = "Showing films by the requested genre..."
-        elif "director" in question_lower:
-            response = "Showing films by the requested director..."
+            df_lower = pd.merge(My_Ratings, IMDB_Ratings, on="Movie ID")
+            df_lower = df_lower[df_lower['Your Rating'] < df_lower['IMDb Rating']]
+            st.subheader("🎬 Films You Rated Lower Than IMDb")
+            st.dataframe(df_lower[['Title', 'Your Rating', 'IMDb Rating', 'Genre', 'Director', 'Year']])
+            response = None
 
-        st.info(response)
+        if response:
+            st.info(response)
 
+# --- Scenario 15  ---
 
-#Scenario 15#                
+elif scenario.startswith("15"):
+    st.subheader("🤖 True AI Q&A (OpenAI-Powered)")
 
+    # Access OpenAI key here
+    try:
+        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+        openai.api_key = OPENAI_API_KEY
+    except Exception as e:
+        st.warning("OpenAI API key not found in secrets.toml. Scenario 15 will not work.")
+        OPENAI_API_KEY = None
 
-if scenario == "15 – True AI Q&A (Natural Language to SQL / OpenAI)":
-    st.subheader("🤖 True AI Q&A (Natural Language to SQL / OpenAI)")
-    st.write("""
-    This version uses an actual AI model (like GPT-4) to interpret your question, 
-    generate SQL dynamically, and run it on your movie data.
-    """)
+    user_question = st.text_input(
+        "Ask any question about your ratings, votes, or IMDb data:",
+        placeholder="e.g., 'Which horror films do I rate the highest?'"
+    )
 
-    user_query = st.text_input("Ask any question about your movie data:",
-                               placeholder="e.g. Show me comedies after 2010 I rated higher than IMDb")
+    if user_question and OPENAI_API_KEY:
+        try:
+            prompt = f"""
+            You are analyzing my movie data. My_Ratings columns: {list(My_Ratings.columns)}.
+            IMDB_Ratings columns: {list(IMDB_Ratings.columns)}.
+            Votes columns: ['Movie ID','Num Votes'].
+            Answer the user's question using the available data.
+            Question: {user_question}
+            """
+            completion = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            answer = completion.choices[0].message.content
+            st.info(answer)
+        except Exception as e:
+            st.error(f"OpenAI API error: {e}")
+    elif user_question:
+        st.warning("OpenAI API key not found. Scenario 15 cannot run without it.")
 
-    if st.button("Ask AI"):
-        if user_query.strip() == "":
-            st.warning("Please type a question first.")
-        else:
-            try:
-                from openai import OpenAI
-                client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-                prompt = f"""
-                You are a data assistant. The user has three pandas dataframes:
-                - My_Ratings(Movie ID, Your Rating, Title, URL, IMDb Rating, Runtime (mins), Year, Director, Genre)
-                - Votes(Movie ID, Num Votes)
-                - IMDB_Ratings(Movie ID, Title, Movie URL, IMDb Rating, Runtime (mins), Year, Genre, Director)
-
-                User question: {user_query}
-
-                Write a valid SQL query that can be executed with pandasql (SQLite syntax). 
-                Always join by Movie ID when needed.
-                Only return the SQL query, nothing else.
-                """
-
-                with st.spinner("Thinking..."):
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": "You are a SQL assistant for movie data."},
-                            {"role": "user", "content": prompt}
-                        ]
-                    )
-
-                sql_query = response.choices[0].message.content.strip()
-                st.code(sql_query, language="sql")
-
-                result = ps.sqldf(sql_query)
-                st.dataframe(result, use_container_width=True)
-
-            except Exception as e:
-                st.error(f"Error: {e}")
-                st.info("Make sure you’ve added your OpenAI API key in Streamlit secrets.")
