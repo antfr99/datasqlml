@@ -1437,90 +1437,86 @@ if scenario.startswith("14"):
     st.subheader("🎬 Smart Q&A (Keyword / Local SQL Assistant)")
 
     st.markdown("""
-    **🧠 How to ask questions in Scenario 14**
-
-    Supported query types:  
-    1. Compare your ratings vs IMDb  
-       - "Which films do I rate higher than IMDb?"  
-       - "Which films do I rate lower than IMDb?"  
-    2. Genre-based queries  
-       - "Which of my comedy films have the highest rating?"  
-       - "Which of my drama films have the lowest rating?"  
-    3. Director-based queries  
-       - "List films by Christopher Nolan"  
-       - "Highest rated films by Spielberg"  
-
-    **Keywords to include:** `my`, `IMDb`, `genre`, `director`, `highest`, `lowest`
-    """)
-
-    st.markdown("""
     **💡 Example questions:**  
-    1. Which of my horror films have the highest rating?  
-    2. Which of my comedy films have the highest rating?  
-    3. Which of my drama films have the lowest rating?  
-    4. List my action films sorted by rating.  
-    5. Which films do I rate higher than IMDb?  
-    6. Which films do I rate lower than IMDb?  
-    7. List films by Christopher Nolan.  
-    8. Highest rated films by Spielberg.  
-    9. Average rating of my thriller films.  
-    10. List my films from 2020 by rating.
+    - Which of my comedy films have the highest rating?  
+    - Which of my comedy films by Spielberg have the highest rating?  
+    - Which of my action films from 2020 have the lowest rating?  
+    - Highest rated films by Nolan.  
+    - Which films do I rate higher than IMDb?  
+    - Which films do I rate lower than IMDb?
     """)
 
     user_question = st.text_input(
         "Ask a question about your ratings, votes, or IMDb data:",
-        placeholder="e.g., 'Which of my comedy films have the highest rating?'"
+        placeholder="e.g., 'Which of my comedy films by Spielberg from 2020 have the highest rating?'"
     )
 
     if user_question:
         question_lower = user_question.lower()
-        response = "🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, or directors."
+        response = "🤖 I couldn’t match your question yet. Try asking about IMDb vs. your ratings, genres, directors, or year."
 
-        # --- Dynamic Genre Queries ---
+        df_filtered = My_Ratings.copy()
+
+        # --- Dynamic Genre Detection (substring match) ---
         all_genres = My_Ratings['Genre'].dropna().unique()
         matched_genres = [g for g in all_genres if g.lower() in question_lower]
         if matched_genres:
-            df_genre = My_Ratings[My_Ratings['Genre'].str.contains('|'.join(matched_genres), case=False, na=False)]
-            if "highest" in question_lower:
-                df_genre_sorted = df_genre.sort_values(by="Your Rating", ascending=False)
-                st.subheader(f"🎬 Your {', '.join(matched_genres)} Films by Highest Rating")
-            elif "lowest" in question_lower:
-                df_genre_sorted = df_genre.sort_values(by="Your Rating", ascending=True)
-                st.subheader(f"🎬 Your {', '.join(matched_genres)} Films by Lowest Rating")
-            else:
-                df_genre_sorted = df_genre
-                st.subheader(f"🎬 Your {', '.join(matched_genres)} Films")
-            st.dataframe(df_genre_sorted[['Title', 'Your Rating', 'Genre', 'Year']])
-            response = None
+            df_filtered = df_filtered[df_filtered['Genre'].str.contains('|'.join(matched_genres), case=False, na=False)]
 
-        # --- Dynamic Director Queries ---
+        # --- Dynamic Director Detection (substring match for surname/partial) ---
         all_directors = My_Ratings['Director'].dropna().unique()
-        matched_directors = [d for d in all_directors if d.lower() in question_lower]
+        matched_directors = [d for d in all_directors if d.lower() in question_lower or any(part.lower() in question_lower for part in d.split())]
         if matched_directors:
-            df_director = My_Ratings[My_Ratings['Director'].isin(matched_directors)]
-            df_director_sorted = df_director.sort_values(by="Your Rating", ascending=False)
-            st.subheader(f"🎬 Films by {', '.join(matched_directors)} Sorted by Your Rating")
-            st.dataframe(df_director_sorted[['Title', 'Your Rating', 'Director', 'Genre', 'Year']])
-            response = None
+            df_filtered = df_filtered[df_filtered['Director'].str.contains('|'.join(matched_directors), case=False, na=False)]
 
-        # --- Dynamic IMDb Comparison Queries ---
+        # --- Year Detection ---
+        import re
+        years_in_question = re.findall(r'\b(19|20)\d{2}\b', user_question)
+        if years_in_question:
+            df_filtered = df_filtered[df_filtered['Year'].astype(str).isin(years_in_question)]
+
+        # --- IMDb Comparison ---
         if "my" in question_lower and "higher" in question_lower and "imdb" in question_lower:
-            df_higher = pd.merge(My_Ratings, IMDB_Ratings, on="Movie ID")
-            df_higher = df_higher[df_higher['Your Rating'] > df_higher['IMDb Rating']]
-            st.subheader("🎬 Films You Rated Higher Than IMDb")
-            st.dataframe(df_higher[['Title', 'Your Rating', 'IMDb Rating', 'Genre', 'Director', 'Year']])
-            response = None
+            df_filtered = pd.merge(df_filtered, IMDB_Ratings, on="Movie ID")
+            df_filtered = df_filtered[df_filtered['Your Rating'] > df_filtered['IMDb Rating']]
+            subheader_text = "Films You Rated Higher Than IMDb"
         elif "my" in question_lower and "lower" in question_lower and "imdb" in question_lower:
-            df_lower = pd.merge(My_Ratings, IMDB_Ratings, on="Movie ID")
-            df_lower = df_lower[df_lower['Your Rating'] < df_lower['IMDb Rating']]
-            st.subheader("🎬 Films You Rated Lower Than IMDb")
-            st.dataframe(df_lower[['Title', 'Your Rating', 'IMDb Rating', 'Genre', 'Director', 'Year']])
+            df_filtered = pd.merge(df_filtered, IMDB_Ratings, on="Movie ID")
+            df_filtered = df_filtered[df_filtered['Your Rating'] < df_filtered['IMDb Rating']]
+            subheader_text = "Films You Rated Lower Than IMDb"
+        else:
+            # --- Sorting by rating ---
+            if "highest" in question_lower:
+                df_filtered = df_filtered.sort_values(by="Your Rating", ascending=False)
+            elif "lowest" in question_lower:
+                df_filtered = df_filtered.sort_values(by="Your Rating", ascending=True)
+
+            # --- Dynamic Subheader ---
+            parts = []
+            if matched_genres:
+                parts.append(f"{', '.join(matched_genres)} Films")
+            if matched_directors:
+                parts.append(f"by {', '.join(matched_directors)}")
+            if years_in_question:
+                parts.append(f"from {', '.join(years_in_question)}")
+            if "highest" in question_lower:
+                parts.append("by Highest Rating")
+            elif "lowest" in question_lower:
+                parts.append("by Lowest Rating")
+            subheader_text = "My " + " ".join(parts) if parts else "My Films"
+
+        # --- Show results ---
+        if not df_filtered.empty:
+            st.subheader(subheader_text)
+            display_cols = ['Title','Your Rating','Genre','Director','Year']
+            if 'IMDb Rating' in df_filtered.columns:
+                display_cols.insert(2,'IMDb Rating')
+            st.dataframe(df_filtered[display_cols])
             response = None
 
         # --- Fallback guidance ---
         if response:
             st.info(response)
-
 
 
 # --- Scenario 15  ---
@@ -1563,55 +1559,59 @@ elif scenario.startswith("15"):
 
 
 # --- Scenario 15: True AI Q&A (OpenAI-Powered) ---
-elif scenario.startswith("15"):
-    st.subheader("🤖 True AI Q&A (OpenAI-Powered)")
 
+# --- Scenario 15: True AI Q&A (Natural Language to SQL / OpenAI) ---
+if scenario.startswith("15"):
+    import streamlit as st
+    import pandas as pd
     import openai
+    import os
 
-    # --- Access OpenAI key via Streamlit secrets ---
+    st.subheader("🤖 True AI Q&A (OpenAI)")
+
+    # --- Load your data ---
     try:
-        OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-        openai.api_key = OPENAI_API_KEY
-    except Exception:
-        st.warning("OpenAI API key not found in secrets.toml. Scenario 15 will not work.")
-        OPENAI_API_KEY = None
+        My_Ratings = pd.read_excel("myratings.xlsx")
+        IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
+    except Exception as e:
+        st.error(f"Error loading Excel files: {e}")
+        My_Ratings = pd.DataFrame()
+        IMDB_Ratings = pd.DataFrame()
 
-    if OPENAI_API_KEY:
+    # --- Access OpenAI API key from Streamlit Cloud secrets ---
+    try:
+        openai.api_key = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        st.warning("OpenAI API key not found in Streamlit Cloud secrets. Scenario 15 will not work.")
+        openai.api_key = None
+
+    if openai.api_key:
         user_question = st.text_input(
-            "Ask any question about your ratings, votes, or IMDb data:",
-            placeholder="e.g., 'Which of my horror films have the highest rating?'"
+            "Ask a question about your ratings, votes, or IMDb data:",
+            placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
         )
 
         if user_question:
-            # --- Combine your data into a simple context for AI ---
-            context_data = pd.merge(My_Ratings, IMDB_Ratings, on="Movie ID", how="left")
-            if not Votes.empty:
-                context_data = pd.merge(context_data, Votes, on="Movie ID", how="left")
-            
-            # Limit to relevant columns to keep prompt reasonable
-            context_str = context_data[['Title','Your Rating','IMDb Rating','Genre','Director','Year','Num Votes']].fillna("").to_csv(index=False)
-
-            # --- Ask OpenAI ---
             try:
+                # --- Prepare prompt for OpenAI ---
                 prompt = f"""
-You are an assistant for a personal movie ratings dataset.
-Answer the user's question using ONLY the information in the CSV below.
-Do NOT make up data. If the answer is not in the CSV, say 'No data available.'  
+You are an AI assistant. The user has two datasets: 
+1) My_Ratings with columns: Movie ID, Your Rating, Title, URL, IMDb Rating, Runtime (mins), Year, Director, Genre
+2) IMDB_Ratings with columns: Movie ID, Title, Movie URL, IMDb Rating, Runtime (mins), Year, Genre, Director
 
-CSV Data:
-{context_str}
-
-User Question: {user_question}
-Answer:
+Answer the user's question by providing either a short answer or a pandas DataFrame query.
+Question: {user_question}
 """
-                completion = openai.Completion.create(
+                response = openai.Completion.create(
                     model="text-davinci-003",
                     prompt=prompt,
-                    max_tokens=300,
-                    temperature=0
+                    temperature=0,
+                    max_tokens=300
                 )
-                answer = completion.choices[0].text.strip()
-                st.markdown(f"**Answer:** {answer}")
+
+                answer = response.choices[0].text.strip()
+                st.markdown("**AI Response:**")
+                st.write(answer)
 
             except Exception as e:
-                st.error(f"Error querying OpenAI: {e}")
+                st.error(f"Error calling OpenAI API: {e}")
