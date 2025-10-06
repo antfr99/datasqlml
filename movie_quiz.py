@@ -1257,10 +1257,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
 
     # --- OMDb API key ---
-    OMDB_API_KEY = "50bcb7e2"
+    OMDB_API_KEY = "41c1dd9b"
 
     # --- Select top 100 films ---
-    top100_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(100)
+    top300_films = IMDB_Ratings[
+    IMDB_Ratings['Genre'].str.contains("Comedy", case=False, na=False)
+    ].sort_values(by="IMDb Rating", ascending=False).head(300)
+
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
@@ -1286,7 +1289,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         results = []
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
-        for _, row in top100_films.iterrows():
+        for _, row in top300_films.iterrows():
             movie_id = row["Movie ID"]
             static_rating = row["IMDb Rating"]
 
@@ -1337,7 +1340,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # --- Show sorted results by Rating Difference ---
         if not new_df.empty:
-            st.subheader("📊 Current Run")
+            st.subheader("📊 Current Run - Comedy")
             st.dataframe(
                 new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
                 use_container_width=True
@@ -1349,7 +1352,12 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
 
-        predict_df = df_ml[(df_ml['Rating Difference'].notna()) & (df_ml['Your Rating'].isna())].copy()
+        # Only predict for unseen movies from the current Horror subset with rating changes
+        predict_df = df_ml[
+        (df_ml['Movie ID'].isin(top300_films['Movie ID'])) &
+        (df_ml['Rating Difference'].notna()) &
+        (df_ml['Your Rating'].isna())
+        ].copy()
         train_df = df_ml[df_ml['Your Rating'].notna()]
 
         categorical_features = ['Genre', 'Director']
@@ -1375,7 +1383,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         predict_df['Predicted Rating'] = model.predict(X_pred)
 
         if not predict_df.empty:
-            st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
+            st.subheader("🤖 Predicted Ratings for Unseen Comedy Movies with Changed Ratings")
             st.dataframe(
                 predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
