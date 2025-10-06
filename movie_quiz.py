@@ -1456,9 +1456,7 @@ It works as a **local SQL/keyword assistant**, meaning:
     st.markdown("**Example questions you can ask:**")
     suggestions = [
         "Which of my comedy films have the highest rating?",
-        "Worst rated horror films by last name 'Nolan'",
-        "Top action films by Spielberg",
-        "Films where my rating is higher than IMDb rating",
+        "Top films by Spielberg",
         "Which of my drama films have the lowest rating?"
     ]
     for q in suggestions:
