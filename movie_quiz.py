@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb. Antonio Friguglietti
+This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, OpenAI, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
 """)
 
 st.markdown("""
@@ -1441,9 +1441,9 @@ if scenario.startswith("14"):
 
     # --- Short explanation ---
     st.markdown("""
-This scenario allows you to ask simple questions about your personal film ratings and IMDb ratings.
-You can filter by **genre**, **director**, or both, and see the films sorted by your rating or IMDb rating.
-The system works by matching keywords in your question to your data.
+This scenario allows you to ask simple questions about my personal film ratings and IMDb ratings.
+You can filter by **genre**, **director**, or both, and see the films sorted by my ratings or IMDb ratings.
+The system works by matching keywords in your questions to my data.
 """)
 
     # --- Suggested example questions ---
