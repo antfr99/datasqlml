@@ -105,7 +105,7 @@ scenario = st.radio(
         "11 – Feature Hypothesis Testing",
         "12 – Semantic Genre & Recommendations (Deep Learning / NLP)",
         "13 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-        "14 – Q&A (Keyword / Local SQL Assistant)",   
+        "14 – Q&A (Keyword / Local SQL Assistant)",        
                 
     ]
 )
@@ -1482,7 +1482,7 @@ You can use this tool to quickly find my top-rated films, see where my ratings d
 
     # --- User question input ---
     user_question = st.text_input(
-        "Ask a question about your ratings, votes, or IMDb:",
+        "Ask a question about ratings, votes, or IMDb:",
         placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
     )
 
@@ -1522,3 +1522,4 @@ You can use this tool to quickly find my top-rated films, see where my ratings d
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different genre or director keyword.")
+
