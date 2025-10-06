@@ -1482,7 +1482,7 @@ You can use this tool to quickly find my top-rated films, see where my ratings d
 
     # --- User question input ---
     user_question = st.text_input(
-        "Ask a question about ratings, votes, or IMDb:",
+        "Ask a question :",
         placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
     )
 
