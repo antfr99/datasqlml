@@ -1513,7 +1513,7 @@ The system works by matching keywords in your questions to my data.
 
 # --- Scenario 15: True AI Q&A (Natural Language to SQL / OpenAI) ---
 
-# --- Scenario 15: True AI Q&A (Natural Language to SQL / OpenAI) ---
+# --- Scenario 15: True AI Q&A (OpenAI >=1.0) ---
 if scenario.startswith("15"):
     import streamlit as st
     import pandas as pd
@@ -1545,7 +1545,6 @@ if scenario.startswith("15"):
 
         if user_question:
             try:
-                # --- Prepare prompt for OpenAI ---
                 prompt = f"""
 You are an AI assistant for a movie data project. The user has two datasets:
 
@@ -1556,32 +1555,16 @@ Answer the user's question as clearly as possible. If a pandas DataFrame query i
 
 Question: {user_question}
 """
-
-                response = openai.Completion.create(
-                    model="text-davinci-003",
-                    prompt=prompt,
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     max_tokens=500
                 )
 
-                answer = response.choices[0].text.strip()
-
-                # --- Try to execute DataFrame code if suggested ---
-                executed = False
-                if "pd.DataFrame" in answer or "My_Ratings" in answer or "IMDB_Ratings" in answer:
-                    try:
-                        # Safely execute the code (restricted to pandas and your data)
-                        local_vars = {"pd": pd, "My_Ratings": My_Ratings, "IMDB_Ratings": IMDB_Ratings}
-                        exec(answer, {}, local_vars)
-                        if "df" in local_vars:
-                            st.dataframe(local_vars["df"])
-                            executed = True
-                    except Exception:
-                        executed = False
-
-                if not executed:
-                    st.markdown("**AI Response:**")
-                    st.write(answer)
+                answer = response.choices[0].message.content.strip()
+                st.markdown("**AI Response:**")
+                st.write(answer)
 
             except Exception as e:
                 st.error(f"Error calling OpenAI API: {e}")
