@@ -1466,7 +1466,7 @@ It works like a **keyword-based data assistant**:
 
     # --- Display editable logic block ---
     logic_code = textwrap.dedent("""
-        # Keyword-based filtering and sorting logic
+        
 
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
