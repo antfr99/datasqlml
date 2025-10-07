@@ -1430,6 +1430,8 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 # --- Scenario 9: Natural-Language Film Q&A Assistant (final version) ---
 
+# --- Scenario 9: Natural-Language Film Q&A Assistant (final version, cleaned) ---
+
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
@@ -1463,6 +1465,7 @@ This scenario allows you to ask **natural-language questions** about my personal
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
+    # --- Editable logic code (cleaned: no unused comments or stopwords) ---
     logic_code = textwrap.dedent(r"""
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
@@ -1476,7 +1479,6 @@ This scenario allows you to ask **natural-language questions** about my personal
                 filtered_genre = True
                 break
 
-        stopwords = {"top", "highest", "lowest", "best", "worst", "bottom", "films", "film", "movie", "movies", "by", "i", "did", "which", "the"}
         all_directors = My_Ratings['Director'].dropna().unique()
         matches = []
 
@@ -1504,7 +1506,7 @@ This scenario allows you to ask **natural-language questions** about my personal
 
     user_question = st.text_input(
         "🎥 Ask a question:",
-        placeholder="Which drama films did I rate the lowest?"
+        placeholder="Which comedy films did I rate the highest?"
     )
 
     if user_question and not My_Ratings.empty:
@@ -1526,3 +1528,4 @@ This scenario allows you to ask **natural-language questions** about my personal
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director surname or genre keyword.")
+
