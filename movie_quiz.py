@@ -1440,7 +1440,7 @@ if scenario.startswith("9"):
 
     # --- Description ---
     st.markdown("""
-This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
+This scenario allows you to ask **natural-language questions** about my personal film ratings.
 
 It works like a keyword-based data assistant:
 - filter by genre (e.g., comedy, horror, drama)
