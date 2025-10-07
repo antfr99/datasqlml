@@ -1429,18 +1429,17 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 
 # --- Scenario 9: Natural-Language Film Q&A Assistant (final version) ---
+
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
     import textwrap
     import re
 
-    # --- Header ---
     st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
-    # --- Description ---
     st.markdown("""
-This scenario allows you to ask **natural-language questions** about my personal film ratings.
+This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
 
 It works like a keyword-based data assistant:
 - filter by genre (e.g., comedy, horror, drama)
@@ -1448,7 +1447,6 @@ It works like a keyword-based data assistant:
 - sort by intent words like "top", "highest", "lowest", "bottom"
 """)
 
-    # --- Example questions ---
     st.markdown("**Example questions you can ask:**")
     for q in [
         "Which Hitchcock films did I rate the highest?",
@@ -1458,7 +1456,6 @@ It works like a keyword-based data assistant:
     ]:
         st.write(f"- {q}")
 
-    # --- Load Data ---
     try:
         My_Ratings = pd.read_excel("myratings.xlsx")
         IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
@@ -1467,30 +1464,25 @@ It works like a keyword-based data assistant:
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    
     logic_code = textwrap.dedent(r"""
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
         question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
 
-        
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_tokens or g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
                 break
 
-        
         all_directors = My_Ratings['Director'].dropna().unique()
         matches = []
 
-        
         for d in all_directors:
             d_lower = d.lower()
             if all(token in d_lower for token in question_tokens if token not in genres):
                 matches.append(d)
 
-        
         if not matches:
             for d in all_directors:
                 d_lower = d.lower()
@@ -1499,8 +1491,9 @@ It works like a keyword-based data assistant:
 
         if matches:
             filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
+        else:
+            filtered = filtered.iloc[0:0]
 
-       
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
         if any(w in question_tokens for w in ["highest", "top", "best"]):
             ascending = False
@@ -1510,11 +1503,9 @@ It works like a keyword-based data assistant:
             ascending = False
     """)
 
-    # --- Show editable block ---
     st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
     editable_code = st.text_area("Modify logic if needed:", logic_code, height=400)
 
-    # --- Question input ---
     user_question = st.text_input(
         "🎥 Ask a question:",
         placeholder="Which drama films did I rate the lowest?"
@@ -1539,3 +1530,4 @@ It works like a keyword-based data assistant:
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director or genre keyword.")
+
