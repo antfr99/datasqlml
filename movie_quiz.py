@@ -100,7 +100,7 @@ scenario = st.radio(
         "6 – Review Analysis (Sentiment, Subjectivity)",
         "7 – Poster Image Analysis (OMDb API)",
         "8 – Graph Based Movie Relationships",
-        "9 – Q&A (Natural-Language Questions / Local SQL)",
+        "9 – Natural-Language Film Q&A Assistant",
         "10 – Predict My Ratings (ML)", 
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
@@ -1428,41 +1428,34 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
         
 
-
-
-
-# --- Scenario 9: Keyword / Local SQL Assistant ---
+# --- Scenario 9: Natural-Language Film Q&A Assistant ---
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
+    import textwrap
 
-    st.subheader("9 – Q&A (Natural-Language Questions / Local SQL)")
+    # --- Header ---
+    st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
-    # --- Expanded explanation ---
+    # --- Description ---
     st.markdown("""
-This scenario allows you to ask **natural-language questions** about my personal film ratings and IMDb ratings.  
+This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.  
 
-It works as a **local SQL/keyword assistant**, meaning:
-1. You can filter films by **genre** (e.g., comedy, horror, action) or by **director** (full name or last name).  
-2. You can indicate your intent with keywords like **highest**, **lowest**, **top**, or **worst**, which will determine how the results are sorted.  
-3. The system scans your question for **matching keywords** and applies them to your dataset to produce a sorted table of films.  
-
-**How it handles words in your question:**
-- Words not recognized as a genre, director, or sorting intent are ignored.  
-- Only genres, director names, and intent keywords influence the results.  
+It works like a **keyword-based data assistant**:
+1. You can filter films by **genre** (e.g., comedy, horror, drama) or by **director** (full or last name).  
+2. You can specify your intent with words like **highest**, **lowest**, **top**, or **worst** to sort results.  
+3. The system scans your question, applies filters and sorting, and displays the relevant films.
 """)
 
-    # --- Suggested example questions ---
     st.markdown("**Example questions you can ask:**")
-    suggestions = [
-        "Which Hitchcock films did I rate the highest ?",
-        "Top films by Spielberg ?",
+    for q in [
+        "Which Hitchcock films did I rate the highest?",
+        "Top films by Spielberg?",
         "Which drama films did I rate the lowest?"
-    ]
-    for q in suggestions:
+    ]:
         st.write(f"- {q}")
 
-    # --- Load data ---
+    # --- Load Data ---
     try:
         My_Ratings = pd.read_excel("myratings.xlsx")
         IMDB_Ratings = pd.read_excel("imdbratings.xlsx")
@@ -1471,24 +1464,21 @@ It works as a **local SQL/keyword assistant**, meaning:
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # --- User question input ---
-    user_question = st.text_input(
-        "Ask a question :",
-        placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
-    )
+    # --- Display editable logic block ---
+    logic_code = textwrap.dedent("""
+        # Keyword-based filtering and sorting logic
 
-    if user_question and not My_Ratings.empty:
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
 
-        # --- Filter by genre ---
+        # 1. Filter by genre
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
                 break
 
-        # --- Filter by director (partial match on last name) ---
+        # 2. Filter by director (last name match)
         directors = filtered['Director'].dropna().unique()
         for d in directors:
             last_name = d.split()[-1].lower()
@@ -1496,16 +1486,30 @@ It works as a **local SQL/keyword assistant**, meaning:
                 filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
                 break
 
-        # --- Determine sort column ---
+        # 3. Choose sort column
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
 
-        # --- Determine sort order based on intent keywords ---
+        # 4. Determine sort order
         if any(w in question_lower for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_lower for w in ["lowest", "worst", "bottom"]):
             ascending = True
         else:
-            ascending = False  # default
+            ascending = False
+    """)
+
+    st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
+    editable_code = st.text_area("Modify logic if you like:", logic_code, height=400)
+
+    # --- Question input ---
+    user_question = st.text_input(
+        "🎥 Ask a question:",
+        placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
+    )
+
+    if user_question and not My_Ratings.empty:
+        # Execute logic block (advanced: optional safety controls)
+        exec(editable_code, globals(), locals())
 
         # --- Display results ---
         if not filtered.empty:
