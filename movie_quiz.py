@@ -1471,14 +1471,13 @@ It works like a **keyword-based data assistant**:
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
 
-        # 1. Filter by genre
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
                 break
 
-        # 2. Filter by director (last name match)
+        
         directors = filtered['Director'].dropna().unique()
         for d in directors:
             last_name = d.split()[-1].lower()
@@ -1486,10 +1485,10 @@ It works like a **keyword-based data assistant**:
                 filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
                 break
 
-        # 3. Choose sort column
+        
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
 
-        # 4. Determine sort order
+        
         if any(w in question_lower for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_lower for w in ["lowest", "worst", "bottom"]):
