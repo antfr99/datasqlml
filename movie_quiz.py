@@ -1429,6 +1429,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 
 # --- Scenario 9: Natural-Language Film Q&A Assistant (final version) ---
+
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
@@ -1476,12 +1477,7 @@ It works like a keyword-based data assistant:
 
         stopwords = {"top", "highest", "lowest", "best", "worst", "bottom", "films", "film", "movie", "movies", "by"}
         all_directors = My_Ratings['Director'].dropna().unique()
-        matches = []
-
-        for d in all_directors:
-            d_lower = d.lower()
-            if any(token in d_lower for token in question_tokens if token not in genres and token not in stopwords):
-                matches.append(d)
+        matches = [d for d in all_directors if d.lower() in question_lower]
 
         if matches:
             filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
@@ -1524,4 +1520,3 @@ It works like a keyword-based data assistant:
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director or genre keyword.")
-
