@@ -11,7 +11,7 @@ import logging
 import os
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import NearestNeighbors
-import openai
+
 
 
 # --- Page Config ---
@@ -1466,8 +1466,6 @@ It works like a **keyword-based data assistant**:
 
     # --- Display editable logic block ---
     logic_code = textwrap.dedent("""
-        
-
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
 
