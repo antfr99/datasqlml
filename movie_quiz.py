@@ -1452,7 +1452,8 @@ It works like a keyword-based data assistant:
         "Which Hitchcock films did I rate the highest?",
         "Top films by Spielberg?",
         "Which drama films did I rate the lowest?",
-        "Show me films by James Cameron"
+        "Show me films by James Cameron",
+        "Films by a non-existent director"
     ]:
         st.write(f"- {q}")
 
@@ -1470,12 +1471,14 @@ It works like a keyword-based data assistant:
         question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
 
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
+        filtered_genre = False
         for g in genres:
             if g in question_tokens or g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
+                filtered_genre = True
                 break
 
-        stopwords = {"top", "highest", "lowest", "best", "worst", "bottom", "films", "film", "movie", "movies", "by"}
+        stopwords = {"top", "highest", "lowest", "best", "worst", "bottom", "films", "film", "movie", "movies", "by", "i", "did", "which", "the"}
         all_directors = My_Ratings['Director'].dropna().unique()
         matches = []
 
@@ -1487,7 +1490,7 @@ It works like a keyword-based data assistant:
 
         if matches:
             filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
-        else:
+        elif not filtered_genre:
             filtered = filtered.iloc[0:0]
 
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
@@ -1526,3 +1529,4 @@ It works like a keyword-based data assistant:
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director or genre keyword.")
+
