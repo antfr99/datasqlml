@@ -1427,8 +1427,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
    - Random forests are robust to overfitting and can generalize well to unseen movies.
 """)
         
-        
-# --- Scenario 9: Natural-Language Film Q&A Assistant (clean logic block) ---
+# --- Scenario 9: Natural-Language Film Q&A Assistant (final version) ---
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
@@ -1438,11 +1437,24 @@ if scenario.startswith("9"):
     # --- Header ---
     st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
-    # --- Description ---
+    # --- Description (your version) ---
     st.markdown("""
-Ask **natural-language questions** about your film ratings.  
-You can filter by **genre**, **director**, and sort by **highest / lowest / best / worst** keywords.
+This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
+
+It works like a keyword-based data assistant:
+- filter by genre (e.g., comedy, horror, drama)
+- filter by director (first or last name)
+- sort by intent words like "top", "highest", "lowest", "bottom"
 """)
+
+    # --- Example questions (your version) ---
+    st.markdown("**Example questions you can ask:**")
+    for q in [
+        "Which Hitchcock films did I rate the highest?",
+        "Top films by Spielberg?",
+        "Which drama films did I rate the lowest?"
+    ]:
+        st.write(f"- {q}")
 
     # --- Load Data ---
     try:
@@ -1485,13 +1497,14 @@ You can filter by **genre**, **director**, and sort by **highest / lowest / best
             ascending = False
     """)
 
+    # --- Show editable block ---
     st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
     editable_code = st.text_area("Modify logic if needed:", logic_code, height=360)
 
     # --- Question input ---
     user_question = st.text_input(
         "🎥 Ask a question:",
-        placeholder="e.g., 'Kubrick lowest', 'Top horror films', or 'Spielberg best dramas'"
+        placeholder="Which drama films did I rate the lowest?"
     )
 
     if user_question and not My_Ratings.empty:
