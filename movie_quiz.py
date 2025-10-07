@@ -1427,24 +1427,21 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
    - Random forests are robust to overfitting and can generalize well to unseen movies.
 """)
         
-
-# --- Scenario 9: Natural-Language Film Q&A Assistant (fixed token-matching) ---
+        
+# --- Scenario 9: Natural-Language Film Q&A Assistant (clean logic block) ---
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
     import textwrap
+    import re
 
     # --- Header ---
     st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
     # --- Description ---
     st.markdown("""
-This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
-
-It works like a keyword-based data assistant:
-- filter by genre (e.g., comedy, horror, drama)
-- filter by director (first or last name)
-- sort by intent words like "top", "highest", "lowest", "bottom"
+Ask **natural-language questions** about your film ratings.  
+You can filter by **genre**, **director**, and sort by **highest / lowest / best / worst** keywords.
 """)
 
     # --- Load Data ---
@@ -1456,27 +1453,22 @@ It works like a keyword-based data assistant:
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # --- Default editable logic (safe, token-based matching) ---
+    # --- Default editable logic (no comments) ---
     logic_code = textwrap.dedent(r"""
-        import re
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
+        question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
 
-       question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
-
-        
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_tokens or g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
                 break
 
-        
         all_directors = My_Ratings['Director'].dropna().unique()
         selected_director = None
         for d in all_directors:
             name_tokens = [p.lower() for p in re.findall(r"\b[\w']+\b", d)]
-            
             if any(token in question_tokens for token in name_tokens):
                 selected_director = d
                 break
@@ -1484,10 +1476,7 @@ It works like a keyword-based data assistant:
         if selected_director:
             filtered = filtered[filtered['Director'].str.contains(re.escape(selected_director), case=False, na=False)]
 
-        
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
-
-        
         if any(w in question_tokens for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_tokens for w in ["lowest", "worst", "bottom"]):
@@ -1497,17 +1486,16 @@ It works like a keyword-based data assistant:
     """)
 
     st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
-    editable_code = st.text_area("Modify logic if you like:", logic_code, height=360)
+    editable_code = st.text_area("Modify logic if needed:", logic_code, height=360)
 
     # --- Question input ---
     user_question = st.text_input(
         "🎥 Ask a question:",
-        placeholder="e.g., 'Which of my comedy films by Spielberg have the highest rating?'"
+        placeholder="e.g., 'Kubrick lowest', 'Top horror films', or 'Spielberg best dramas'"
     )
 
     if user_question and not My_Ratings.empty:
-        # Execute user-modifiable logic in a controlled namespace
-        exec_ns = {"My_Ratings": My_Ratings, "user_question": user_question}
+        exec_ns = {"My_Ratings": My_Ratings, "user_question": user_question, "re": re}
         try:
             exec(editable_code, exec_ns)
         except Exception as e:
@@ -1516,14 +1504,12 @@ It works like a keyword-based data assistant:
             exec_ns.setdefault("sort_col", "Your Rating")
             exec_ns.setdefault("ascending", False)
 
-        # pull outputs back safely
         filtered = exec_ns.get("filtered", My_Ratings.copy())
         sort_col = exec_ns.get("sort_col", "Your Rating")
         ascending = exec_ns.get("ascending", False)
 
-        # --- Display results ---
         if not filtered.empty:
             filtered_sorted = filtered.sort_values(by=sort_col, ascending=ascending)
             st.dataframe(filtered_sorted)
         else:
-            st.info("No matching films found. Try a different genre or director keyword.")
+            st.info("No matching films found. Try a different director or genre keyword.")
