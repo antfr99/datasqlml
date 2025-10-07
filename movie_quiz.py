@@ -1428,7 +1428,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 """)
         
 
-# --- Scenario 9: Natural-Language Film Q&A Assistant ---
+# --- Scenario 9: Natural-Language Film Q&A Assistant (Fixed Director Matching) ---
 if scenario.startswith("9"):
     import streamlit as st
     import pandas as pd
@@ -1472,16 +1472,19 @@ It works like a **keyword-based data assistant**:
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_lower:
-                filtered = filtered[filtered['Genre'].str.lower().str.contains(g)]
+                filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
                 break
 
-        
-        directors = filtered['Director'].dropna().unique()
-        for d in directors:
-            last_name = d.split()[-1].lower()
-            if last_name in question_lower:
-                filtered = filtered[filtered['Director'].str.contains(d, case=False, na=False)]
+        all_directors = My_Ratings['Director'].dropna().unique()
+        selected_director = None
+        for d in all_directors:
+            first_last = d.lower().split()
+            if any(name in question_lower for name in first_last):
+                selected_director = d
                 break
+
+        if selected_director:
+            filtered = filtered[filtered['Director'].str.contains(selected_director, case=False, na=False)]
 
         
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
@@ -1505,7 +1508,7 @@ It works like a **keyword-based data assistant**:
     )
 
     if user_question and not My_Ratings.empty:
-        # Execute logic block (advanced: optional safety controls)
+        # Execute logic block safely
         exec(editable_code, globals(), locals())
 
         # --- Display results ---
