@@ -1477,7 +1477,13 @@ It works like a keyword-based data assistant:
 
         stopwords = {"top", "highest", "lowest", "best", "worst", "bottom", "films", "film", "movie", "movies", "by"}
         all_directors = My_Ratings['Director'].dropna().unique()
-        matches = [d for d in all_directors if d.lower() in question_lower]
+        matches = []
+
+        for d in all_directors:
+            d_lower = d.lower()
+            name_tokens = set(re.findall(r"\b[\w']+\b", d_lower))
+            if name_tokens & (question_tokens - set(genres) - stopwords):
+                matches.append(d)
 
         if matches:
             filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
