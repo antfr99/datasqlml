@@ -1451,8 +1451,7 @@ This scenario allows you to ask **natural-language questions** about your person
         "Which Hitchcock films did I rate the highest?",
         "Top films by Spielberg?",
         "Which drama films did I rate the lowest?",
-        "Show me films by Cameron",
-        "Films by a non-existent director"
+        "Show me films by Cameron"
     ]:
         st.write(f"- {q}")
 
@@ -1483,7 +1482,7 @@ This scenario allows you to ask **natural-language questions** about your person
 
         for d in all_directors:
             last_name = d.split()[-1].lower()
-            if last_name in question_lower:
+            if re.search(r'\b' + re.escape(last_name) + r'\b', question_lower):
                 matches.append(d)
 
         if matches:
