@@ -1441,10 +1441,9 @@ if scenario.startswith("9"):
     st.markdown("""
 This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
 
-It works like a keyword-based data assistant:
-- filter by genre (e.g., comedy, horror, drama)
-- filter by director (first or last name, partial match allowed)
-- sort by intent words like "top", "highest", "lowest", "bottom"
+- When asking about directors, include only the **director’s surname** (last name).  
+- You can also filter by genre (e.g., comedy, horror, drama).  
+- Words like **top/highest/best** or **lowest/worst/bottom** control sorting.
 """)
 
     st.markdown("**Example questions you can ask:**")
@@ -1452,7 +1451,7 @@ It works like a keyword-based data assistant:
         "Which Hitchcock films did I rate the highest?",
         "Top films by Spielberg?",
         "Which drama films did I rate the lowest?",
-        "Show me films by James Cameron",
+        "Show me films by Cameron",
         "Films by a non-existent director"
     ]:
         st.write(f"- {q}")
@@ -1483,9 +1482,8 @@ It works like a keyword-based data assistant:
         matches = []
 
         for d in all_directors:
-            d_lower = d.lower()
-            name_tokens = set(re.findall(r"\b[\w']+\b", d_lower))
-            if name_tokens & (question_tokens - set(genres) - stopwords):
+            last_name = d.split()[-1].lower()
+            if last_name in question_lower:
                 matches.append(d)
 
         if matches:
@@ -1528,5 +1526,4 @@ It works like a keyword-based data assistant:
             filtered_sorted = filtered.sort_values(by=sort_col, ascending=ascending)
             st.dataframe(filtered_sorted)
         else:
-            st.info("No matching films found. Try a different director or genre keyword.")
-
+            st.info("No matching films found. Try a different director surname or genre keyword.")
