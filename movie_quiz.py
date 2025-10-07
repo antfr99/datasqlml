@@ -1483,12 +1483,6 @@ It works like a keyword-based data assistant:
             if all(token in d_lower for token in question_tokens if token not in genres):
                 matches.append(d)
 
-        if not matches:
-            for d in all_directors:
-                d_lower = d.lower()
-                if any(token in d_lower for token in question_tokens if token not in genres):
-                    matches.append(d)
-
         if matches:
             filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
         else:
@@ -1530,4 +1524,3 @@ It works like a keyword-based data assistant:
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director or genre keyword.")
-
