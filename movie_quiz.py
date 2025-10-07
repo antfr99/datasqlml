@@ -1426,7 +1426,8 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
    - One-hot encoding allows categorical variables like directors and genres to be used.  
    - Random forests are robust to overfitting and can generalize well to unseen movies.
 """)
-        
+
+
 # --- Scenario 9: Natural-Language Film Q&A Assistant (final version) ---
 if scenario.startswith("9"):
     import streamlit as st
@@ -1437,22 +1438,23 @@ if scenario.startswith("9"):
     # --- Header ---
     st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
-    # --- Description (your version) ---
+    # --- Description ---
     st.markdown("""
 This scenario allows you to ask **natural-language questions** about your personal film ratings and IMDb ratings.
 
 It works like a keyword-based data assistant:
 - filter by genre (e.g., comedy, horror, drama)
-- filter by director (first or last name)
+- filter by director (first or last name, partial match allowed)
 - sort by intent words like "top", "highest", "lowest", "bottom"
 """)
 
-    # --- Example questions (your version) ---
+    # --- Example questions ---
     st.markdown("**Example questions you can ask:**")
     for q in [
         "Which Hitchcock films did I rate the highest?",
         "Top films by Spielberg?",
-        "Which drama films did I rate the lowest?"
+        "Which drama films did I rate the lowest?",
+        "Show me films by James Cameron"
     ]:
         st.write(f"- {q}")
 
@@ -1465,29 +1467,40 @@ It works like a keyword-based data assistant:
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # --- Default editable logic (no comments) ---
+    
     logic_code = textwrap.dedent(r"""
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
         question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
 
+        
         genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
         for g in genres:
             if g in question_tokens or g in question_lower:
                 filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
                 break
 
+        
         all_directors = My_Ratings['Director'].dropna().unique()
-        selected_director = None
+        matches = []
+
+        
         for d in all_directors:
-            name_tokens = [p.lower() for p in re.findall(r"\b[\w']+\b", d)]
-            if any(token in question_tokens for token in name_tokens):
-                selected_director = d
-                break
+            d_lower = d.lower()
+            if all(token in d_lower for token in question_tokens if token not in genres):
+                matches.append(d)
 
-        if selected_director:
-            filtered = filtered[filtered['Director'].str.contains(re.escape(selected_director), case=False, na=False)]
+        
+        if not matches:
+            for d in all_directors:
+                d_lower = d.lower()
+                if any(token in d_lower for token in question_tokens if token not in genres):
+                    matches.append(d)
 
+        if matches:
+            filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
+
+       
         sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
         if any(w in question_tokens for w in ["highest", "top", "best"]):
             ascending = False
@@ -1499,7 +1512,7 @@ It works like a keyword-based data assistant:
 
     # --- Show editable block ---
     st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
-    editable_code = st.text_area("Modify logic if needed:", logic_code, height=360)
+    editable_code = st.text_area("Modify logic if needed:", logic_code, height=400)
 
     # --- Question input ---
     user_question = st.text_input(
