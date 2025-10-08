@@ -22,20 +22,8 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a film data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
+This is a film/data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
 """)
-
-st.markdown("""
-### Introduction 🎥
-
-This project is designed to combine **SQL** and **Pandas** to explore film data in a structured way, while also experimenting with **machine learning** models for deeper insights.  
-
-I’m approaching this from two angles:  
-1. **Film Exploration** – Using IMDb ratings, my personal ratings, and vote data to highlight agreements, disagreements, and recommendations.  
-2. **Technical Exploration** – Demonstrating how different analytical tools (SQL queries, statistical tests, machine learning models, sentiment analysis , poster image analysis, etc ) can be applied to the same dataset to uncover new perspectives.  
- 
-""")
-
 
 # --- Load Excel files ---
 try:
