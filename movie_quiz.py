@@ -22,7 +22,7 @@ st.set_page_config(
 
 st.title("IMDb/SQL/PYTHON Data Project 🎬")
 st.write("""
-This is a film/data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX, Sentence-Transformers and Requests. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
+This is a film/data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX and Sentence-Transformers. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb.
 """)
 
 # --- Load Excel files ---
