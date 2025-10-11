@@ -1250,10 +1250,10 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
     # --- OMDb API key ---
     OMDB_API_KEY = "e9476c0a"
 
-    # --- Select top 100 films ---
-    top100_films = IMDB_Ratings[
+    # --- Select top 250 films ---
+    top250_films = IMDB_Ratings[
     IMDB_Ratings['Genre'].str.contains("Horror", case=False, na=False)
-    ].sort_values(by="IMDb Rating", ascending=False).head(100)
+    ].sort_values(by="IMDb Rating", ascending=False).head(250)
 
 
     # --- Run Button ---
@@ -1280,7 +1280,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         results = []
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
-        for _, row in top100_films.iterrows():
+        for _, row in top250_films.iterrows():
             movie_id = row["Movie ID"]
             static_rating = row["IMDb Rating"]
 
@@ -1345,7 +1345,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # Only predict for unseen movies from the current Horror subset with rating changes
         predict_df = df_ml[
-        (df_ml['Movie ID'].isin(top100_films['Movie ID'])) &
+        (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
         (df_ml['Rating Difference'].notna()) &
         (df_ml['Your Rating'].isna())
         ].copy()
