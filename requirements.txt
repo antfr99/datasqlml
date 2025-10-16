@@ -16,4 +16,5 @@ shap
 requests
 sentence-transformers
 lime
-openai
+torch
+transformers
