@@ -17,13 +17,10 @@ from sklearn.neighbors import NearestNeighbors
 # --- Page Config ---
 st.set_page_config(
     layout="wide",
-    page_title="IMDb/SQL/PYTHON Data Project 🎬"
+    page_title="IMDb Data & AI Playground🎬"
 )
 
-st.title("IMDb/SQL/PYTHON Data Project 🎬")
-st.write("""
-This is a film/data project that integrates several Python libraries, including Pandas, PandasQL, NumPy, Streamlit, Scikit-learn, SciPy, TextBlob, Matplotlib, Seaborn, NetworkX and Sentence-Transformers. It also incorporates SQL, OMDb API, AI, GitHub, and IMDb - antfr99.
-""")
+st.title("IMDb Data & AI Playground 🎬")
 
 # --- Load Excel files ---
 try:
