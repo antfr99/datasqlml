@@ -102,11 +102,11 @@ scenario = st.radio(
 # --- Scenario 1: SQL Playground ---
 if scenario == "1 – Highlight Disagreements (SQL)":
     st.header("1 – Highlight Disagreements (SQL)")
-    st.write("Movies where my rating differs from IMDb by more than 2 points.")
+    st.write("Movies where Viewer Rating differs from IMDb by more than 2 points.")
 
     default_query_1 = """SELECT 
        pr.Title,
-       pr.[Viewer Rating] AS [My Rating],
+       pr.[Viewer Rating] AS [Viewer Rating],
        ir.[IMDb Rating],
        ABS(CAST(pr.[Viewer Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
        CASE 
@@ -489,7 +489,7 @@ I thought this was worth its salt even though it did tend towards cliché as it 
 Where to start - I've literally just finished watching this and spent the last hour questioning if I had been transported to another universe.
 This movie had all the potential to be something great, from the cast to the secluded creepy setting - but no, we got almost 2 hours of the what could only be described as one of those brainwashing experimental videos where you have no idea what's going on.
 If you like movies which make you feel uneasy, and make you think you're going mad then this might be the movies for you. Otherwise, I wouldn't bother.
-Edit:So after having a day or so to ponder over the meaning of this movie - I've changed my rating and edited my review based on what I have come to know.
+Edit:So after having a day or so to ponder over the meaning of this movie - I've changed Viewer Rating and edited my review based on what I have come to know.
 I can now say that once you understand the characters and why they represent, you'll understand the meaning and it could change your entire view of this movie.
 
 If you just watch the pictures, the are confusing, disturbing, chaotic but their actual meaning is the representation of a person giving everything for someone else and still is not enough and everything she gives is topped by something else, every precious moment is taken to be shared.
@@ -700,7 +700,7 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
             **What the feature represents:**  
             For `{feature}`, the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.  
             In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.  
-            My rating behavior for {director_name} movies is distinct from my average ratings, and therefore the model relies on this pattern to make predictions.
+            Viewer Rating behavior for {director_name} movies is distinct from my average ratings, and therefore the model relies on this pattern to make predictions.
             """)
 
         # --- Aggregated by category ---
@@ -1241,7 +1241,7 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
 
 **Supervised Machine Learning:**  
 The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films - Horror Films only.  
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts Viewer Rating for unseen films - Horror Films only.  
 """)
 
     # --- OMDb API key ---
@@ -1387,7 +1387,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 1. **Data Preparation**  
    - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
-   - `My Rating` is the target variable for supervised learning.
+   - `Viewer Rating` is the target variable for supervised learning.
 
 2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
    - Categorical features are converted to **one-hot encoded vectors**.  
