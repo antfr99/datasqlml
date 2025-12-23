@@ -102,21 +102,21 @@ scenario = st.radio(
 # --- Scenario 1: SQL Playground ---
 if scenario == "1 – Highlight Disagreements (SQL)":
     st.header("1 – Highlight Disagreements (SQL)")
-    st.write("Movies where Viewer Rating differs from IMDb by more than 2 points.")
+    st.write("Movies where Viewer Ratings differs from IMDb by more than 2 points.")
 
     default_query_1 = """SELECT 
        pr.Title,
-       pr.[Viewer Rating] AS [Viewer Rating],
+       pr.[Viewer Ratings] AS [Viewer Ratings],
        ir.[IMDb Rating],
-       ABS(CAST(pr.[Viewer Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
+       ABS(CAST(pr.[Viewer Ratings] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) AS Rating_Diff,
        CASE 
-            WHEN pr.[Viewer Rating] > ir.[IMDb Rating] THEN 'I Liked More'
+            WHEN pr.[Viewer Ratings] > ir.[IMDb Rating] THEN 'I Liked More'
             ELSE 'I Liked Less'
        END AS Disagreement_Type
 FROM My_Ratings pr
 JOIN IMDB_Ratings ir
     ON pr.[Movie ID] = ir.[Movie ID]
-WHERE ABS(CAST(pr.[Viewer Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
+WHERE ABS(CAST(pr.[Viewer Ratings] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
 
@@ -143,15 +143,15 @@ if scenario == "2 – Hybrid Recommendations (SQL)":
        ir.Director,
        ir.Genre,
        ir.Year,
-       CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Viewer Rating] >= 7) THEN 1 ELSE 0 END AS Director_Bonus,
+       CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Viewer Ratings] >= 7) THEN 1 ELSE 0 END AS Director_Bonus,
        CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Genre_Bonus,
        ir.[IMDb Rating] 
-       + CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Viewer Rating] >= 7) THEN 1 ELSE 0 END
+       + CASE WHEN ir.Director IN (SELECT DISTINCT Director FROM My_Ratings WHERE [Viewer Ratings] >= 7) THEN 1 ELSE 0 END
        + CASE WHEN ir.Genre IN ('Comedy','Drama') THEN 0.5 ELSE 0.2 END AS Recommendation_Score
 FROM IMDB_Ratings ir
 LEFT JOIN My_Ratings pr
     ON ir.[Movie ID] = pr.[Movie ID]
-WHERE pr.[Viewer Rating] IS NULL
+WHERE pr.[Viewer Ratings] IS NULL
   AND ir.[Num Votes] > 40000
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
@@ -193,7 +193,7 @@ FROM (
     FROM IMDB_Ratings ir
     LEFT JOIN My_Ratings pr
         ON ir.[Movie ID] = pr.[Movie ID]
-    WHERE pr.[Viewer Rating] IS NULL
+    WHERE pr.[Viewer Ratings] IS NULL
       AND ir.[Num Votes] > 50000
 ) ranked
 WHERE RankInDecade <= 20
@@ -239,9 +239,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 
-df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Rating']], on='Movie ID', how='left')
-train_df = df_ml[df_ml['Viewer Rating'].notna()]
-predict_df = df_ml[df_ml['Viewer Rating'].isna()]
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Ratings']], on='Movie ID', how='left')
+train_df = df_ml[df_ml['Viewer Ratings'].notna()]
+predict_df = df_ml[df_ml['Viewer Ratings'].isna()]
 
 
 categorical_features = ['Genre', 'Director']
@@ -262,7 +262,7 @@ model = Pipeline([
 
 
 X_train = train_df[categorical_features + numerical_features]
-y_train = train_df['Viewer Rating']
+y_train = train_df['Viewer Ratings']
 model.fit(X_train, y_train)
 X_pred = predict_df[categorical_features + numerical_features]
 predict_df['Predicted Rating'] = model.predict(X_pred)
@@ -303,12 +303,12 @@ if scenario == "4 – Statistical Insights by Genre (Agreement)":
 
     stats_code = '''
 df_compare = IMDB_Ratings.merge(
-    My_Ratings[['Movie ID','Viewer Rating']],
+    My_Ratings[['Movie ID','Viewer Ratings']],
     on='Movie ID', how='inner'
 )
 
 df_compare['Agreement'] = (
-    (df_compare['Viewer Rating'] - df_compare['IMDb Rating']).abs() <= 1
+    (df_compare['Viewer Ratings'] - df_compare['IMDb Rating']).abs() <= 1
 )
 
 genre_agreement = (
@@ -374,7 +374,7 @@ import numpy as np
 import pandas as pd
 
 df_ttest = IMDB_Ratings.merge(
-    My_Ratings[['Movie ID','Viewer Rating']],
+    My_Ratings[['Movie ID','Viewer Ratings']],
     on='Movie ID', how='inner'
 )
 
@@ -383,14 +383,14 @@ results = []
 for director, group in df_ttest.groupby('Director'):
     n = len(group)
     if n >= {min_movies}:
-        differences = group['Viewer Rating'] - group['IMDb Rating']
+        differences = group['Viewer Ratings'] - group['IMDb Rating']
 
         
         if differences.std() == 0:
             stat, pval = np.nan, np.nan
             interpretation = "All differences identical — t-test undefined"
         else:
-            stat, pval = ttest_rel(group['Viewer Rating'], group['IMDb Rating'])
+            stat, pval = ttest_rel(group['Viewer Ratings'], group['IMDb Rating'])
             if pval < 0.05:
                 if n <= 2*{min_movies}:
                     interpretation = "Significant (p < 0.05) — small sample, interpret cautiously"
@@ -403,7 +403,7 @@ for director, group in df_ttest.groupby('Director'):
             "Director": director,
             "Num_Movies": n,
             "Mean_IMDb": group['IMDb Rating'].mean().round(2),
-            "Mean_Mine": group['Viewer Rating'].mean().round(2),
+            "Mean_Mine": group['Viewer Ratings'].mean().round(2),
             "t_statistic": round(stat, 3) if not np.isnan(stat) else np.nan,
             "p_value": round(pval, 4) if not np.isnan(pval) else np.nan,
             "Interpretation": interpretation
@@ -489,7 +489,7 @@ I thought this was worth its salt even though it did tend towards cliché as it 
 Where to start - I've literally just finished watching this and spent the last hour questioning if I had been transported to another universe.
 This movie had all the potential to be something great, from the cast to the secluded creepy setting - but no, we got almost 2 hours of the what could only be described as one of those brainwashing experimental videos where you have no idea what's going on.
 If you like movies which make you feel uneasy, and make you think you're going mad then this might be the movies for you. Otherwise, I wouldn't bother.
-Edit:So after having a day or so to ponder over the meaning of this movie - I've changed Viewer Rating and edited my review based on what I have come to know.
+Edit:So after having a day or so to ponder over the meaning of this movie - I've changed Viewer Ratings and edited my review based on what I have come to know.
 I can now say that once you understand the characters and why they represent, you'll understand the meaning and it could change your entire view of this movie.
 
 If you just watch the pictures, the are confusing, disturbing, chaotic but their actual meaning is the representation of a person giving everything for someone else and still is not enough and everything she gives is topped by something else, every precious moment is taken to be shared.
@@ -625,14 +625,14 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
     # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
         st.warning("Model not found. Retrain here.")
-        if st.button("Run Scenario 9 ( Predit Viewer Ratings ) Training Now"):
+        if st.button("Run Scenario 9 ( Predict Viewer Ratings ) Training Now"):
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
             from sklearn.compose import ColumnTransformer
             from sklearn.pipeline import Pipeline
 
-            df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Rating']], on='Movie ID', how='left')
-            train_df = df_ml[df_ml['Viewer Rating'].notna()]
+            df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Ratings']], on='Movie ID', how='left')
+            train_df = df_ml[df_ml['Viewer Ratings'].notna()]
 
             # Treat Year as categorical
             categorical_features = ['Genre', 'Director', 'Year']
@@ -651,7 +651,7 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
             ])
 
             X_train = train_df[categorical_features + numerical_features]
-            y_train = train_df['Viewer Rating']
+            y_train = train_df['Viewer Ratings']
             model.fit(X_train, y_train)
 
             st.session_state['model'] = model
@@ -700,7 +700,7 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
             **What the feature represents:**  
             For `{feature}`, the model uses a one-hot encoded feature to distinguish {director_name} movies from all other movies.  
             In other words, whether a movie is directed by {director_name} significantly affects the model's predictions.  
-            Viewer Rating behavior for {director_name} movies is distinct from my average ratings, and therefore the model relies on this pattern to make predictions.
+            Viewer Ratings behavior for {director_name} movies is distinct from my average ratings, and therefore the model relies on this pattern to make predictions.
             """)
 
         # --- Aggregated by category ---
@@ -768,9 +768,9 @@ if scenario == "12 – Feature Hypothesis Testing":
         import matplotlib.pyplot as plt
 
         # --- Prepare training data ---
-        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Rating']], on='Movie ID', how='left')
-        train_df = df_ml[df_ml['Viewer Rating'].notna()]
-        y = train_df['Viewer Rating']  # Target variable: Viewer Ratings
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Ratings']], on='Movie ID', how='left')
+        train_df = df_ml[df_ml['Viewer Ratings'].notna()]
+        y = train_df['Viewer Ratings']  # Target variable: Viewer Ratings
 
         # --- Baseline model (numeric only) ---
         baseline_features = ['Num Votes','IMDb Rating']
@@ -805,7 +805,7 @@ if scenario == "12 – Feature Hypothesis Testing":
             model_test.fit(X_test, y)
 
             # --- Predict all unseen movies ---
-            unseen_df = df_ml[df_ml['Viewer Rating'].isna()]
+            unseen_df = df_ml[df_ml['Viewer Ratings'].isna()]
             if not unseen_df.empty:
                 X_unseen = unseen_df[features_to_use]
                 preds = model_test.predict(X_unseen)
@@ -1241,7 +1241,7 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
 
 **Supervised Machine Learning:**  
 The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts Viewer Rating for unseen films - Horror Films only.  
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts Viewer Ratings for unseen films - Horror Films only.  
 """)
 
     # --- OMDb API key ---
@@ -1337,16 +1337,16 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
             st.warning("No English-language films with rating changes found in this run.")
 
         # --- Supervised ML: Predict Viewer Ratings for Movies with Changed Live Ratings ---
-        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Rating']], on='Movie ID', how='left')
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Viewer Ratings']], on='Movie ID', how='left')
         df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
 
         # Only predict for unseen movies from the current Horror subset with rating changes
         predict_df = df_ml[
         (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
         (df_ml['Rating Difference'].notna()) &
-        (df_ml['Viewer Rating'].isna())
+        (df_ml['Viewer Ratings'].isna())
         ].copy()
-        train_df = df_ml[df_ml['Viewer Rating'].notna()]
+        train_df = df_ml[df_ml['Viewer Ratings'].notna()]
 
         categorical_features = ['Genre', 'Director']
         numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
@@ -1364,7 +1364,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         ])
 
         X_train = train_df[categorical_features + numerical_features]
-        y_train = train_df['Viewer Rating']
+        y_train = train_df['Viewer Ratings']
         model.fit(X_train, y_train)
 
         X_pred = predict_df[categorical_features + numerical_features]
@@ -1387,7 +1387,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
 1. **Data Preparation**  
    - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
-   - `Viewer Rating` is the target variable for supervised learning.
+   - `Viewer Ratings` is the target variable for supervised learning.
 
 2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
    - Categorical features are converted to **one-hot encoded vectors**.  
@@ -1401,7 +1401,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
      - This reduces overfitting and improves accuracy.
 
 4. **Training**  
-   - Model learns patterns from movies I have rated (`Viewer Rating`).  
+   - Model learns patterns from movies I have rated (`Viewer Ratings`).  
 
 5. **Prediction**  
    - Model predicts ratings for movies I haven’t rated based on learned patterns.  
@@ -1477,7 +1477,7 @@ This scenario allows you to ask **natural-language questions** about my personal
         elif not filtered_genre:
             filtered = filtered.iloc[0:0]
 
-        sort_col = "IMDb Rating" if "imdb" in question_lower else "Viewer Rating"
+        sort_col = "IMDb Rating" if "imdb" in question_lower else "Viewer Ratings"
         if any(w in question_tokens for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_tokens for w in ["lowest", "worst", "bottom"]):
@@ -1501,11 +1501,11 @@ This scenario allows you to ask **natural-language questions** about my personal
         except Exception as e:
             st.error(f"Error running logic: {e}")
             exec_ns.setdefault("filtered", My_Ratings.copy())
-            exec_ns.setdefault("sort_col", "Viewer Rating")
+            exec_ns.setdefault("sort_col", "Viewer Ratings")
             exec_ns.setdefault("ascending", False)
 
         filtered = exec_ns.get("filtered", My_Ratings.copy())
-        sort_col = exec_ns.get("sort_col", "Viewer Rating")
+        sort_col = exec_ns.get("sort_col", "Viewer Ratings")
         ascending = exec_ns.get("ascending", False)
 
         if not filtered.empty:
