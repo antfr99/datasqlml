@@ -61,16 +61,16 @@ if not IMDB_Ratings.empty:
 else:
     st.warning("IMDb Ratings table is empty or failed to load.")
 
-st.write("### Viewer Ratings Table")
+st.write("### Viewer ratings Table")
 if not My_Ratings.empty:
     My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
     My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
         # Rename column only for display
-    display_ratings = My_Ratings_sorted.rename(columns={"Your Rating": "My Ratings"})
+    display_ratings = My_Ratings_sorted.rename(columns={"Your Rating": "viewer ratings"})
     display_ratings = display_ratings.drop(columns=['Year_Sort'])
     st.dataframe(display_ratings, width="stretch", height=400)
 else:
-    st.warning("Viewer Ratings Table is empty or failed to load.")
+    st.warning("Viewer ratings table is empty or failed to load.")
 
 # --- Scenarios ---
 
@@ -86,7 +86,7 @@ scenario = st.radio(
         "7 – Poster Image Analysis (OMDb API)",
         "8 – Graph Based Movie Relationships",
         "9 – Natural-Language Film Q&A Assistant",
-        "10 – Predict My Ratings (ML)", 
+        "10 – Predict Viewer ratings (ML)", 
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
         "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
@@ -214,10 +214,10 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 
 # --- Scenario 9: Python ML ---
-if scenario == "10 – Predict My Ratings (ML)":
-    st.header("10 – Predict My Ratings (ML)")
+if scenario == "10 – Predict Viewer ratings (ML)":
+    st.header("10 – Predict Viewer ratings (ML)")
     st.write("""
-    Predict my ratings for unseen movies using a machine learning model.
+    Predict Viewer ratings for unseen movies using a machine learning model.
 
     **How it works:**
     1. The model uses my existing ratings (`My_Ratings`) as training data.
@@ -297,7 +297,7 @@ predict_df
 if scenario == "4 – Statistical Insights by Genre (Agreement)":
     st.header("4 – Statistical Insights by Genre (Agreement)")
     st.write("""
-    This analysis measures how often my ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
+    This analysis measures how often viewer ratings align with IMDb ratings **within a tolerance band of ±1 point**.  
     Results are grouped by genre, showing agreements, disagreements, and overall percentages.
     """)
 
@@ -357,8 +357,8 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 if scenario == "5 – Statistical Insights by Director (t-test)":
     st.header("5 – Statistical Insights by Director (t-test)")
     st.write("""
-This analysis compares my ratings with IMDb ratings on a director-by-director basis using a **paired t-test**.  
-The test checks whether the differences between my ratings and IMDb’s are statistically significant for each director.  
+This analysis compares viewer ratings with IMDb ratings on a director-by-director basis using a **paired t-test**.  
+The test checks whether the differences between viewer ratings and IMDb’s are statistically significant for each director.  
 
 - **t-statistic**: shows the size and direction of the difference (positive = I rate higher than IMDb, negative = I rate lower).  
 - **p-value**: shows whether the difference is statistically significant or could be due to chance. p < 0.05 (significant) → Unlikely the difference is due to chance. I consistently rate this director higher or lower than IMDb. 
@@ -625,7 +625,7 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
     # --- Retrain model if not in session ---
     if 'model' not in st.session_state:
         st.warning("Model not found. Retrain here.")
-        if st.button("Run Scenario 9 ( Predit My Ratings ) Training Now"):
+        if st.button("Run Scenario 9 ( Predit viewer ratings ) Training Now"):
             from sklearn.preprocessing import OneHotEncoder
             from sklearn.ensemble import RandomForestRegressor
             from sklearn.compose import ColumnTransformer
@@ -717,11 +717,11 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
         # --- Summary explanation (only shows when model exists) ---
         st.write("""
         **Interpretation:**  
-        Aggregating features by category shows the bigger picture of what drives my ratings. If `Director` is high, it means certain directors consistently shape how I score movies.  
+        Aggregating features by category shows the bigger picture of what drives viewer ratings. If `Director` is high, it means certain directors consistently shape how I score movies.  
 
         **Why this matters for me:**  
         I bring my own personal insight into how I feel about directors — their style, storytelling, or reputation.  
-        The model simply quantifies what I already sense: that my ratings often rise or fall depending on who directed the film.  
+        The model simply quantifies what I already sense: that viewer ratings often rise or fall depending on who directed the film.  
 
         **Why movies are my choice for all scenarios:**  
         Movies are personal. Unlike abstract datasets, I have close experience with films and directors.  
@@ -1336,7 +1336,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         else:
             st.warning("No English-language films with rating changes found in this run.")
 
-        # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
+        # --- Supervised ML: Predict viewer ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
 
