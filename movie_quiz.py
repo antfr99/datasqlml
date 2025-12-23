@@ -61,7 +61,7 @@ if not IMDB_Ratings.empty:
 else:
     st.warning("IMDb Ratings table is empty or failed to load.")
 
-st.write("### My Ratings Table")
+st.write("### Viewer Ratings Table")
 if not My_Ratings.empty:
     My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
     My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
@@ -70,7 +70,7 @@ if not My_Ratings.empty:
     display_ratings = display_ratings.drop(columns=['Year_Sort'])
     st.dataframe(display_ratings, width="stretch", height=400)
 else:
-    st.warning("My Ratings table is empty or failed to load.")
+    st.warning("Viewer Ratings Table is empty or failed to load.")
 
 # --- Scenarios ---
 
