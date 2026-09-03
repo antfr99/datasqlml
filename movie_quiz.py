@@ -1501,8 +1501,34 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
     supabase = get_supabase_client()
 
-    # --- Select top 250 films (no genre restriction) ---
-    top250_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(250)
+    # --- Filter which titles get checked ---
+    st.markdown("#### Filter which titles to check")
+    genres_available = sorted({
+        g.strip() for sublist in IMDB_Ratings['Genre'].dropna().str.split(',') for g in sublist
+    })
+    default_genre = ["Horror"] if "Horror" in genres_available else []
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_genres = st.multiselect("Genre(s)", genres_available, default=default_genre)
+    with col2:
+        min_rating_filter = st.slider("Minimum IMDb rating", 0.0, 9.5, 6.0, 0.1)
+    with col3:
+        min_votes_filter = st.slider("Minimum votes (popularity)", 0, 500000, 20000, step=5000)
+
+    check_limit = st.slider("How many titles to check", 25, 250, 100, step=25)
+
+    top250_films = IMDB_Ratings[
+        (IMDB_Ratings['IMDb Rating'] >= min_rating_filter) &
+        (IMDB_Ratings['Num Votes'] >= min_votes_filter)
+    ]
+    if selected_genres:
+        import re as _re
+        pattern = '|'.join(_re.escape(g) for g in selected_genres)
+        top250_films = top250_films[top250_films['Genre'].str.contains(pattern, case=False, na=False)]
+
+    top250_films = top250_films.sort_values(by="IMDb Rating", ascending=False).head(check_limit)
+    st.caption(f"🎯 {len(top250_films)} titles match these filters and will be checked.")
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
@@ -1682,13 +1708,35 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         st.caption("Connect Supabase (see notice above) to see rating drift trends across every past run here.")
     else:
         try:
-            hist = supabase.table("films").select("*").order("checked_at", desc=True).limit(2000).execute()
+            hist = supabase.table("films").select("*").order("checked_at", desc=True).limit(5000).execute()
             hist_df = pd.DataFrame(hist.data)
             if not hist_df.empty:
-                st.dataframe(hist_df, use_container_width=True, height=300)
-                trend = hist_df.groupby("checked_at")["rating_diff"].mean().reset_index().sort_values("checked_at")
-                st.line_chart(trend.set_index("checked_at"))
-                st.caption("Average live-vs-static rating difference per logged run, oldest to newest.")
+                hist_df['checked_at'] = pd.to_datetime(hist_df['checked_at'])
+                hist_df['Run Date'] = hist_df['checked_at'].dt.date.astype(str)
+
+                n_runs = hist_df['Run Date'].nunique()
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Rows logged", f"{len(hist_df):,}")
+                c2.metric("Distinct run dates", n_runs)
+                c3.metric("Titles with any live change", int((hist_df['rating_diff'] != 0).sum()))
+
+                if n_runs < 2:
+                    st.info(
+                        "Only one run's worth of history so far, so there's nothing to trend yet — "
+                        "a single point can't show drift over time. Run this again on a different day "
+                        "(or let the scheduled CI/CD job build history) and a real trend line will "
+                        "appear here."
+                    )
+                else:
+                    trend = (
+                        hist_df.groupby('Run Date')['rating_diff']
+                        .mean().reset_index().sort_values('Run Date')
+                    )
+                    st.bar_chart(trend.set_index('Run Date'))
+                    st.caption("Average live-vs-static rating difference per run date, oldest to newest.")
+
+                with st.expander("📋 View all logged rows"):
+                    st.dataframe(hist_df.drop(columns=['Run Date']), use_container_width=True, height=300)
             else:
                 st.info("No rows logged yet — click **Run Live Ratings Check** above to start building history.")
         except Exception as e:
