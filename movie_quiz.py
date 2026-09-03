@@ -298,7 +298,7 @@ SCENARIO_CATEGORIES = {
         "8 – Graph Based Movie Relationships",
     ],
     "⚙️ Live Monitoring": [
-        14 – Live Ratings Monitor (Scheduled + On-Demand)",
+        "14 – Live Ratings Monitor (Scheduled + On-Demand)",
     ],
 }
 
@@ -1463,8 +1463,8 @@ if scenario == "13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
 
 
 # --- Scenario 14: Live Ratings Monitor + Supervised ML Predictions (English only) ---
-if scenario == 14 – Live Ratings Monitor (Scheduled + On-Demand)":
-    st.header(14 – Live Ratings Monitor (Scheduled + On-Demand)")
+if scenario == "14 – Live Ratings Monitor (Scheduled + On-Demand)":
+    st.header("14 – Live Ratings Monitor (Scheduled + On-Demand)")
 
     st.markdown("""
 **What this scenario actually does**
