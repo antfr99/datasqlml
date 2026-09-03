@@ -262,7 +262,7 @@ SCENARIO_CATEGORIES = {
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
         "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
-        "14 – Live Ratings Monitor (Scheduled + On-Demand)",
+        "14 – Live Ratings Monitor (Scheduled + on-demand)",
         "15 – Personalized Watchlist Ranker",
         "16 – Similar Films Finder",
         "17 – Taste Profile Radar",
@@ -298,7 +298,7 @@ SCENARIO_CATEGORIES = {
         "8 – Graph Based Movie Relationships",
     ],
     "⚙️ Live Monitoring": [
-        "14 – Live Ratings Monitor (Scheduled + On-Demand)",
+        "14 – Live Ratings Monitor (Scheduled + on-demand)",
     ],
 }
 
@@ -847,6 +847,38 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
 
     *(Trains its own Random Forest model below — no need to visit another scenario first.)*
     """)
+
+    s11_code_view = '''
+df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+train_df = df_ml[df_ml['Your Rating'].notna()]
+
+categorical_features = ['Genre', 'Director', 'Year']
+numerical_features = ['IMDb Rating', 'Num Votes']
+
+preprocessor = ColumnTransformer(transformers=[
+    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+    ('num', 'passthrough', numerical_features)
+])
+model = Pipeline([
+    ('prep', preprocessor),
+    ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+])
+model.fit(train_df[categorical_features + numerical_features], train_df['Your Rating'])
+
+# Feature importance, individually and rolled up by category (Genre/Director/Year/etc)
+cat_features = model.named_steps['prep'].named_transformers_['cat'].get_feature_names_out(categorical_features)
+all_features = np.concatenate([cat_features, numerical_features])
+importances = model.named_steps['reg'].feature_importances_
+fi_df = pd.DataFrame({'Feature': all_features, 'Importance': importances}).sort_values('Importance', ascending=False)
+fi_df['Category'] = fi_df['Feature'].str.split('_').str[0]
+agg_df = fi_df.groupby('Category')['Importance'].sum().sort_values(ascending=False)
+'''
+    with st.expander("🛠️ View the underlying code", expanded=False):
+        st.text_area(
+            "Python code (view only — this box is not wired back into execution)",
+            s11_code_view, height=420, key="s11_code_view",
+        )
+        st.caption("This is a reference copy of the code that actually runs below. Editing this box won't change the output.")
 
     # --- Train / retrain model (always available, not just first run) ---
     retrain_clicked = st.button(
@@ -1397,6 +1429,38 @@ if scenario == "13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
     directors_list.sort()
     selected_director = st.selectbox("Choose a director:", directors_list)
 
+    s13_code_view = '''
+from sentence_transformers import SentenceTransformer, util
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+movies = IMDB_Ratings[IMDB_Ratings["Director"] == selected_director]["Title"].dropna().tolist()
+results = []
+for title in movies:
+    movie_data = fetch_movie_data(title)          # OMDb lookup, cached per title
+    plot_embedding = model.encode(movie_data["Plot"], convert_to_tensor=True)
+
+    similarities = {}
+    for g in movie_data["Genre"]:
+        g_embedding = model.encode(g, convert_to_tensor=True)
+        similarities[g] = round(util.cos_sim(plot_embedding, g_embedding).item(), 3)
+
+    main_genre = max(similarities, key=similarities.get) if similarities else "Unknown"
+    results.append({
+        "Film": movie_data["Title"],
+        "OMDb Genres": ", ".join(movie_data["Genre"]),
+        "Embedding Similarity": similarities,
+        "Main Genre (Predicted)": main_genre,
+    })
+
+df_results = pd.DataFrame(results)
+'''
+    with st.expander("🛠️ View the underlying code", expanded=False):
+        st.text_area(
+            "Python code (view only — this box is not wired back into execution)",
+            s13_code_view, height=380, key="s13_code_view",
+        )
+        st.caption("This is a reference copy of the code that actually runs below. Editing this box won't change the output.")
+
     # --- Hidden OMDb API key ---
     OMDB_API_KEY = "72466310"  # keep this private
 
@@ -1463,22 +1527,31 @@ if scenario == "13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
 
 
 # --- Scenario 14: Live Ratings Monitor + Supervised ML Predictions (English only) ---
-if scenario == "14 – Live Ratings Monitor (Scheduled + On-Demand)":
-    st.header("14 – Live Ratings Monitor (Scheduled + On-Demand)")
+if scenario == "14 – Live Ratings Monitor (Scheduled + on-demand)":
+    st.header("14 – Live Ratings Monitor (Scheduled + on-demand)")
 
     st.markdown("""
 **What this scenario actually does**
 
 - **Scheduled monitoring:** `scripts/refresh_live_ratings.py` runs daily via GitHub Actions,
   independent of this app — it fetches live OMDb ratings, compares them to the stored snapshot,
-  and logs any changed titles to Supabase with a timestamp. History keeps building even when
-  nobody has this app open. See the setup notes at the bottom of this page.
+  and logs any changed titles to Supabase with a timestamp.
 - **On-demand monitoring:** The button below runs the same check manually, with your own filters,
   and writes to the same Supabase table.
-- **On-demand ML prediction:** The Random Forest model below is retrained fresh each time you
-  click the button, using `My_Ratings` as training data, to predict how I might rate unseen
-  films whose live rating just moved.
+- **CI:** Every push runs `ci.yml` — syntax-checks this app and the scripts, and runs the unit
+  test suite in `tests/`.
+- **CD gate:** Branch protection on `main` requires that CI check to pass before merging, and
+  Streamlit Cloud auto-deploys off `main` — so nothing untested reaches production.
+- **MLOps — training & registry:** `scripts/train_model.py` cross-validates a candidate model,
+  uploads it to Supabase Storage, and logs the run to a `model_runs` table. It's only **promoted**
+  to production if its validated RMSE beats the current champion. This runs on a weekly schedule,
+  on demand, whenever `myratings.xlsx` changes, and automatically right after CI passes on `main`.
+- **MLOps — serving:** The prediction table below loads the current **registered** production
+  model (see the panel above) instead of retraining from scratch on every click. If nothing's
+  registered yet, it falls back to a temporary session-only model and says so explicitly.
 
+See the setup notes at the bottom of this page for the Supabase table/bucket and GitHub secrets
+this all depends on.
 """)
 
     # --- OMDb API key(s): manual override > comma-separated keys in secrets >
@@ -1531,6 +1604,56 @@ if scenario == "14 – Live Ratings Monitor (Scheduled + On-Demand)":
         return create_client(url, key)
 
     supabase = get_supabase_client()
+
+    # --- Production model registry (see model_runs_schema.sql + scripts/train_model.py) ---
+    current_model_row = None
+    if supabase is not None:
+        try:
+            reg = (
+                supabase.table("model_runs")
+                .select("*")
+                .eq("is_current", True)
+                .order("trained_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if reg.data:
+                current_model_row = reg.data[0]
+        except Exception as e:
+            st.warning(f"Couldn't read the model registry (`model_runs` table): {e}")
+
+    with st.expander("🏷️ Production model status", expanded=False):
+        if current_model_row:
+            mc1, mc2, mc3 = st.columns(3)
+            mc1.metric("Validated RMSE", f"{current_model_row['cv_rmse_mean']:.3f}")
+            mc2.metric("Trained on", f"{current_model_row['n_training_movies']} movies")
+            trained_at_display = str(current_model_row['trained_at'])[:19].replace("T", " ")
+            mc3.metric("Trained at (UTC)", trained_at_display)
+            st.caption(
+                f"Features: {current_model_row['features']} · "
+                f"Commit: {current_model_row.get('git_sha', 'n/a')[:8]}"
+            )
+        else:
+            st.info(
+                "No registered model yet. Run the **Train Ratings Model** GitHub Actions "
+                "workflow once (Actions tab → Train Ratings Model → Run workflow) to train, "
+                "validate, and register the first one. Until then, predictions below fall "
+                "back to a temporary model trained just for this session."
+            )
+
+    @st.cache_resource
+    def _load_production_model(storage_path: str):
+        """Downloads and deserializes the registered model. Cached per
+        storage_path, so a newly-promoted model (a different path) is
+        downloaded fresh, while repeat runs against the same model reuse
+        the cached object instead of re-downloading every rerun."""
+        import joblib
+        import tempfile
+        data = supabase.storage.from_("models").download(storage_path)
+        with tempfile.NamedTemporaryFile(suffix=".joblib") as tmp:
+            tmp.write(data)
+            tmp.flush()
+            return joblib.load(tmp.name)
 
     # --- Filter which titles get checked ---
     st.markdown("#### Filter which titles to check")
@@ -1763,27 +1886,47 @@ if scenario == "14 – Live Ratings Monitor (Scheduled + On-Demand)":
         categorical_features = ['Genre', 'Director']
         numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-                ('num', 'passthrough', numerical_features)
-            ]
-        )
-
-        model = Pipeline([
-            ('prep', preprocessor),
-            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-        ])
-
-        X_train = train_df[categorical_features + numerical_features]
-        y_train = train_df['Your Rating']
-        model.fit(X_train, y_train)
-
         if not predict_df.empty:
             X_pred = predict_df[categorical_features + numerical_features]
-            predict_df['Predicted Rating'] = model.predict(X_pred)
 
-            st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
+            if current_model_row is not None:
+                try:
+                    model = _load_production_model(current_model_row["storage_path"])
+                    predict_df['Predicted Rating'] = model.predict(X_pred)
+                    st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
+                    st.caption(
+                        f"Served from the registered production model "
+                        f"(validated RMSE {current_model_row['cv_rmse_mean']:.3f}) — "
+                        f"not retrained on this click."
+                    )
+                except Exception as e:
+                    st.warning(
+                        f"Couldn't load the registered model ({e}) — falling back to a "
+                        f"temporary session model instead."
+                    )
+                    current_model_row = None
+
+            if current_model_row is None:
+                preprocessor = ColumnTransformer(
+                    transformers=[
+                        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                        ('num', 'passthrough', numerical_features)
+                    ]
+                )
+                fallback_model = Pipeline([
+                    ('prep', preprocessor),
+                    ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+                ])
+                X_train = train_df[categorical_features + numerical_features]
+                y_train = train_df['Your Rating']
+                fallback_model.fit(X_train, y_train)
+                predict_df['Predicted Rating'] = fallback_model.predict(X_pred)
+                st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
+                st.caption(
+                    "⚠️ No registered production model — this is a temporary model trained "
+                    "just for this session, not the validated registry model."
+                )
+
             st.dataframe(
                 predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
                 .sort_values(by='Predicted Rating', ascending=False)
@@ -1865,10 +2008,9 @@ if scenario == "14 – Live Ratings Monitor (Scheduled + On-Demand)":
    - Random forests are robust to overfitting and can generalize well to unseen movies.
 """)
 
-    with st.expander("⚙️ CI/CD setup notes (Supabase + GitHub Actions)"):
+    with st.expander("⚙️ CI/CD + MLOps setup notes (Supabase + GitHub Actions)"):
         st.markdown("""
-This scenario is designed to log to a Supabase table named **`films`**. Suggested schema
-(adjust names below to match the table you already created):
+**1. `films` table** (live-ratings monitoring log) — unchanged from before:
 
 ```sql
 create table if not exists films (
@@ -1887,15 +2029,43 @@ create table if not exists films (
 );
 ```
 
-**To connect this app:** add `SUPABASE_URL` and `SUPABASE_KEY` under your app's *Settings → Secrets*
-on Streamlit Cloud, and add `supabase` to `requirements.txt`.
+**2. `model_runs` table** (model registry — see `model_runs_schema.sql`):
 
-**To make it CI/CD-scheduled (not just click-to-run):** this repo also ships a standalone
-`scripts/refresh_live_ratings.py` and `.github/workflows/refresh_live_ratings.yml`. The workflow
-runs the same OMDb check on a daily cron schedule via GitHub Actions and writes straight to
-Supabase — so the `films` table keeps growing even if nobody opens this app. Add
-`SUPABASE_URL`, `SUPABASE_KEY`, and `OMDB_API_KEY` as **GitHub Actions secrets** (repo →
-*Settings → Secrets and variables → Actions*) for the workflow to run.
+```sql
+create table if not exists model_runs (
+    id bigint generated always as identity primary key,
+    trained_at timestamptz not null default now(),
+    git_sha text,
+    n_training_movies int,
+    features text,
+    cv_rmse_mean numeric,
+    cv_rmse_std numeric,
+    storage_path text not null,
+    is_current boolean not null default false
+);
+```
+
+**3. Storage bucket:** create a bucket named `models` (Supabase dashboard → Storage → New bucket,
+private) — this is where trained model artifacts (`.joblib` files) live.
+
+**4. Streamlit Cloud secrets** (Settings → Secrets): `SUPABASE_URL`, `SUPABASE_KEY` (anon key is
+fine here — the app only *reads* `model_runs` and downloads from `models`), and `supabase` added
+to `requirements.txt`.
+
+**5. GitHub Actions secrets** (repo → Settings → Secrets and variables → Actions):
+- `SUPABASE_URL`, `SUPABASE_KEY`, `OMDB_API_KEY` — used by `refresh_live_ratings.py` (unchanged).
+- `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` — used by `train_model.py`. This one needs the
+  **service_role** key specifically, since it writes to `model_runs` and uploads to Storage
+  regardless of RLS policy — never expose this key to the browser or put it in Streamlit secrets.
+
+**6. Branch protection (the actual CD gate):** repo → Settings → Branches → add a rule for `main`
+requiring the `CI` workflow's status check to pass before merging. This is a one-time UI setting,
+not a file — it's what turns the `ci.yml` workflow from decorative into an actual gate on what
+reaches production.
+
+**7. First run:** once secrets are set, trigger **Train Ratings Model** manually once from the
+Actions tab so a model gets registered — otherwise this scenario's predictions fall back to a
+temporary session-only model (and will tell you so).
 """)
 
 
@@ -2050,6 +2220,37 @@ if scenario == "15 – Personalized Watchlist Ranker":
     min_votes = st.slider("Minimum IMDb votes", 0, 200000, 40000, step=5000)
     top_n = st.slider("How many to show", 5, 50, 15, step=5)
 
+    s15_code_view = '''
+liked_directors = set(My_Ratings.loc[My_Ratings['Your Rating'] >= 7, 'Director'].dropna())
+
+rated_with_genre = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='inner')
+favorite_genres = (
+    rated_with_genre.loc[rated_with_genre['Your Rating'] >= 7, 'Genre']
+    .dropna().str.split(',').explode().str.strip()
+    .value_counts().head(5).index.tolist()
+)
+
+unseen = IMDB_Ratings.merge(My_Ratings[['Movie ID']], on='Movie ID', how='left', indicator=True)
+unseen = unseen[unseen['_merge'] == 'left_only'].drop(columns=['_merge'])
+unseen = unseen[unseen['Num Votes'] >= min_votes].copy()
+
+def score_row(row):
+    director_bonus = w_director if row['Director'] in liked_directors else 0
+    genres = [g.strip() for g in str(row['Genre']).split(',')]
+    genre_bonus = w_genre * sum(1 for g in genres if g in favorite_genres) / max(len(genres), 1)
+    popularity_bonus = w_popularity * min(row['Num Votes'] / 200000, 1)
+    return row['IMDb Rating'] + director_bonus + genre_bonus + popularity_bonus
+
+unseen['Watchlist Score'] = unseen.apply(score_row, axis=1)
+ranked = unseen.sort_values(by='Watchlist Score', ascending=False).head(top_n)
+'''
+    with st.expander("🛠️ View the underlying code", expanded=False):
+        st.text_area(
+            "Python code (view only — this box is not wired back into execution)",
+            s15_code_view, height=420, key="s15_code_view",
+        )
+        st.caption("This is a reference copy of the code that actually runs below. Editing this box won't change the output.")
+
     if IMDB_Ratings.empty or My_Ratings.empty:
         st.warning("Need both tables loaded to build a watchlist.")
     else:
@@ -2107,6 +2308,34 @@ if scenario == "16 – Similar Films Finder":
         seed_title = st.selectbox("Find films similar to:", title_options)
         k = st.slider("How many matches", 3, 20, 8)
 
+        s16_code_view = '''
+from scipy.sparse import hstack, csr_matrix
+
+encoder = OneHotEncoder(handle_unknown='ignore')
+cat_encoded = encoder.fit_transform(feature_df[['Genre', 'Director']])
+
+num_features = feature_df[['Year', 'IMDb Rating', 'Num Votes']].copy()
+num_features = (num_features - num_features.mean()) / num_features.std().replace(0, 1)
+
+X = hstack([cat_encoded, csr_matrix(num_features.values)]).tocsr()
+
+nn = NearestNeighbors(n_neighbors=min(k + 1, len(feature_df)), metric='cosine')
+nn.fit(X)
+
+seed_idx = feature_df.index[feature_df['Title'] == seed_title][0]
+distances, indices = nn.kneighbors(X[seed_idx])
+
+matches = feature_df.iloc[indices[0][1:]].copy()
+matches['Similarity'] = (1 - distances[0][1:]).round(3)
+matches['Already Seen'] = matches['Movie ID'].isin(set(My_Ratings['Movie ID']))
+'''
+        with st.expander("🛠️ View the underlying code", expanded=False):
+            st.text_area(
+                "Python code (view only — this box is not wired back into execution)",
+                s16_code_view, height=380, key="s16_code_view",
+            )
+            st.caption("This is a reference copy of the code that actually runs below. Editing this box won't change the output.")
+
         if st.button("🔎 Find similar films"):
             from scipy.sparse import hstack, csr_matrix
 
@@ -2158,6 +2387,29 @@ if scenario == "17 – Taste Profile Radar":
             min_films = st.slider("Minimum films watched in genre", 1, 20, 3)
         with col_b:
             top_n_genres = st.slider("Show top N genres (by films watched)", 4, 15, 8)
+
+        s17_code_view = '''
+genre_df = My_Ratings.assign(Genre=My_Ratings['Genre'].str.split(',')).explode('Genre')
+genre_df['Genre'] = genre_df['Genre'].str.strip()
+genre_stats = genre_df.groupby('Genre').agg(
+    Avg_Rating=('Your Rating', 'mean'),
+    Films_Watched=('Movie ID', 'count')
+).reset_index()
+
+genre_stats = genre_stats[genre_stats['Films_Watched'] >= min_films]
+genre_stats = genre_stats.sort_values('Films_Watched', ascending=False).head(top_n_genres)
+genre_stats = genre_stats.sort_values('Avg_Rating', ascending=False)
+
+# Radial axis is zoomed to the actual value spread, not a fixed 0-10 scale
+lo = max(0, min(genre_stats['Avg_Rating']) - 1)
+hi = min(10, max(genre_stats['Avg_Rating']) + 1)
+'''
+        with st.expander("🛠️ View the underlying code", expanded=False):
+            st.text_area(
+                "Python code (view only — this box is not wired back into execution)",
+                s17_code_view, height=340, key="s17_code_view",
+            )
+            st.caption("This is a reference copy of the code that actually runs below. Editing this box won't change the output.")
 
         genre_stats = genre_stats[genre_stats['Films_Watched'] >= min_films]
         genre_stats = genre_stats.sort_values('Films_Watched', ascending=False).head(top_n_genres)
