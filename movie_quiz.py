@@ -1478,8 +1478,9 @@ The model uses my existing ratings (`My_Ratings`) as training data to learn patt
 Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.
 """)
 
-    # --- OMDb API key ---
-    OMDB_API_KEY = "e9476c0a"
+    # --- OMDb API key: prefer your own key from secrets (the fallback below
+    # is a shared public demo key and gets rate-limited fast) ---
+    OMDB_API_KEY = (st.secrets.get("OMDB_API_KEY") if hasattr(st, "secrets") else None) or "e9476c0a"
 
     # --- Supabase client (reads secrets; degrades gracefully if not configured) ---
     @st.cache_resource
@@ -1517,6 +1518,10 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         min_votes_filter = st.slider("Minimum votes (popularity)", 0, 500000, 20000, step=5000)
 
     check_limit = st.slider("How many titles to check", 25, 250, 100, step=25)
+    only_show_changed = st.checkbox(
+        "Only show titles with a rating change in the results below", value=False
+    )
+    st.caption("Note: everything checked is still logged to Supabase either way — this only affects the table below, so trend history stays complete.")
 
     top250_films = IMDB_Ratings[
         (IMDB_Ratings['IMDb Rating'] >= min_rating_filter) &
@@ -1546,6 +1551,8 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         timestamp = datetime.now(timezone.utc).isoformat()
 
         results = []
+        omdb_errors = []       # sample of raw OMDb/network errors, for diagnostics
+        non_english_skipped = 0
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
         with st.spinner(f"Checking {len(top250_films)} titles against OMDb..."):
@@ -1563,13 +1570,18 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                         live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
                         if "english" not in languages:
+                            non_english_skipped += 1
                             continue
                     else:
                         live_rating = None
                         languages = []
-                except Exception:
+                        if len(omdb_errors) < 3:
+                            omdb_errors.append(resp.get("Error", "Unknown OMDb error"))
+                except Exception as e:
                     live_rating = None
                     languages = []
+                    if len(omdb_errors) < 3:
+                        omdb_errors.append(str(e))
 
                 rating_diff = live_rating - static_rating if live_rating is not None else None
 
@@ -1604,6 +1616,21 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         st.success("Live ratings check complete ✅")
 
+        # --- Diagnostics: make failures visible instead of a silently thin result ---
+        checked_count = len(top250_films)
+        matched_count = len(new_df)
+        failed_count = checked_count - matched_count - non_english_skipped
+        if checked_count > 0 and matched_count < checked_count * 0.5:
+            hint = f' OMDb\'s own error message was: "{omdb_errors[0]}".' if omdb_errors else ""
+            st.warning(
+                f"Only {matched_count} of {checked_count} titles came back with a usable live rating "
+                f"({non_english_skipped} skipped as non-English, {failed_count} failed outright).{hint} "
+                "This is almost always the OMDb API key being rate-limited or invalid — the key baked "
+                "into this app is a shared public demo key with a low daily quota. Get your own free "
+                "key at omdbapi.com/apikey.aspx and add it as `OMDB_API_KEY` in your Streamlit secrets "
+                "(same place as your Supabase keys) to fix this reliably."
+            )
+
         # --- Persist this run: Supabase if connected, otherwise a local CSV fallback ---
         if not new_df.empty:
             if supabase is not None:
@@ -1637,21 +1664,26 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 combined.to_csv(history_file, index=False)
                 st.caption("💾 Logged to a local CSV for this session (won't survive a redeploy — connect Supabase to persist).")
 
-        # --- Show results, biggest changes first (nothing hidden) ---
+        # --- Show results, biggest changes first (nothing hidden by default) ---
         if not new_df.empty:
             st.subheader("📊 Current Run - Live Ratings Comparison")
-            display_df = new_df.copy()
-            display_df['Abs Change'] = display_df['Rating Difference'].abs()
-            st.dataframe(
-                display_df.sort_values(by='Abs Change', ascending=False)
-                .drop(columns=['Abs Change']).reset_index(drop=True),
-                use_container_width=True
-            )
-            changed = int((display_df['Rating Difference'] != 0).sum())
+            changed = int((new_df['Rating Difference'] != 0).sum())
+
+            display_df = new_df[new_df['Rating Difference'] != 0].copy() if only_show_changed else new_df.copy()
+
+            if display_df.empty:
+                st.info("No titles changed this run — try unchecking 'Only show titles with a rating change' to see the full checked list.")
+            else:
+                display_df['Abs Change'] = display_df['Rating Difference'].abs()
+                st.dataframe(
+                    display_df.sort_values(by='Abs Change', ascending=False)
+                    .drop(columns=['Abs Change']).reset_index(drop=True),
+                    use_container_width=True
+                )
             st.caption(
-                f"{changed} of {len(display_df)} checked titles show a different live rating today than the "
-                f"stored snapshot — the rest are shown too, just unchanged (this is expected for high-vote "
-                f"films, whose rounded average barely moves day-to-day)."
+                f"{changed} of {len(new_df)} checked titles show a different live rating today than the "
+                f"stored snapshot (this is expected for high-vote films, whose rounded average barely "
+                f"moves day-to-day)."
             )
         else:
             st.warning("No English-language films could be matched to a live rating this run — try again in a moment.")
