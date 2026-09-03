@@ -1475,7 +1475,7 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
 
 **Supervised Machine Learning:**
 The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films - Horror Films only.
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.
 """)
 
     # --- OMDb API key ---
@@ -1488,27 +1488,21 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
             from supabase import create_client
         except ImportError:
             return None
-        url = st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None
-        key = st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None
+        if not hasattr(st, "secrets"):
+            return None
+        # Accept secrets either flat (SUPABASE_URL / SUPABASE_KEY at the top
+        # level) or nested under a [supabase] section in secrets.toml.
+        section = st.secrets.get("supabase", {})
+        url = st.secrets.get("SUPABASE_URL") or section.get("SUPABASE_URL")
+        key = st.secrets.get("SUPABASE_KEY") or section.get("SUPABASE_KEY")
         if not url or not key:
             return None
         return create_client(url, key)
 
     supabase = get_supabase_client()
 
-    if supabase is None:
-        st.info(
-            "📡 Supabase isn't connected yet, so results below will only live for this session. "
-            "Add `SUPABASE_URL` and `SUPABASE_KEY` to your app's Secrets (and make sure `supabase` "
-            "is in requirements.txt) to persist history and unlock the trend chart below."
-        )
-    else:
-        st.caption("📡 Connected to Supabase — results from this run will be logged to the `films` table.")
-
-    # --- Select top 250 films ---
-    top250_films = IMDB_Ratings[
-        IMDB_Ratings['Genre'].str.contains("Horror", case=False, na=False)
-    ].sort_values(by="IMDb Rating", ascending=False).head(250)
+    # --- Select top 250 films (no genre restriction) ---
+    top250_films = IMDB_Ratings.sort_values(by="IMDb Rating", ascending=False).head(250)
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
@@ -1624,7 +1618,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left') if not new_df.empty else df_ml.assign(**{'Rating Difference': np.nan})
 
-        # Only predict for unseen movies from the current Horror subset with rating changes
+        # Only predict for unseen movies from the current top-250 subset with rating changes
         predict_df = df_ml[
             (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
             (df_ml['Rating Difference'].notna()) &
@@ -1808,20 +1802,27 @@ This scenario allows you to ask **natural-language questions** about my personal
             filtered = filtered[filtered['Genre'].str.lower().str.contains(pattern, na=False)]
 
         # Director matching: exact surname first, then a fuzzy fallback so small
-        # typos ("Nolen" instead of "Nolan") still resolve.
+        # typos ("Nolen" instead of "Nolan") still resolve. Grouped as lists
+        # because multiple directors can share a surname (e.g. James Cameron
+        # and Cody Cameron) - a plain {surname: director} dict would silently
+        # drop all but one of them.
         all_directors = My_Ratings['Director'].dropna().unique()
-        surnames = {d.split()[-1].lower(): d for d in all_directors}
+        surname_to_directors = {}
+        for d in all_directors:
+            last_name = d.split()[-1].lower()
+            surname_to_directors.setdefault(last_name, []).append(d)
 
-        director_matches = [
-            d for last_name, d in surnames.items()
-            if re.search(r'\b' + re.escape(last_name) + r'\b', question_lower)
-        ]
+        director_matches = []
+        for last_name, directors_sharing_name in surname_to_directors.items():
+            if re.search(r'\b' + re.escape(last_name) + r'\b', question_lower):
+                director_matches.extend(directors_sharing_name)
 
         if not director_matches:
             close = []
             for token in question_tokens:
-                close += difflib.get_close_matches(token, surnames.keys(), n=1, cutoff=0.8)
-            director_matches = [surnames[c] for c in dict.fromkeys(close)]
+                close += difflib.get_close_matches(token, surname_to_directors.keys(), n=1, cutoff=0.8)
+            for c in dict.fromkeys(close):
+                director_matches.extend(surname_to_directors[c])
 
         used_fallback = False
         if director_matches:
