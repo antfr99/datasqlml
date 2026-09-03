@@ -1478,9 +1478,36 @@ The model uses my existing ratings (`My_Ratings`) as training data to learn patt
 Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.
 """)
 
-    # --- OMDb API key: prefer your own key from secrets (the fallback below
-    # is a shared public demo key and gets rate-limited fast) ---
-    OMDB_API_KEY = (st.secrets.get("OMDB_API_KEY") if hasattr(st, "secrets") else None) or "e9476c0a"
+    # --- OMDb API key(s): manual override > comma-separated keys in secrets >
+    # shared fallback key. If a key hits its rate limit mid-run, the app
+    # automatically switches to the next one for the rest of the run. ---
+    with st.expander("🔑 OMDb API key (use this if you're seeing rate-limit errors)"):
+        st.caption(
+            "Paste your own free key here to use it for this session (get one in ~30 seconds at "
+            "omdbapi.com/apikey.aspx). For a permanent fix, add `OMDB_API_KEY` to your Streamlit "
+            "secrets — you can list several keys separated by commas there, and the app will "
+            "automatically switch to the next one if one gets rate-limited mid-run."
+        )
+        st.text_input("Your OMDb API key", type="password", key="omdb_manual_key", placeholder="e.g. abcd1234")
+
+    def _get_omdb_keys():
+        keys = []
+        manual_key = st.session_state.get("omdb_manual_key", "").strip()
+        if manual_key:
+            keys.append(manual_key)
+        if hasattr(st, "secrets"):
+            secret_val = st.secrets.get("OMDB_API_KEY")
+            if secret_val:
+                keys.extend([k.strip() for k in str(secret_val).split(",") if k.strip()])
+        keys.append("e9476c0a")  # last-resort shared demo key
+        seen, ordered = set(), []
+        for k in keys:
+            if k not in seen:
+                ordered.append(k)
+                seen.add(k)
+        return ordered
+
+    omdb_keys = _get_omdb_keys()
 
     # --- Supabase client (reads secrets; degrades gracefully if not configured) ---
     @st.cache_resource
@@ -1513,9 +1540,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
     with col1:
         selected_genres = st.multiselect("Genre(s)", genres_available, default=default_genre)
     with col2:
-        min_rating_filter = st.slider("Minimum IMDb rating", 0.0, 9.5, 6.0, 0.1)
+        min_rating_filter, max_rating_filter = st.slider(
+            "IMDb rating range", 0.0, 9.5, (6.0, 9.5), 0.1
+        )
     with col3:
-        min_votes_filter = st.slider("Minimum votes (popularity)", 0, 500000, 20000, step=5000)
+        min_votes_filter, max_votes_filter = st.slider(
+            "Votes (popularity) range", 0, 3000000, (20000, 3000000), step=5000
+        )
 
     check_limit = st.slider("How many titles to check", 25, 250, 100, step=25)
     only_show_changed = st.checkbox(
@@ -1525,7 +1556,9 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
     top250_films = IMDB_Ratings[
         (IMDB_Ratings['IMDb Rating'] >= min_rating_filter) &
-        (IMDB_Ratings['Num Votes'] >= min_votes_filter)
+        (IMDB_Ratings['IMDb Rating'] <= max_rating_filter) &
+        (IMDB_Ratings['Num Votes'] >= min_votes_filter) &
+        (IMDB_Ratings['Num Votes'] <= max_votes_filter)
     ]
     if selected_genres:
         import re as _re
@@ -1553,6 +1586,28 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         results = []
         omdb_errors = []       # sample of raw OMDb/network errors, for diagnostics
         non_english_skipped = 0
+        key_idx = [0]          # mutable so the helper can advance it across calls
+
+        def _fetch_from_omdb(movie_id):
+            """Tries the current key; on a rate-limit-style error, advances to
+            the next configured key and retries the same title with it."""
+            for _ in range(len(omdb_keys)):
+                idx = key_idx[0]
+                try:
+                    url = f"http://www.omdbapi.com/?i={movie_id}&apikey={omdb_keys[idx]}"
+                    resp = requests.get(url, timeout=10).json()
+                except Exception as e:
+                    return None, str(e)
+
+                if resp.get("Response") == "True":
+                    return resp, None
+
+                error_msg = resp.get("Error", "Unknown OMDb error")
+                if "limit" in error_msg.lower() and idx + 1 < len(omdb_keys):
+                    key_idx[0] += 1
+                    continue
+                return None, error_msg
+            return None, "All configured OMDb keys are rate-limited"
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
         with st.spinner(f"Checking {len(top250_films)} titles against OMDb..."):
@@ -1560,28 +1615,20 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 movie_id = row["Movie ID"]
                 static_rating = row["IMDb Rating"]
 
-                try:
-                    url = f"http://www.omdbapi.com/?i={movie_id}&apikey={OMDB_API_KEY}"
-                    resp = requests.get(url, timeout=10).json()
+                resp, error = _fetch_from_omdb(movie_id)
+                if resp is not None:
+                    # Normalize languages: split, strip, lowercase
+                    languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
+                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
-                    if resp.get("Response") == "True":
-                        # Normalize languages: split, strip, lowercase
-                        languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
-                        live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
-
-                        if "english" not in languages:
-                            non_english_skipped += 1
-                            continue
-                    else:
-                        live_rating = None
-                        languages = []
-                        if len(omdb_errors) < 3:
-                            omdb_errors.append(resp.get("Error", "Unknown OMDb error"))
-                except Exception as e:
+                    if "english" not in languages:
+                        non_english_skipped += 1
+                        continue
+                else:
                     live_rating = None
                     languages = []
                     if len(omdb_errors) < 3:
-                        omdb_errors.append(str(e))
+                        omdb_errors.append(error)
 
                 rating_diff = live_rating - static_rating if live_rating is not None else None
 
@@ -1616,19 +1663,27 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         st.success("Live ratings check complete ✅")
 
+        if key_idx[0] > 0:
+            st.caption(f"🔁 Switched to backup OMDb key #{key_idx[0] + 1} of {len(omdb_keys)} partway through this run after hitting a rate limit.")
+
         # --- Diagnostics: make failures visible instead of a silently thin result ---
         checked_count = len(top250_films)
         matched_count = len(new_df)
         failed_count = checked_count - matched_count - non_english_skipped
         if checked_count > 0 and matched_count < checked_count * 0.5:
             hint = f' OMDb\'s own error message was: "{omdb_errors[0]}".' if omdb_errors else ""
+            key_note = (
+                f"All {len(omdb_keys)} configured OMDb key(s) appear rate-limited or invalid."
+                if len(omdb_keys) > 1 else
+                "This is almost always the OMDb API key being rate-limited or invalid — the key baked "
+                "into this app is a shared public demo key with a low daily quota."
+            )
             st.warning(
                 f"Only {matched_count} of {checked_count} titles came back with a usable live rating "
                 f"({non_english_skipped} skipped as non-English, {failed_count} failed outright).{hint} "
-                "This is almost always the OMDb API key being rate-limited or invalid — the key baked "
-                "into this app is a shared public demo key with a low daily quota. Get your own free "
-                "key at omdbapi.com/apikey.aspx and add it as `OMDB_API_KEY` in your Streamlit secrets "
-                "(same place as your Supabase keys) to fix this reliably."
+                f"{key_note} Add your own key via the \"🔑 OMDb API key\" box above, or add "
+                "`OMDB_API_KEY` to your Streamlit secrets (comma-separate multiple keys for automatic "
+                "fallback) — get a free one at omdbapi.com/apikey.aspx."
             )
 
         # --- Persist this run: Supabase if connected, otherwise a local CSV fallback ---
