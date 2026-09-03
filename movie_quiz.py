@@ -17,10 +17,135 @@ from sklearn.neighbors import NearestNeighbors
 # --- Page Config ---
 st.set_page_config(
     layout="wide",
-    page_title="IMDb Data & AI Playground🎬"
+    page_title="IMDb Data & AI Playground🎬",
+    page_icon="🎬",
+    initial_sidebar_state="expanded",
 )
 
-st.title("IMDb Data & AI Playground 🎬")
+# --- Theme: "Screening Room" (charcoal-navy + marquee gold, ticket-stub motif) ---
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+    --bg: #12151A;
+    --surface: #1B2029;
+    --surface-alt: #171B22;
+    --border: #2A2F3A;
+    --text: #EDEEF0;
+    --text-muted: #8B93A1;
+    --gold: #E3A857;
+    --teal: #4FA88F;
+    --brick: #C1524B;
+}
+
+html, body, [data-testid="stAppViewContainer"], .main, [data-testid="stHeader"] {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    font-family: 'Fraunces', serif !important;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text) !important;
+}
+
+p, span, label, li { color: var(--text); }
+
+/* Hero */
+.hero-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+    color: var(--text);
+}
+.hero-subtitle {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-muted);
+    font-size: 1.02rem;
+    margin-bottom: 1rem;
+}
+.hero-rule {
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--gold) 0 10px, transparent 10px 18px);
+    opacity: 0.55;
+    margin: 0 0 1.6rem 0;
+    border: none;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--surface-alt);
+    border-right: 1px solid var(--border);
+}
+[data-testid="stSidebar"] * { color: var(--text) !important; }
+.nav-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    color: var(--gold) !important;
+    margin: 0.2rem 0 0.7rem 0;
+}
+.nav-caption {
+    color: var(--text-muted) !important;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+.nav-divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 1rem 0;
+}
+[data-testid="stSidebar"] [role="radiogroup"] label {
+    padding: 0.15rem 0;
+}
+
+/* Metrics styled as ticket stubs */
+[data-testid="stMetric"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px dashed var(--gold);
+    border-radius: 0 10px 10px 0;
+    padding: 0.9rem 1rem;
+}
+[data-testid="stMetricLabel"] { color: var(--text-muted) !important; }
+[data-testid="stMetricValue"] { color: var(--text) !important; font-family: 'Fraunces', serif; }
+
+/* Buttons */
+.stButton > button {
+    background-color: var(--gold);
+    color: #1B140A;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    padding: 0.5rem 1.1rem;
+    transition: filter 0.15s ease;
+}
+.stButton > button:hover { filter: brightness(1.08); color: #1B140A; }
+
+/* Inputs */
+.stTextArea textarea, .stTextInput input, .stSelectbox div[data-baseweb="select"] > div, .stMultiSelect div[data-baseweb="select"] > div {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+}
+
+/* Dataframes & expanders */
+[data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+[data-testid="stExpander"] { background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+
+hr { border-color: var(--border); }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Hero ---
+st.markdown("""
+<div class="hero-title">IMDb Data & AI Playground 🎬</div>
+<div class="hero-subtitle">A personal screening room for browsing, analyzing, and predicting my own movie ratings.</div>
+<hr class="hero-rule">
+""", unsafe_allow_html=True)
 
 # --- Load Excel files ---
 try:
@@ -53,50 +178,88 @@ if not IMDB_Ratings_2019.empty:
 if not Votes.empty:
     IMDB_Ratings = IMDB_Ratings.merge(Votes, on="Movie ID", how="left")
 
-# --- Show Tables ---
-st.write("---")
-st.write("### IMDb Ratings Table")
-if not IMDB_Ratings.empty:
-    st.dataframe(IMDB_Ratings, width="stretch", height=400)
-else:
-    st.warning("IMDb Ratings table is empty or failed to load.")
+# --- Quick Stats Dashboard ---
+if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.columns:
+    _compare = IMDB_Ratings.merge(My_Ratings[["Movie ID", "Your Rating"]], on="Movie ID", how="inner")
+    total_rated = len(_compare)
+    if total_rated:
+        avg_mine = _compare["Your Rating"].mean()
+        agreement_pct = ((_compare["Your Rating"] - _compare["IMDb Rating"]).abs() <= 1).mean() * 100
+        unseen_count = IMDB_Ratings["Movie ID"].nunique() - _compare["Movie ID"].nunique()
 
-st.write("### My Ratings Table")
-if not My_Ratings.empty:
-    My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
-    My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Films Rated", f"{total_rated:,}")
+        c2.metric("My Avg Rating", f"{avg_mine:.1f}")
+        c3.metric("Agreement w/ IMDb", f"{agreement_pct:.0f}%")
+        c4.metric("Unseen in Catalog", f"{unseen_count:,}")
+        st.write("")
+
+# --- Data tables (tucked away so the hero + stats lead the page) ---
+with st.expander("📋 Browse full IMDb Ratings table"):
+    if not IMDB_Ratings.empty:
+        st.dataframe(IMDB_Ratings, width="stretch", height=400)
+    else:
+        st.warning("IMDb Ratings table is empty or failed to load.")
+
+with st.expander("📋 Browse full My Ratings table"):
+    if not My_Ratings.empty:
+        My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
+        My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
         # Rename column only for display
-    display_ratings = My_Ratings_sorted.rename(columns={"Your Rating": "My Ratings"})
-    display_ratings = display_ratings.drop(columns=['Year_Sort'])
-    st.dataframe(display_ratings, width="stretch", height=400)
-else:
-    st.warning("My Ratings table is empty or failed to load.")
+        display_ratings = My_Ratings_sorted.rename(columns={"Your Rating": "My Ratings"})
+        display_ratings = display_ratings.drop(columns=['Year_Sort'])
+        st.dataframe(display_ratings, width="stretch", height=400)
+    else:
+        st.warning("My Ratings table is empty or failed to load.")
 
-# --- Scenarios ---
+st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
 
-scenario = st.radio(
-    "Choose a scenario:",
-    [
+# --- Scenarios: grouped, icon-led sidebar navigation ---
+# NOTE: the underlying option strings are left exactly as before so every
+# `if scenario == "..."` check further down the file keeps working unchanged.
+SCENARIO_CATEGORIES = {
+    "🔍 Discover & Browse": [
         "1 – Highlight Disagreements (SQL)",
         "2 – Hybrid Recommendations (SQL)",
         "3 – Top Unseen Films by Decade (SQL)",
+        "9 – Natural-Language Film Q&A Assistant",
+    ],
+    "📊 Stats & Insights": [
         "4 – Statistical Insights by Genre (Agreement)",
         "5 – Statistical Insights by Director (t-test)",
         "6 – Review Analysis (Sentiment, Subjectivity)",
-        "7 – Poster Image Analysis (OMDb API)",
-        "8 – Graph Based Movie Relationships",
-        "9 – Natural-Language Film Q&A Assistant",
-        "10 – Predict My Ratings (ML)", 
+    ],
+    "🤖 ML & Predictions": [
+        "10 – Predict My Ratings (ML)",
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
         "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
+    ],
+    "🕸️ Media & Relationships": [
+        "7 – Poster Image Analysis (OMDb API)",
+        "8 – Graph Based Movie Relationships",
+    ],
+    "⚙️ Live Monitoring": [
         "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
-                
-                
-    ]
+    ],
+}
+
+st.sidebar.markdown('<div class="nav-title">🎟️ Browse the Playground</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="nav-caption">Pick a category, then a feature.</div>', unsafe_allow_html=True)
+
+category = st.sidebar.radio(
+    "Category",
+    list(SCENARIO_CATEGORIES.keys()),
+    label_visibility="collapsed",
 )
 
+st.sidebar.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
 
+scenario = st.sidebar.radio(
+    "Feature",
+    SCENARIO_CATEGORIES[category],
+    label_visibility="collapsed",
+)
 
 
 # --- Scenario 1: SQL Playground ---
@@ -347,8 +510,6 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 
         except Exception as e:
             st.error(f"Error running Statistical Analysis code: {e}")
-
-
 
 
 
@@ -921,6 +1082,7 @@ if scenario == "12 – Feature Hypothesis Testing":
         - RMSE increase + p-value < 0.05 → features worsen predictions.
         - p-value ≥ 0.05 → no significant change.
         """)
+
 
 
 
@@ -1513,4 +1675,3 @@ This scenario allows you to ask **natural-language questions** about my personal
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director surname or genre keyword.")
-
