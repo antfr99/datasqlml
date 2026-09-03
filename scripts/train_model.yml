@@ -1,0 +1,41 @@
+name: Train Ratings Model
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"   # weekly, Monday 05:00 UTC
+  workflow_dispatch: {}    # lets you trigger it manually from the Actions tab
+  push:
+    branches: [main]
+    paths:
+      - "myratings.xlsx"   # auto-retrain whenever your ratings data changes
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    # For the workflow_run trigger specifically, only proceed if CI actually
+    # passed - this is the CI -> training handoff: untested code on main
+    # never gets a chance to train or promote a model. Other triggers
+    # (schedule/manual/data-change) aren't gated on this since they don't
+    # come from a workflow_run event at all.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pandas scikit-learn joblib supabase openpyxl
+
+      - name: Train and (maybe) promote model
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/train_model.py
