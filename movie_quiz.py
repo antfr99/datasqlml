@@ -1550,7 +1550,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
     check_limit = st.slider("How many titles to check", 25, 250, 100, step=25)
     only_show_changed = st.checkbox(
-        "Only show titles with a rating change in the results below", value=False
+        "Only show titles with a rating change in the results below", value=True
     )
     st.caption("Note: everything checked is still logged to Supabase either way — this only affects the table below, so trend history stays complete.")
 
@@ -1747,10 +1747,12 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left') if not new_df.empty else df_ml.assign(**{'Rating Difference': np.nan})
 
-        # Only predict for unseen movies from the current top-250 subset with rating changes
+        # Only predict for unseen movies from the current top-250 subset that
+        # actually had a live rating change (not just any successfully-checked
+        # title - notna() alone let zero-diff rows through here).
         predict_df = df_ml[
             (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
-            (df_ml['Rating Difference'].notna()) &
+            (df_ml['Rating Difference'].fillna(0) != 0) &
             (df_ml['Your Rating'].isna())
         ].copy()
         train_df = df_ml[df_ml['Your Rating'].notna()]
