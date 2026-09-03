@@ -1522,7 +1522,7 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         results = []
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
-        with st.spinner(f"Checking {len(top250_films)} horror titles against OMDb..."):
+        with st.spinner(f"Checking {len(top250_films)} titles against OMDb..."):
             for _, row in top250_films.iterrows():
                 movie_id = row["Movie ID"]
                 static_rating = row["IMDb Rating"]
@@ -1563,11 +1563,18 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         new_df = pd.DataFrame(results)
 
-        # Only keep rows with non-zero rating differences if the column exists
-        if not new_df.empty and "Rating Difference" in new_df.columns:
-            new_df = new_df[new_df["Rating Difference"] != 0]
+        # Keep every title that was successfully checked - including ones with
+        # zero rating change. High-vote/popular films rarely move day-to-day
+        # (a handful of new votes barely shifts a rounded average built on
+        # hundreds of thousands of ratings), so dropping every zero-diff row
+        # was silently hiding those films completely, and on runs where
+        # *nothing* changed it left an empty table with nothing to log to
+        # Supabase at all. We only drop titles OMDb couldn't be matched to a
+        # live rating for.
+        if not new_df.empty and "IMDb Rating (Live)" in new_df.columns:
+            new_df = new_df[new_df["IMDb Rating (Live)"].notna()]
         else:
-            new_df = pd.DataFrame()  # Ensure it's still a DataFrame even if empty
+            new_df = pd.DataFrame()
 
         st.success("Live ratings check complete ✅")
 
@@ -1604,15 +1611,24 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
                 combined.to_csv(history_file, index=False)
                 st.caption("💾 Logged to a local CSV for this session (won't survive a redeploy — connect Supabase to persist).")
 
-        # --- Show sorted results by Rating Difference ---
+        # --- Show results, biggest changes first (nothing hidden) ---
         if not new_df.empty:
             st.subheader("📊 Current Run - Live Ratings Comparison")
+            display_df = new_df.copy()
+            display_df['Abs Change'] = display_df['Rating Difference'].abs()
             st.dataframe(
-                new_df.sort_values(by="Rating Difference", ascending=False).reset_index(drop=True),
+                display_df.sort_values(by='Abs Change', ascending=False)
+                .drop(columns=['Abs Change']).reset_index(drop=True),
                 use_container_width=True
             )
+            changed = int((display_df['Rating Difference'] != 0).sum())
+            st.caption(
+                f"{changed} of {len(display_df)} checked titles show a different live rating today than the "
+                f"stored snapshot — the rest are shown too, just unchanged (this is expected for high-vote "
+                f"films, whose rounded average barely moves day-to-day)."
+            )
         else:
-            st.warning("No English-language films with rating changes found in this run.")
+            st.warning("No English-language films could be matched to a live rating this run — try again in a moment.")
 
         # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
