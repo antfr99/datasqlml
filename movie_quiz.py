@@ -39,10 +39,21 @@ st.markdown("""
     --brick: #C1524B;
 }
 
-html, body, [data-testid="stAppViewContainer"], .main, [data-testid="stHeader"] {
-    background-color: var(--bg);
-    color: var(--text);
+html, body, [data-testid="stAppViewContainer"], .main, [data-testid="stHeader"], [data-testid="stBottomBlockContainer"] {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
     font-family: 'Inter', sans-serif;
+}
+
+/* Dataframe / table grids intentionally stay on Streamlit's light theme colors
+   (set in .streamlit/config.toml) for readability - just give them a card frame
+   so they don't look like they're floating loose on the dark background. */
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    padding: 2px;
+    background-color: #D6D9DE;
 }
 
 h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
@@ -133,7 +144,6 @@ p, span, label, li { color: var(--text); }
 }
 
 /* Dataframes & expanders */
-[data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 [data-testid="stExpander"] { background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
 
 hr { border-color: var(--border); }
@@ -218,22 +228,50 @@ st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
 # NOTE: the underlying option strings are left exactly as before so every
 # `if scenario == "..."` check further down the file keeps working unchanged.
 SCENARIO_CATEGORIES = {
+    "🔢 All Scenarios (1–20)": [
+        "1 – Highlight Disagreements",
+        "2 – Hybrid Recommendations",
+        "3 – Top Unseen Films by Decade",
+        "4 – Statistical Insights by Genre (Agreement)",
+        "5 – Statistical Insights by Director (t-test)",
+        "6 – Review Analysis (Sentiment, Subjectivity)",
+        "7 – Poster Image Analysis (OMDb API)",
+        "8 – Graph Based Movie Relationships",
+        "9 – Natural-Language Film Q&A Assistant",
+        "10 – Predict My Ratings (ML)",
+        "11 – Model Evaluation (Feature Importance)",
+        "12 – Feature Hypothesis Testing",
+        "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
+        "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
+        "15 – Personalized Watchlist Ranker",
+        "16 – Similar Films Finder",
+        "17 – Taste Profile Radar",
+        "18 – Prediction Outlier Detector",
+        "19 – Tonight's Pick Roulette",
+        "20 – Ratings Timeline by Release Decade",
+    ],
     "🔍 Discover & Browse": [
         "1 – Highlight Disagreements",
         "2 – Hybrid Recommendations",
         "3 – Top Unseen Films by Decade",
         "9 – Natural-Language Film Q&A Assistant",
+        "15 – Personalized Watchlist Ranker",
+        "16 – Similar Films Finder",
+        "19 – Tonight's Pick Roulette",
     ],
     "📊 Stats & Insights": [
         "4 – Statistical Insights by Genre (Agreement)",
         "5 – Statistical Insights by Director (t-test)",
         "6 – Review Analysis (Sentiment, Subjectivity)",
+        "17 – Taste Profile Radar",
+        "20 – Ratings Timeline by Release Decade",
     ],
     "🤖 ML & Predictions": [
         "10 – Predict My Ratings (ML)",
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
         "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
+        "18 – Prediction Outlier Detector",
     ],
     "🕸️ Media & Relationships": [
         "7 – Poster Image Analysis (OMDb API)",
@@ -787,43 +825,47 @@ if scenario == "11 – Model Evaluation (Feature Importance)":
     - Higher score → stronger influence on predictions.  
     - Lower score → weaker influence.  
 
-    *(Requires a trained model from Scenario 9.)*
+    *(Trains its own Random Forest model below — no need to visit another scenario first.)*
     """)
 
-    # --- Retrain model if not in session ---
+    # --- Train / retrain model (always available, not just first run) ---
+    retrain_clicked = st.button(
+        "🔄 Retrain model now" if 'model' in st.session_state else "▶️ Train model now"
+    )
     if 'model' not in st.session_state:
-        st.warning("Model not found. Retrain here.")
-        if st.button("Run Scenario 9 ( Predit My Ratings ) Training Now"):
-            from sklearn.preprocessing import OneHotEncoder
-            from sklearn.ensemble import RandomForestRegressor
-            from sklearn.compose import ColumnTransformer
-            from sklearn.pipeline import Pipeline
+        st.info("No model trained yet for this session — click the button above to train one on your ratings.")
 
-            df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-            train_df = df_ml[df_ml['Your Rating'].notna()]
+    if retrain_clicked:
+        from sklearn.preprocessing import OneHotEncoder
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.compose import ColumnTransformer
+        from sklearn.pipeline import Pipeline
 
-            # Treat Year as categorical
-            categorical_features = ['Genre', 'Director', 'Year']
-            numerical_features = ['IMDb Rating', 'Num Votes']
+        df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
+        train_df = df_ml[df_ml['Your Rating'].notna()]
 
-            preprocessor = ColumnTransformer(
-                transformers=[
-                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-                    ('num', 'passthrough', numerical_features)
-                ]
-            )
+        # Treat Year as categorical
+        categorical_features = ['Genre', 'Director', 'Year']
+        numerical_features = ['IMDb Rating', 'Num Votes']
 
-            model = Pipeline([
-                ('prep', preprocessor),
-                ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-            ])
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                ('num', 'passthrough', numerical_features)
+            ]
+        )
 
-            X_train = train_df[categorical_features + numerical_features]
-            y_train = train_df['Your Rating']
-            model.fit(X_train, y_train)
+        model = Pipeline([
+            ('prep', preprocessor),
+            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+        ])
 
-            st.session_state['model'] = model
-            st.success("Model trained successfully! You can now view feature importance.")
+        X_train = train_df[categorical_features + numerical_features]
+        y_train = train_df['Your Rating']
+        model.fit(X_train, y_train)
+
+        st.session_state['model'] = model
+        st.success("Model trained successfully! Feature importance is shown below.")
 
     # --- Show feature importance if model exists ---
     if 'model' in st.session_state:
@@ -1405,30 +1447,53 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
     st.markdown("""
-**MLOps + CI/CD + Monitoring (Brief)**  
+**MLOps + CI/CD + Monitoring (Brief)**
 
-- **MLOps:** Automates data collection (live IMDb ratings), logs historical differences, and retrains ML models to predict future rating changes.  
-- **CI/CD:** Modular code can be version-controlled; in a full setup, changes would trigger automated testing and deployment.  
-- **Monitoring:** Tracks rating differences over time with timestamps, enabling detection of trends, anomalies, or shifts in popularity.
+- **MLOps:** Automates data collection (live IMDb ratings), logs historical differences to Supabase, and retrains ML models to predict future rating changes.
+- **CI/CD:** A standalone script (`scripts/refresh_live_ratings.py`) runs this same check on a schedule via GitHub Actions, independent of this Streamlit app — so history keeps building even when nobody has the app open. See the setup notes at the bottom of this page.
+- **Monitoring:** Every run's rating differences are logged to Supabase with a timestamp, so trends and drift are visible over time, not just for a single session.
 
-**Supervised Machine Learning:**  
-The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.  
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films - Horror Films only.  
+**Supervised Machine Learning:**
+The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.
+Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films - Horror Films only.
 """)
 
     # --- OMDb API key ---
     OMDB_API_KEY = "e9476c0a"
 
+    # --- Supabase client (reads secrets; degrades gracefully if not configured) ---
+    @st.cache_resource
+    def get_supabase_client():
+        try:
+            from supabase import create_client
+        except ImportError:
+            return None
+        url = st.secrets.get("SUPABASE_URL") if hasattr(st, "secrets") else None
+        key = st.secrets.get("SUPABASE_KEY") if hasattr(st, "secrets") else None
+        if not url or not key:
+            return None
+        return create_client(url, key)
+
+    supabase = get_supabase_client()
+
+    if supabase is None:
+        st.info(
+            "📡 Supabase isn't connected yet, so results below will only live for this session. "
+            "Add `SUPABASE_URL` and `SUPABASE_KEY` to your app's Secrets (and make sure `supabase` "
+            "is in requirements.txt) to persist history and unlock the trend chart below."
+        )
+    else:
+        st.caption("📡 Connected to Supabase — results from this run will be logged to the `films` table.")
+
     # --- Select top 250 films ---
     top250_films = IMDB_Ratings[
-    IMDB_Ratings['Genre'].str.contains("Horror", case=False, na=False)
+        IMDB_Ratings['Genre'].str.contains("Horror", case=False, na=False)
     ].sort_values(by="IMDb Rating", ascending=False).head(250)
-
 
     # --- Run Button ---
     if st.button("Run Live Ratings Check"):
         import requests
-        from datetime import datetime
+        from datetime import datetime, timezone
         import os
         import pandas as pd
         import numpy as np
@@ -1438,55 +1503,49 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         from sklearn.pipeline import Pipeline
 
         history_file = "live_ratings_history.csv"
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Load previous history
-        if os.path.exists(history_file):
-            history_df = pd.read_csv(history_file)
-        else:
-            history_df = pd.DataFrame()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         results = []
 
         # --- Fetch live ratings from OMDb using Movie ID (IMDb ID) ---
-        for _, row in top250_films.iterrows():
-            movie_id = row["Movie ID"]
-            static_rating = row["IMDb Rating"]
+        with st.spinner(f"Checking {len(top250_films)} horror titles against OMDb..."):
+            for _, row in top250_films.iterrows():
+                movie_id = row["Movie ID"]
+                static_rating = row["IMDb Rating"]
 
-            try:
-                url = f"http://www.omdbapi.com/?i={movie_id}&apikey={OMDB_API_KEY}"
-                resp = requests.get(url).json()
+                try:
+                    url = f"http://www.omdbapi.com/?i={movie_id}&apikey={OMDB_API_KEY}"
+                    resp = requests.get(url, timeout=10).json()
 
-                if resp.get("Response") == "True":
-                    # Normalize languages: split, strip, lowercase
-                    languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
-                    live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
+                    if resp.get("Response") == "True":
+                        # Normalize languages: split, strip, lowercase
+                        languages = [lang.strip().lower() for lang in resp.get("Language", "").split(",")]
+                        live_rating = float(resp.get("imdbRating", 0)) if resp.get("imdbRating") else None
 
-                   
-                    if "english" not in languages:
-                        continue
-                else:
+                        if "english" not in languages:
+                            continue
+                    else:
+                        live_rating = None
+                        languages = []
+                except Exception:
                     live_rating = None
                     languages = []
-            except Exception:
-                live_rating = None
-                languages = []
 
-            rating_diff = live_rating - static_rating if live_rating is not None else None
+                rating_diff = live_rating - static_rating if live_rating is not None else None
 
-            results.append({
-                "Title": row["Title"],
-                "IMDb Rating (Static)": static_rating,
-                "IMDb Rating (Live)": live_rating,
-                "Rating Difference": rating_diff,
-                "CheckedAt": timestamp,
-                "Movie ID": movie_id,
-                "Genre": row.get("Genre"),
-                "Director": row.get("Director"),
-                "Year": row.get("Year"),
-                "Num Votes": row.get("Num Votes"),
-                "Language": ", ".join([lang.capitalize() for lang in languages])
-            })
+                results.append({
+                    "Title": row["Title"],
+                    "IMDb Rating (Static)": static_rating,
+                    "IMDb Rating (Live)": live_rating,
+                    "Rating Difference": rating_diff,
+                    "CheckedAt": timestamp,
+                    "Movie ID": movie_id,
+                    "Genre": row.get("Genre"),
+                    "Director": row.get("Director"),
+                    "Year": row.get("Year"),
+                    "Num Votes": row.get("Num Votes"),
+                    "Language": ", ".join([lang.capitalize() for lang in languages])
+                })
 
         new_df = pd.DataFrame(results)
 
@@ -1494,9 +1553,42 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         if not new_df.empty and "Rating Difference" in new_df.columns:
             new_df = new_df[new_df["Rating Difference"] != 0]
         else:
-            new_df = pd.DataFrame()  # Ensure it’s still a DataFrame even if empty
+            new_df = pd.DataFrame()  # Ensure it's still a DataFrame even if empty
 
         st.success("Live ratings check complete ✅")
+
+        # --- Persist this run: Supabase if connected, otherwise a local CSV fallback ---
+        if not new_df.empty:
+            if supabase is not None:
+                records = [
+                    {
+                        "movie_id": r["Movie ID"],
+                        "title": r["Title"],
+                        "imdb_rating_static": r["IMDb Rating (Static)"],
+                        "imdb_rating_live": r["IMDb Rating (Live)"],
+                        "rating_diff": r["Rating Difference"],
+                        "genre": r["Genre"],
+                        "director": r["Director"],
+                        "year": int(r["Year"]) if pd.notna(r["Year"]) else None,
+                        "num_votes": r["Num Votes"],
+                        "language": r["Language"],
+                        "checked_at": r["CheckedAt"],
+                    }
+                    for r in new_df.to_dict(orient="records")
+                ]
+                try:
+                    supabase.table("films").insert(records).execute()
+                    st.caption(f"💾 Logged {len(records)} row(s) to Supabase (`films` table).")
+                except Exception as e:
+                    st.warning(f"Couldn't write to Supabase (`films` table): {e}")
+            else:
+                if os.path.exists(history_file):
+                    history_df = pd.read_csv(history_file)
+                    combined = pd.concat([history_df, new_df], ignore_index=True)
+                else:
+                    combined = new_df
+                combined.to_csv(history_file, index=False)
+                st.caption("💾 Logged to a local CSV for this session (won't survive a redeploy — connect Supabase to persist).")
 
         # --- Show sorted results by Rating Difference ---
         if not new_df.empty:
@@ -1510,13 +1602,13 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
 
         # --- Supervised ML: Predict My Ratings for Movies with Changed Live Ratings ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
-        df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left')
+        df_ml = df_ml.merge(new_df[['Movie ID','Rating Difference']], on='Movie ID', how='left') if not new_df.empty else df_ml.assign(**{'Rating Difference': np.nan})
 
         # Only predict for unseen movies from the current Horror subset with rating changes
         predict_df = df_ml[
-        (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
-        (df_ml['Rating Difference'].notna()) &
-        (df_ml['Your Rating'].isna())
+            (df_ml['Movie ID'].isin(top250_films['Movie ID'])) &
+            (df_ml['Rating Difference'].notna()) &
+            (df_ml['Your Rating'].isna())
         ].copy()
         train_df = df_ml[df_ml['Your Rating'].notna()]
 
@@ -1539,10 +1631,10 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         y_train = train_df['Your Rating']
         model.fit(X_train, y_train)
 
-        X_pred = predict_df[categorical_features + numerical_features]
-        predict_df['Predicted Rating'] = model.predict(X_pred)
-
         if not predict_df.empty:
+            X_pred = predict_df[categorical_features + numerical_features]
+            predict_df['Predicted Rating'] = model.predict(X_pred)
+
             st.subheader("🤖 Predicted Ratings for Unseen Movies with Changed Ratings")
             st.dataframe(
                 predict_df[['Title','IMDb Rating','Genre','Director','Rating Difference','Predicted Rating']]
@@ -1553,35 +1645,87 @@ Given movie features (IMDb rating, genre, director, year, votes), the model pred
         else:
             st.info("No new movies available for prediction this run.")
 
-        # --- Explain how Python and packages make predictions ---
-        st.markdown("""
-**How the Predictions Work (Technical Explanation):**  
+    # --- Historical trend from Supabase (persists across runs and sessions) ---
+    st.markdown("---")
+    st.subheader("📈 Historical Trend")
+    if supabase is None:
+        st.caption("Connect Supabase (see notice above) to see rating drift trends across every past run here.")
+    else:
+        try:
+            hist = supabase.table("films").select("*").order("checked_at", desc=True).limit(2000).execute()
+            hist_df = pd.DataFrame(hist.data)
+            if not hist_df.empty:
+                st.dataframe(hist_df, use_container_width=True, height=300)
+                trend = hist_df.groupby("checked_at")["rating_diff"].mean().reset_index().sort_values("checked_at")
+                st.line_chart(trend.set_index("checked_at"))
+                st.caption("Average live-vs-static rating difference per logged run, oldest to newest.")
+            else:
+                st.info("No rows logged yet — click **Run Live Ratings Check** above to start building history.")
+        except Exception as e:
+            st.warning(f"Couldn't read from Supabase (`films` table): {e}")
 
-1. **Data Preparation**  
-   - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).  
+    # --- Explain how Python and packages make predictions ---
+    st.markdown("""
+**How the Predictions Work (Technical Explanation):**
+
+1. **Data Preparation**
+   - Features used: `Genre`, `Director` (categorical), `IMDb Rating`, `Num Votes`, `Year` (numerical).
    - `My Rating` is the target variable for supervised learning.
 
-2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**  
-   - Categorical features are converted to **one-hot encoded vectors**.  
-   - Numerical features are passed through unchanged.  
+2. **Feature Encoding with `ColumnTransformer` and `OneHotEncoder`**
+   - Categorical features are converted to **one-hot encoded vectors**.
+   - Numerical features are passed through unchanged.
 
-3. **Pipeline with `RandomForestRegressor`**  
-   - Combines preprocessing and model training.  
-   - Random forest is an **ensemble of decision trees**:  
-     - Each tree predicts independently.  
-     - The final prediction is the average across all trees.  
+3. **Pipeline with `RandomForestRegressor`**
+   - Combines preprocessing and model training.
+   - Random forest is an **ensemble of decision trees**:
+     - Each tree predicts independently.
+     - The final prediction is the average across all trees.
      - This reduces overfitting and improves accuracy.
 
-4. **Training**  
-   - Model learns patterns from movies I have rated (`Your Rating`).  
+4. **Training**
+   - Model learns patterns from movies I have rated (`Your Rating`).
 
-5. **Prediction**  
-   - Model predicts ratings for movies I haven’t rated based on learned patterns.  
+5. **Prediction**
+   - Model predicts ratings for movies I haven't rated based on learned patterns.
 
-6. **Why this works**  
-   - Handles non-linear relationships and feature interactions naturally.  
-   - One-hot encoding allows categorical variables like directors and genres to be used.  
+6. **Why this works**
+   - Handles non-linear relationships and feature interactions naturally.
+   - One-hot encoding allows categorical variables like directors and genres to be used.
    - Random forests are robust to overfitting and can generalize well to unseen movies.
+""")
+
+    with st.expander("⚙️ CI/CD setup notes (Supabase + GitHub Actions)"):
+        st.markdown("""
+This scenario is designed to log to a Supabase table named **`films`**. Suggested schema
+(adjust names below to match the table you already created):
+
+```sql
+create table if not exists films (
+    id bigint generated always as identity primary key,
+    movie_id text not null,
+    title text,
+    imdb_rating_static numeric,
+    imdb_rating_live numeric,
+    rating_diff numeric,
+    genre text,
+    director text,
+    year int,
+    num_votes bigint,
+    language text,
+    checked_at timestamptz not null default now()
+);
+```
+
+**To connect this app:** add `SUPABASE_URL` and `SUPABASE_KEY` under your app's *Settings → Secrets*
+on Streamlit Cloud, and add `supabase` to `requirements.txt`.
+
+**To make it CI/CD-scheduled (not just click-to-run):** this repo also ships a standalone
+`scripts/refresh_live_ratings.py` and `.github/workflows/refresh_live_ratings.yml`. The workflow
+runs the same OMDb check on a daily cron schedule via GitHub Actions and writes straight to
+Supabase — so the `films` table keeps growing even if nobody opens this app. Add
+`SUPABASE_URL`, `SUPABASE_KEY`, and `OMDB_API_KEY` as **GitHub Actions secrets** (repo →
+*Settings → Secrets and variables → Actions*) for the workflow to run.
 """)
 
 
@@ -1685,3 +1829,265 @@ This scenario allows you to ask **natural-language questions** about my personal
             st.dataframe(filtered_sorted)
         else:
             st.info("No matching films found. Try a different director surname or genre keyword.")
+
+
+# --- Scenario 15: Personalized Watchlist Ranker ---
+if scenario == "15 – Personalized Watchlist Ranker":
+    st.header("15 – Personalized Watchlist Ranker")
+    st.write("""
+    Rank unseen films with your own weighting — drag the sliders and the watchlist reorders live.
+    Builds on the same idea as the Hybrid Recommendations scenario, but interactive instead of a fixed formula.
+    """)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        w_director = st.slider("Weight: liked directors", 0.0, 3.0, 1.0, 0.1)
+    with col2:
+        w_genre = st.slider("Weight: favorite genres", 0.0, 3.0, 1.0, 0.1)
+    with col3:
+        w_popularity = st.slider("Weight: popularity (votes)", 0.0, 3.0, 0.5, 0.1)
+
+    min_votes = st.slider("Minimum IMDb votes", 0, 200000, 40000, step=5000)
+    top_n = st.slider("How many to show", 5, 50, 15, step=5)
+
+    if IMDB_Ratings.empty or My_Ratings.empty:
+        st.warning("Need both tables loaded to build a watchlist.")
+    else:
+        liked_directors = set(My_Ratings.loc[My_Ratings['Your Rating'] >= 7, 'Director'].dropna())
+
+        rated_with_genre = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='inner')
+        favorite_genres = (
+            rated_with_genre.loc[rated_with_genre['Your Rating'] >= 7, 'Genre']
+            .dropna().str.split(',').explode().str.strip()
+            .value_counts().head(5).index.tolist()
+        )
+
+        unseen = IMDB_Ratings.merge(My_Ratings[['Movie ID']], on='Movie ID', how='left', indicator=True)
+        unseen = unseen[unseen['_merge'] == 'left_only'].drop(columns=['_merge'])
+        unseen = unseen[unseen['Num Votes'] >= min_votes].copy()
+
+        def score_row(row):
+            director_bonus = w_director if row['Director'] in liked_directors else 0
+            genres = [g.strip() for g in str(row['Genre']).split(',')]
+            genre_bonus = w_genre * sum(1 for g in genres if g in favorite_genres) / max(len(genres), 1)
+            popularity_bonus = w_popularity * min(row['Num Votes'] / 200000, 1)
+            return row['IMDb Rating'] + director_bonus + genre_bonus + popularity_bonus
+
+        unseen['Watchlist Score'] = unseen.apply(score_row, axis=1)
+        ranked = unseen.sort_values(by='Watchlist Score', ascending=False).head(top_n)
+
+        st.dataframe(
+            ranked[['Title', 'IMDb Rating', 'Genre', 'Director', 'Year', 'Num Votes', 'Watchlist Score']]
+            .round(2).reset_index(drop=True),
+            use_container_width=True
+        )
+        st.caption(
+            f"Boosting directors you've rated 7+: {', '.join(sorted(liked_directors)) if liked_directors else 'none yet'} "
+            f"· Favorite genres: {', '.join(favorite_genres) if favorite_genres else 'none yet'}"
+        )
+
+
+# --- Scenario 16: Similar Films Finder ---
+if scenario == "16 – Similar Films Finder":
+    st.header("16 – Similar Films Finder")
+    st.write("""
+    Pick a film and find unseen titles with the closest content profile — genre, director,
+    era, and popularity — using nearest-neighbor search.
+    """)
+
+    if IMDB_Ratings.empty:
+        st.warning("IMDb Ratings table is empty.")
+    else:
+        feature_df = IMDB_Ratings.dropna(
+            subset=['Genre', 'Director', 'Year', 'IMDb Rating', 'Num Votes', 'Title']
+        ).drop_duplicates(subset=['Title']).reset_index(drop=True)
+
+        seed_title = st.selectbox("Find films similar to:", sorted(feature_df['Title'].unique().tolist()))
+        k = st.slider("How many matches", 3, 20, 8)
+
+        if st.button("🔎 Find similar films"):
+            from scipy.sparse import hstack, csr_matrix
+
+            encoder = OneHotEncoder(handle_unknown='ignore')
+            cat_encoded = encoder.fit_transform(feature_df[['Genre', 'Director']])
+
+            num_features = feature_df[['Year', 'IMDb Rating', 'Num Votes']].copy()
+            num_features = (num_features - num_features.mean()) / num_features.std().replace(0, 1)
+
+            X = hstack([cat_encoded, csr_matrix(num_features.values)]).tocsr()
+
+            nn = NearestNeighbors(n_neighbors=min(k + 1, len(feature_df)), metric='cosine')
+            nn.fit(X)
+
+            seed_idx = feature_df.index[feature_df['Title'] == seed_title][0]
+            distances, indices = nn.kneighbors(X[seed_idx])
+
+            matches = feature_df.iloc[indices[0][1:]].copy()
+            matches['Similarity'] = (1 - distances[0][1:]).round(3)
+
+            seen_ids = set(My_Ratings['Movie ID']) if not My_Ratings.empty else set()
+            matches['Already Seen'] = matches['Movie ID'].isin(seen_ids)
+
+            st.dataframe(
+                matches[['Title', 'Genre', 'Director', 'Year', 'IMDb Rating', 'Similarity', 'Already Seen']]
+                .sort_values(by='Similarity', ascending=False)
+                .reset_index(drop=True),
+                use_container_width=True
+            )
+
+
+# --- Scenario 17: Taste Profile Radar ---
+if scenario == "17 – Taste Profile Radar":
+    st.header("17 – Taste Profile Radar")
+    st.write("A snapshot of which genres you rate highest and watch the most.")
+
+    if My_Ratings.empty:
+        st.warning("My Ratings table is empty.")
+    else:
+        genre_df = My_Ratings.assign(Genre=My_Ratings['Genre'].str.split(',')).explode('Genre')
+        genre_df['Genre'] = genre_df['Genre'].str.strip()
+        genre_stats = genre_df.groupby('Genre').agg(
+            Avg_Rating=('Your Rating', 'mean'),
+            Films_Watched=('Movie ID', 'count')
+        ).reset_index()
+
+        min_films = st.slider("Minimum films watched in genre", 1, 20, 3)
+        genre_stats = genre_stats[genre_stats['Films_Watched'] >= min_films].sort_values('Avg_Rating', ascending=False)
+
+        if genre_stats.empty:
+            st.warning("Not enough data at this threshold — lower the minimum.")
+        else:
+            import matplotlib.pyplot as plt
+            import numpy as np
+
+            categories = genre_stats['Genre'].tolist()
+            values = genre_stats['Avg_Rating'].tolist()
+            values += values[:1]
+            angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
+            angles += angles[:1]
+
+            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+            ax.plot(angles, values, color='#E3A857', linewidth=2)
+            ax.fill(angles, values, color='#E3A857', alpha=0.25)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(categories, fontsize=8)
+            ax.set_ylim(0, 10)
+            st.pyplot(fig)
+
+            st.dataframe(genre_stats.round(2).reset_index(drop=True), use_container_width=True)
+
+
+# --- Scenario 18: Prediction Outlier Detector ---
+if scenario == "18 – Prediction Outlier Detector":
+    st.header("18 – Prediction Outlier Detector")
+    st.write("""
+    Uses out-of-fold predictions to find films where your actual rating surprised the model most —
+    the ones that broke your usual genre/director patterns.
+    """)
+
+    from sklearn.model_selection import KFold, cross_val_predict
+
+    df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='inner')
+    df_ml = df_ml.dropna(subset=['Genre', 'Director', 'Year', 'IMDb Rating', 'Num Votes', 'Your Rating'])
+
+    if len(df_ml) < 10:
+        st.warning("Need at least 10 rated films with complete data to run this.")
+    else:
+        categorical_features = ['Genre', 'Director']
+        numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
+
+        preprocessor = ColumnTransformer(transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+            ('num', 'passthrough', numerical_features)
+        ])
+        model = Pipeline([
+            ('prep', preprocessor),
+            ('reg', RandomForestRegressor(n_estimators=200, random_state=42))
+        ])
+
+        X = df_ml[categorical_features + numerical_features]
+        y = df_ml['Your Rating']
+        cv = KFold(n_splits=min(5, len(df_ml)), shuffle=True, random_state=42)
+        oof_preds = cross_val_predict(model, X, y, cv=cv)
+
+        df_ml = df_ml.copy()
+        df_ml['Predicted (out-of-fold)'] = oof_preds.round(2)
+        df_ml['Surprise'] = (df_ml['Your Rating'] - df_ml['Predicted (out-of-fold)']).round(2)
+        df_ml['Abs Surprise'] = df_ml['Surprise'].abs()
+
+        top_n = st.slider("How many outliers to show", 5, 30, 10)
+        outliers = df_ml.sort_values('Abs Surprise', ascending=False).head(top_n)
+
+        st.dataframe(
+            outliers[['Title', 'Genre', 'Director', 'Your Rating', 'Predicted (out-of-fold)', 'Surprise']]
+            .reset_index(drop=True),
+            use_container_width=True
+        )
+        st.caption("Positive Surprise = you liked it more than your usual pattern predicts. Negative = you liked it less.")
+
+
+# --- Scenario 19: Tonight's Pick Roulette ---
+if scenario == "19 – Tonight's Pick Roulette":
+    st.header("19 – Tonight's Pick Roulette 🎰")
+    st.write("Can't decide what to watch? Filter by mood, then spin.")
+
+    if IMDB_Ratings.empty:
+        st.warning("IMDb Ratings table is empty.")
+    else:
+        genres_available = sorted({
+            g.strip() for sublist in IMDB_Ratings['Genre'].dropna().str.split(',') for g in sublist
+        })
+        mood_genre = st.multiselect("Mood / genre (optional)", genres_available)
+        min_rating = st.slider("Minimum IMDb rating", 0.0, 9.5, 7.0, 0.1)
+        unseen_only = st.checkbox("Only films I haven't rated yet", value=True)
+
+        pool = IMDB_Ratings[IMDB_Ratings['IMDb Rating'] >= min_rating].copy()
+        if mood_genre:
+            pattern = '|'.join(mood_genre)
+            pool = pool[pool['Genre'].str.contains(pattern, case=False, na=False)]
+        if unseen_only and not My_Ratings.empty:
+            pool = pool[~pool['Movie ID'].isin(My_Ratings['Movie ID'])]
+
+        st.write(f"🎬 {len(pool)} films match your mood.")
+
+        if st.button("🎲 Spin for a pick"):
+            if pool.empty:
+                st.warning("No films match — loosen a filter and try again.")
+            else:
+                weights = pool['IMDb Rating'] ** 2  # bias toward higher-rated picks
+                pick = pool.sample(n=1, weights=weights).iloc[0]
+                st.success(f"Tonight's pick: **{pick['Title']}** ({int(pick['Year']) if pd.notna(pick['Year']) else '—'})")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("IMDb Rating", f"{pick['IMDb Rating']}")
+                c2.metric("Director", pick['Director'] if pd.notna(pick['Director']) else "—")
+                c3.metric("Genre", pick['Genre'] if pd.notna(pick['Genre']) else "—")
+
+
+# --- Scenario 20: Ratings Timeline by Release Decade ---
+if scenario == "20 – Ratings Timeline by Release Decade":
+    st.header("20 – Ratings Timeline by Release Decade")
+    st.write("How does your taste shift across different decades of film?")
+
+    if IMDB_Ratings.empty or My_Ratings.empty:
+        st.warning("Need both tables loaded for this.")
+    else:
+        compare = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='inner')
+        compare = compare.dropna(subset=['Year'])
+        compare['Decade'] = (compare['Year'].astype(int) // 10) * 10
+
+        decade_stats = compare.groupby('Decade').agg(
+            Films_Rated=('Movie ID', 'count'),
+            Avg_My_Rating=('Your Rating', 'mean'),
+            Avg_IMDb_Rating=('IMDb Rating', 'mean'),
+        ).reset_index().sort_values('Decade')
+
+        min_films = st.slider("Minimum films rated in decade", 1, 15, 2)
+        decade_stats = decade_stats[decade_stats['Films_Rated'] >= min_films]
+
+        if decade_stats.empty:
+            st.warning("Not enough data at this threshold — lower the minimum.")
+        else:
+            chart_df = decade_stats.set_index('Decade')[['Avg_My_Rating', 'Avg_IMDb_Rating']]
+            st.line_chart(chart_df)
+            st.dataframe(decade_stats.round(2).reset_index(drop=True), use_container_width=True)
+            st.caption("Where your line rises above IMDb's, you rate that decade more generously than the crowd — and vice versa.")
