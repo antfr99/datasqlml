@@ -283,7 +283,8 @@ WHERE ABS(CAST(pr.[Your Rating] AS FLOAT) - CAST(ir.[IMDb Rating] AS FLOAT)) > 2
 ORDER BY Rating_Diff DESC, ir.[Num Votes] DESC
 LIMIT 1000;"""
 
-    user_query = st.text_area("Enter SQL query:", default_query_1, height=500, key="sql1")
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_query = st.text_area("Enter SQL query:", default_query_1, height=500, key="sql1")
     if st.button("Run SQL Query – Find my disagreements", key="run_sql1"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -319,7 +320,8 @@ WHERE pr.[Your Rating] IS NULL
 ORDER BY Recommendation_Score DESC
 LIMIT 10000;"""
 
-    user_query = st.text_area("Enter SQL query:", default_query_2, height=500, key="sql2")
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_query = st.text_area("Enter SQL query:", default_query_2, height=500, key="sql2")
     if st.button("Run SQL Query – Recommend movies", key="run_sql2"):
         try:
             result = ps.sqldf(user_query, {"IMDB_Ratings": IMDB_Ratings, "My_Ratings": My_Ratings})
@@ -364,7 +366,8 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 """
 
     # Text area to allow user edits
-    user_query = st.text_area("Enter SQL query:", default_query_3, height=600, key="sql3")
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_query = st.text_area("Enter SQL query:", default_query_3, height=600, key="sql3")
 
     # Run button
     if st.button("Run SQL Query – Top unseen films", key="run_sql3"):
@@ -432,7 +435,8 @@ predict_df['Predicted Rating'] = model.predict(X_pred)
 predict_df
 '''
 
-    user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=1000)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_ml_code = st.text_area("Python ML Code (editable)", ml_code, height=1000)
 
     st.sidebar.header("ML Options")
     min_votes = st.sidebar.slider("Minimum IMDb Votes", 0, 500000, 50000, step=5000)
@@ -494,7 +498,8 @@ genre_agreement.sort_values(by='Agreement_%', ascending=False)
 '''
 
     # Editable code box
-    user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_stats_code = st.text_area("Python Statistical Code (editable)", stats_code, height=600)
 
     if st.button("Run Statistical Analysis", key="run_stats5"):
         try:
@@ -575,7 +580,8 @@ df_results = pd.DataFrame(results)
 df_results = df_results.sort_values(by="p_value")
 '''
 
-    user_ttest_code_director = st.text_area("Python t-test per Director Code (editable)", ttest_code_director, height=650)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_ttest_code_director = st.text_area("Python t-test per Director Code (editable)", ttest_code_director, height=650)
 
     if st.button("Run t-test Analysis", key="run_ttest_director6"):
         try:
@@ -703,11 +709,12 @@ df_reviews['ReviewID'] = df_reviews.index + 1
 '''
 
     # --- Editable code input (like Scenario 5) ---
-    user_review_code = st.text_area(
-        "Python Review Sentiment Code (editable)",
-        review_code,
-        height=700
-    )
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_review_code = st.text_area(
+            "Python Review Sentiment Code (editable)",
+            review_code,
+            height=700
+        )
 
     # --- Run button ---
     if st.button("Run Sentiment Analysis", key="run_sentiment6"):
@@ -1054,7 +1061,8 @@ if scenario == "12 – Feature Hypothesis Testing":
         plt.figure(figsize=(7,4))
         rmse_base_mean = np.mean(result['scores_base'])
         rmse_test_mean = np.mean(result['scores_test'])
-        plt.boxplot([result['scores_base'], result['scores_test']], labels=['Baseline', 'With Feature(s)'])
+        plt.boxplot([result['scores_base'], result['scores_test']])
+        plt.xticks([1, 2], ['Baseline', 'With Feature(s)'])
         plt.ylabel("RMSE")
         plt.title("Cross-Validated RMSE Comparison")
         plt.text(1, rmse_base_mean + 0.02, f"{rmse_base_mean:.2f}", ha='center', color='blue')
@@ -1168,7 +1176,8 @@ st.pyplot(fig)
 st.write(f"Graph built with **{len(G.nodes)} nodes** and **{len(G.edges)} edges**.")
 '''
 
-    user_graph_code = st.text_area("Python Graph Code (editable)", graph_code, height=600)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_graph_code = st.text_area("Python Graph Code (editable)", graph_code, height=600)
 
     if st.button("Run Graph Analysis", key="run_graph11"):
         try:
@@ -1278,7 +1287,8 @@ else:
 '''
 
     # --- Editable text area ---
-    user_poster_code = st.text_area("Python Poster Analysis Code (editable)", poster_code, height=650)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        user_poster_code = st.text_area("Python Poster Analysis Code (editable)", poster_code, height=650)
 
     # --- Hidden API key ---
     OMDB_API_KEY = "cbbdb8f8"  # Keep this hidden in production
@@ -1648,8 +1658,8 @@ This scenario allows you to ask **natural-language questions** about my personal
             ascending = False
     """)
 
-    st.markdown("#### 🔧 Filtering and Sorting Logic (editable)")
-    editable_code = st.text_area("Modify logic if needed:", logic_code, height=400)
+    with st.expander("🛠️ View / edit the underlying code", expanded=False):
+        editable_code = st.text_area("Modify logic if needed:", logic_code, height=400)
 
     user_question = st.text_input(
         "🎥 Ask a question:",
