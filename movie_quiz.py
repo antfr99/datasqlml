@@ -1467,15 +1467,22 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
     st.header("14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
 
     st.markdown("""
-**MLOps + CI/CD + Monitoring (Brief)**
+**What this scenario actually does**
 
-- **MLOps:** Automates data collection (live IMDb ratings), logs historical differences to Supabase, and retrains ML models to predict future rating changes.
-- **CI/CD:** A standalone script (`scripts/refresh_live_ratings.py`) runs this same check on a schedule via GitHub Actions, independent of this Streamlit app — so history keeps building even when nobody has the app open. See the setup notes at the bottom of this page.
-- **Monitoring:** Every run's rating differences are logged to Supabase with a timestamp, so trends and drift are visible over time, not just for a single session.
+- **Scheduled monitoring:** `scripts/refresh_live_ratings.py` runs daily via GitHub Actions,
+  independent of this app — it fetches live OMDb ratings, compares them to the stored snapshot,
+  and logs any changed titles to Supabase with a timestamp. History keeps building even when
+  nobody has this app open. See the setup notes at the bottom of this page.
+- **On-demand monitoring:** The button below runs the same check manually, with your own filters,
+  and writes to the same Supabase table.
+- **On-demand ML prediction:** The Random Forest model below is retrained fresh each time you
+  click the button, using `My_Ratings` as training data, to predict how I might rate unseen
+  films whose live rating just moved.
 
-**Supervised Machine Learning:**
-The model uses my existing ratings (`My_Ratings`) as training data to learn patterns in how I rate movies.
-Given movie features (IMDb rating, genre, director, year, votes), the model predicts my rating for unseen films.
+**Being precise about the terms:** this is a scheduled data pipeline with drift logging and an
+ad hoc prediction step — not full CI/CD or MLOps in the strict sense. There's no automated
+testing before deploy (CI), no automated app deployment through this workflow (CD), and no
+model versioning or automated retraining trigger (MLOps).
 """)
 
     # --- OMDb API key(s): manual override > comma-separated keys in secrets >
