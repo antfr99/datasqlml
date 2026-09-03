@@ -219,9 +219,9 @@ st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
 # `if scenario == "..."` check further down the file keeps working unchanged.
 SCENARIO_CATEGORIES = {
     "🔍 Discover & Browse": [
-        "1 – Highlight Disagreements (SQL)",
-        "2 – Hybrid Recommendations (SQL)",
-        "3 – Top Unseen Films by Decade (SQL)",
+        "1 – Highlight Disagreements",
+        "2 – Hybrid Recommendations",
+        "3 – Top Unseen Films by Decade",
         "9 – Natural-Language Film Q&A Assistant",
     ],
     "📊 Stats & Insights": [
@@ -263,8 +263,8 @@ scenario = st.sidebar.radio(
 
 
 # --- Scenario 1: SQL Playground ---
-if scenario == "1 – Highlight Disagreements (SQL)":
-    st.header("1 – Highlight Disagreements (SQL)")
+if scenario == "1 – Highlight Disagreements":
+    st.header("1 – Highlight Disagreements")
     st.write("Movies where my rating differs from IMDb by more than 2 points.")
 
     default_query_1 = """SELECT 
@@ -293,8 +293,8 @@ LIMIT 1000;"""
             st.error(f"Error in SQL query: {e}")
 
 # --- Scenario 2: SQL Playground ---
-if scenario == "2 – Hybrid Recommendations (SQL)":
-    st.header("2 – Hybrid Recommendations (SQL)")
+if scenario == "2 – Hybrid Recommendations":
+    st.header("2 – Hybrid Recommendations")
     st.write("""
     Recommend movies I haven't seen yet with a bonus point system:  
     - Director I liked before → +1 point  
@@ -332,8 +332,8 @@ LIMIT 10000;"""
 
 
 # --- Scenario 3: SQL Playground ---
-if scenario == "3 – Top Unseen Films by Decade (SQL)":
-    st.header("3 – Top Unseen Films by Decade (SQL)")
+if scenario == "3 – Top Unseen Films by Decade":
+    st.header("3 – Top Unseen Films by Decade")
     st.write("""
     Shows the highest-rated unseen films grouped by decade.  
     Uses Python deduplication and limits results to the top 20 per decade.
