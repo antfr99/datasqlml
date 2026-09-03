@@ -262,7 +262,7 @@ SCENARIO_CATEGORIES = {
         "11 – Model Evaluation (Feature Importance)",
         "12 – Feature Hypothesis Testing",
         "13 – Semantic Genre & Recommendations (Deep Learning / NLP)",
-        "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
+        "14 – Live Ratings Monitor (Scheduled + On-Demand)",
         "15 – Personalized Watchlist Ranker",
         "16 – Similar Films Finder",
         "17 – Taste Profile Radar",
@@ -298,7 +298,7 @@ SCENARIO_CATEGORIES = {
         "8 – Graph Based Movie Relationships",
     ],
     "⚙️ Live Monitoring": [
-        "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)",
+        14 – Live Ratings Monitor (Scheduled + On-Demand)",
     ],
 }
 
@@ -1463,8 +1463,8 @@ if scenario == "13 – Semantic Genre & Recommendations (Deep Learning / NLP)":
 
 
 # --- Scenario 14: Live Ratings Monitor + Supervised ML Predictions (English only) ---
-if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
-    st.header("14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)")
+if scenario == 14 – Live Ratings Monitor (Scheduled + On-Demand)":
+    st.header(14 – Live Ratings Monitor (Scheduled + On-Demand)")
 
     st.markdown("""
 **What this scenario actually does**
@@ -1479,10 +1479,6 @@ if scenario == "14 – Live Ratings Monitor (MLOps + CI/CD + Monitoring)":
   click the button, using `My_Ratings` as training data, to predict how I might rate unseen
   films whose live rating just moved.
 
-**Being precise about the terms:** this is a scheduled data pipeline with drift logging and an
-ad hoc prediction step — not full CI/CD or MLOps in the strict sense. There's no automated
-testing before deploy (CI), no automated app deployment through this workflow (CD), and no
-model versioning or automated retraining trigger (MLOps).
 """)
 
     # --- OMDb API key(s): manual override > comma-separated keys in secrets >
