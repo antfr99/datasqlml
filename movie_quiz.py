@@ -6,6 +6,26 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 import lightgbm as lgb
+import matplotlib.pyplot as plt
+
+# --- Global chart theme: every matplotlib chart in this app (radar, bar charts,
+# boxplots, etc.) uses this dark palette instead of matplotlib's white default,
+# so charts match the app's dark theme instead of popping up as white cards. ---
+plt.rcParams.update({
+    "figure.facecolor": "#12151A",
+    "axes.facecolor": "#12151A",
+    "savefig.facecolor": "#12151A",
+    "figure.edgecolor": "#12151A",
+    "axes.edgecolor": "#EDEEF0",
+    "axes.labelcolor": "#EDEEF0",
+    "xtick.color": "#EDEEF0",
+    "ytick.color": "#EDEEF0",
+    "text.color": "#EDEEF0",
+    "grid.color": "#2A2F3A",
+    "legend.facecolor": "#1B2029",
+    "legend.edgecolor": "#2A2F3A",
+    "legend.labelcolor": "#EDEEF0",
+})
 import numpy as np
 import logging
 import os
@@ -1738,15 +1758,17 @@ if scenario.startswith("9"):
     import pandas as pd
     import textwrap
     import re
+    import difflib
 
     st.subheader("🎬 9 – Natural-Language Film Q&A Assistant")
 
     st.markdown("""
 This scenario allows you to ask **natural-language questions** about my personal film ratings.
 
-- When asking about directors, include only the **director’s surname** (last name).  
-- You can also filter by genre (e.g., comedy, horror, drama).  
+- When asking about directors, include only the **director’s surname** (last name) — small typos are okay.
+- You can also filter by genre, using whatever genres actually appear in the data (comedy, fantasy, documentary, etc).
 - Words like **top/highest/best** or **lowest/worst/bottom** control sorting.
+- If nothing specific is recognized, you'll still get your full rated list back, sorted — never a blank page.
 """)
 
     st.markdown("**Example questions you can ask:**")
@@ -1766,34 +1788,50 @@ This scenario allows you to ask **natural-language questions** about my personal
         My_Ratings = pd.DataFrame()
         IMDB_Ratings = pd.DataFrame()
 
-    # --- Editable logic code (cleaned: no unused comments or stopwords) ---
+    # --- Editable logic code ---
     logic_code = textwrap.dedent(r"""
         question_lower = user_question.lower()
         filtered = My_Ratings.copy()
-        question_tokens = set(re.findall(r"\b[\w']+\b", question_lower))
+        question_tokens = set(re.findall(r"\b[\w'-]+\b", question_lower))
 
-        genres = ["comedy", "horror", "action", "drama", "sci-fi", "thriller", "romance"]
-        filtered_genre = False
-        for g in genres:
-            if g in question_tokens or g in question_lower:
-                filtered = filtered[filtered['Genre'].str.lower().str.contains(g, na=False)]
-                filtered_genre = True
-                break
+        # Genre list is built from whatever genres actually appear in the data
+        # (not a fixed shortlist), so Fantasy, Documentary, Crime, etc. all work.
+        all_genres = sorted({
+            g.strip().lower()
+            for sub in My_Ratings['Genre'].dropna().str.split(',')
+            for g in sub
+        })
+        matched_genres = [g for g in all_genres if g and g in question_lower]
 
+        if matched_genres:
+            pattern = '|'.join(re.escape(g) for g in matched_genres)
+            filtered = filtered[filtered['Genre'].str.lower().str.contains(pattern, na=False)]
+
+        # Director matching: exact surname first, then a fuzzy fallback so small
+        # typos ("Nolen" instead of "Nolan") still resolve.
         all_directors = My_Ratings['Director'].dropna().unique()
-        matches = []
+        surnames = {d.split()[-1].lower(): d for d in all_directors}
 
-        for d in all_directors:
-            last_name = d.split()[-1].lower()
-            if re.search(r'\b' + re.escape(last_name) + r'\b', question_lower):
-                matches.append(d)
+        director_matches = [
+            d for last_name, d in surnames.items()
+            if re.search(r'\b' + re.escape(last_name) + r'\b', question_lower)
+        ]
 
-        if matches:
-            filtered = filtered[filtered['Director'].str.lower().isin([m.lower() for m in matches])]
-        elif not filtered_genre:
-            filtered = filtered.iloc[0:0]
+        if not director_matches:
+            close = []
+            for token in question_tokens:
+                close += difflib.get_close_matches(token, surnames.keys(), n=1, cutoff=0.8)
+            director_matches = [surnames[c] for c in dict.fromkeys(close)]
 
-        sort_col = "IMDb Rating" if "imdb" in question_lower else "Your Rating"
+        used_fallback = False
+        if director_matches:
+            filtered = filtered[filtered['Director'].isin(director_matches)]
+        elif not matched_genres:
+            # Nothing recognized in the question - show everything rather than
+            # an empty table, so the assistant never comes back blank.
+            used_fallback = True
+
+        sort_col = "IMDb Rating" if "imdb" in question_tokens else "Your Rating"
         if any(w in question_tokens for w in ["highest", "top", "best"]):
             ascending = False
         elif any(w in question_tokens for w in ["lowest", "worst", "bottom"]):
@@ -1811,7 +1849,7 @@ This scenario allows you to ask **natural-language questions** about my personal
     )
 
     if user_question and not My_Ratings.empty:
-        exec_ns = {"My_Ratings": My_Ratings, "user_question": user_question, "re": re}
+        exec_ns = {"My_Ratings": My_Ratings, "user_question": user_question, "re": re, "difflib": difflib}
         try:
             exec(editable_code, exec_ns)
         except Exception as e:
@@ -1819,16 +1857,21 @@ This scenario allows you to ask **natural-language questions** about my personal
             exec_ns.setdefault("filtered", My_Ratings.copy())
             exec_ns.setdefault("sort_col", "Your Rating")
             exec_ns.setdefault("ascending", False)
+            exec_ns.setdefault("used_fallback", False)
 
         filtered = exec_ns.get("filtered", My_Ratings.copy())
         sort_col = exec_ns.get("sort_col", "Your Rating")
         ascending = exec_ns.get("ascending", False)
+        used_fallback = exec_ns.get("used_fallback", False)
+
+        if used_fallback:
+            st.info("Couldn't pin down a specific director or genre in that question — showing your full rated list instead.")
 
         if not filtered.empty:
             filtered_sorted = filtered.sort_values(by=sort_col, ascending=ascending)
             st.dataframe(filtered_sorted)
         else:
-            st.info("No matching films found. Try a different director surname or genre keyword.")
+            st.info("No films matched that director/genre combination. Try a different surname or genre keyword.")
 
 
 # --- Scenario 15: Personalized Watchlist Ranker ---
@@ -1901,8 +1944,10 @@ if scenario == "16 – Similar Films Finder":
         feature_df = IMDB_Ratings.dropna(
             subset=['Genre', 'Director', 'Year', 'IMDb Rating', 'Num Votes', 'Title']
         ).drop_duplicates(subset=['Title']).reset_index(drop=True)
+        feature_df['Title'] = feature_df['Title'].astype(str)
 
-        seed_title = st.selectbox("Find films similar to:", sorted(feature_df['Title'].unique().tolist()))
+        title_options = sorted(feature_df['Title'].unique().tolist())
+        seed_title = st.selectbox("Find films similar to:", title_options)
         k = st.slider("How many matches", 3, 20, 8)
 
         if st.button("🔎 Find similar films"):
@@ -1951,29 +1996,59 @@ if scenario == "17 – Taste Profile Radar":
             Films_Watched=('Movie ID', 'count')
         ).reset_index()
 
-        min_films = st.slider("Minimum films watched in genre", 1, 20, 3)
-        genre_stats = genre_stats[genre_stats['Films_Watched'] >= min_films].sort_values('Avg_Rating', ascending=False)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            min_films = st.slider("Minimum films watched in genre", 1, 20, 3)
+        with col_b:
+            top_n_genres = st.slider("Show top N genres (by films watched)", 4, 15, 8)
+
+        genre_stats = genre_stats[genre_stats['Films_Watched'] >= min_films]
+        genre_stats = genre_stats.sort_values('Films_Watched', ascending=False).head(top_n_genres)
+        genre_stats = genre_stats.sort_values('Avg_Rating', ascending=False)
 
         if genre_stats.empty:
             st.warning("Not enough data at this threshold — lower the minimum.")
         else:
-            import matplotlib.pyplot as plt
             import numpy as np
 
             categories = genre_stats['Genre'].tolist()
             values = genre_stats['Avg_Rating'].tolist()
-            values += values[:1]
+            counts = genre_stats['Films_Watched'].tolist()
+
+            # Zoom the radial axis into the actual spread of the data instead of a
+            # fixed 0-10 scale, so differences between genres are actually visible
+            # rather than everything hugging the outer edge as a near-circle.
+            lo = max(0, min(values) - 1)
+            hi = min(10, max(values) + 1)
+
+            values_closed = values + values[:1]
             angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-            angles += angles[:1]
+            angles_closed = angles + angles[:1]
 
-            fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-            ax.plot(angles, values, color='#E3A857', linewidth=2)
-            ax.fill(angles, values, color='#E3A857', alpha=0.25)
-            ax.set_xticks(angles[:-1])
-            ax.set_xticklabels(categories, fontsize=8)
-            ax.set_ylim(0, 10)
-            st.pyplot(fig)
+            fig, ax = plt.subplots(figsize=(4.3, 4.3), subplot_kw=dict(polar=True))
+            ax.plot(angles_closed, values_closed, color='#E3A857', linewidth=2)
+            ax.fill(angles_closed, values_closed, color='#E3A857', alpha=0.25)
+            ax.set_xticks(angles)
+            ax.set_xticklabels(categories, fontsize=7.5)
+            ax.set_ylim(lo, hi)
+            ax.tick_params(axis='y', labelsize=6)
 
+            for angle, value in zip(angles, values):
+                ax.annotate(
+                    f"{value:.1f}", xy=(angle, value), fontsize=6.5, color='#EDEEF0',
+                    ha='center', va='bottom'
+                )
+
+            fig.tight_layout()
+
+            chart_col, _ = st.columns([1, 1])
+            with chart_col:
+                st.pyplot(fig)
+
+            st.caption(
+                f"Axis is zoomed to {lo:.1f}–{hi:.1f} (not 0–10) so the shape reflects real differences "
+                f"between genres, not just how bunched-up your ratings are."
+            )
             st.dataframe(genre_stats.round(2).reset_index(drop=True), use_container_width=True)
 
 
@@ -2074,8 +2149,11 @@ if scenario == "20 – Ratings Timeline by Release Decade":
         compare = IMDB_Ratings.merge(My_Ratings[['Movie ID', 'Your Rating']], on='Movie ID', how='inner')
         compare = compare.dropna(subset=['Year'])
         compare['Decade'] = (compare['Year'].astype(int) // 10) * 10
+        # Label as text ("1990s") rather than a bare int - otherwise Streamlit's
+        # chart/dataframe auto-formatting adds thousands separators (e.g. "1,990").
+        compare['Decade Label'] = compare['Decade'].astype(str) + "s"
 
-        decade_stats = compare.groupby('Decade').agg(
+        decade_stats = compare.groupby(['Decade', 'Decade Label']).agg(
             Films_Rated=('Movie ID', 'count'),
             Avg_My_Rating=('Your Rating', 'mean'),
             Avg_IMDb_Rating=('IMDb Rating', 'mean'),
@@ -2087,7 +2165,21 @@ if scenario == "20 – Ratings Timeline by Release Decade":
         if decade_stats.empty:
             st.warning("Not enough data at this threshold — lower the minimum.")
         else:
-            chart_df = decade_stats.set_index('Decade')[['Avg_My_Rating', 'Avg_IMDb_Rating']]
-            st.line_chart(chart_df)
-            st.dataframe(decade_stats.round(2).reset_index(drop=True), use_container_width=True)
-            st.caption("Where your line rises above IMDb's, you rate that decade more generously than the crowd — and vice versa.")
+            chart_df = decade_stats.set_index('Decade Label')[['Avg_My_Rating', 'Avg_IMDb_Rating']]
+            st.bar_chart(chart_df)
+            st.dataframe(
+                decade_stats[['Decade Label', 'Films_Rated', 'Avg_My_Rating', 'Avg_IMDb_Rating']]
+                .rename(columns={'Decade Label': 'Decade'})
+                .round(2).reset_index(drop=True),
+                use_container_width=True
+            )
+            st.caption("Where your bar rises above IMDb's, you rate that decade more generously than the crowd — and vice versa.")
+
+            st.markdown("---")
+            st.subheader("🔍 Drill into a decade")
+            decade_choice = st.selectbox("Pick a decade", decade_stats['Decade Label'].tolist())
+            decade_films = compare[compare['Decade Label'] == decade_choice].sort_values('Your Rating', ascending=False)
+            st.dataframe(
+                decade_films[['Title', 'Your Rating', 'IMDb Rating', 'Genre', 'Director']].reset_index(drop=True),
+                use_container_width=True
+            )
