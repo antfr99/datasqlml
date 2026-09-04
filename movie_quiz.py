@@ -224,6 +224,98 @@ if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.
         c4.metric("Unseen in Catalog", f"{unseen_count:,}")
         st.write("")
 
+        # --- Landing page charts: filterable overview, independent of the
+        # scenario picker in the sidebar. Reuses `_compare` (My_Ratings joined
+        # to IMDB_Ratings) computed above for the KPI cards. ---
+        st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
+        st.markdown("### 🎞️ Explore Your Ratings")
+        st.caption("Filter your rated films and the charts below update together.")
+
+        _all_genres = sorted({
+            g.strip() for sub in _compare["Genre"].dropna().str.split(",") for g in sub if g.strip()
+        })
+        _year_series = pd.to_numeric(_compare["Year"], errors="coerce").dropna()
+        _min_year = int(_year_series.min()) if not _year_series.empty else 1950
+        _max_year = int(_year_series.max()) if not _year_series.empty else 2026
+
+        f1, f2 = st.columns([2, 1])
+        with f1:
+            landing_genres = st.multiselect(
+                "Filter by genre", _all_genres, default=[], key="landing_genre_filter"
+            )
+        with f2:
+            landing_year_range = st.slider(
+                "Release year range", _min_year, _max_year, (_min_year, _max_year),
+                key="landing_year_filter"
+            )
+
+        _filtered = _compare.copy()
+        _filtered["Year"] = pd.to_numeric(_filtered["Year"], errors="coerce")
+        _filtered = _filtered[
+            (_filtered["Year"] >= landing_year_range[0]) & (_filtered["Year"] <= landing_year_range[1])
+        ]
+        if landing_genres:
+            _pattern = "|".join(g for g in landing_genres)
+            _filtered = _filtered[_filtered["Genre"].str.contains(_pattern, case=False, na=False)]
+
+        if _filtered.empty:
+            st.info("No films match these filters — widen the year range or clear the genre filter.")
+        else:
+            chart_col1, chart_col2 = st.columns(2)
+
+            with chart_col1:
+                st.markdown("**My Rating vs IMDb Rating**")
+                fig1, ax1 = plt.subplots(figsize=(5, 4))
+                ax1.scatter(
+                    _filtered["IMDb Rating"], _filtered["Your Rating"],
+                    alpha=0.6, color="#E3A857", s=25
+                )
+                ax1.plot([0, 10], [0, 10], color="#4FA88F", linestyle="--", linewidth=1)
+                ax1.set_xlabel("IMDb Rating")
+                ax1.set_ylabel("My Rating")
+                ax1.set_xlim(0, 10)
+                ax1.set_ylim(0, 10)
+                fig1.tight_layout()
+                st.pyplot(fig1)
+
+            with chart_col2:
+                st.markdown("**Genres I Watch Most**")
+                _genre_exp = _filtered.dropna(subset=["Genre"]).assign(
+                    Genre=lambda d: d["Genre"].str.split(",")
+                ).explode("Genre")
+                _genre_exp["Genre"] = _genre_exp["Genre"].str.strip()
+                _genre_counts = _genre_exp["Genre"].value_counts().head(10)
+                fig2, ax2 = plt.subplots(figsize=(5, 4))
+                ax2.barh(_genre_counts.index[::-1], _genre_counts.values[::-1], color="#4FA88F")
+                ax2.set_xlabel("Films Watched")
+                fig2.tight_layout()
+                st.pyplot(fig2)
+
+            chart_col3, chart_col4 = st.columns(2)
+
+            with chart_col3:
+                st.markdown("**Rating Distribution**")
+                fig3, ax3 = plt.subplots(figsize=(5, 4))
+                bins = np.arange(0, 10.5, 0.5)
+                ax3.hist(_filtered["Your Rating"].dropna(), bins=bins, alpha=0.6, label="Mine", color="#E3A857")
+                ax3.hist(_filtered["IMDb Rating"].dropna(), bins=bins, alpha=0.6, label="IMDb", color="#4FA88F")
+                ax3.set_xlabel("Rating")
+                ax3.set_ylabel("Count")
+                ax3.legend()
+                fig3.tight_layout()
+                st.pyplot(fig3)
+
+            with chart_col4:
+                st.markdown("**Top Directors by Films Watched**")
+                _dir_counts = _filtered["Director"].dropna().value_counts().head(10)
+                fig4, ax4 = plt.subplots(figsize=(5, 4))
+                ax4.barh(_dir_counts.index[::-1], _dir_counts.values[::-1], color="#C1524B")
+                ax4.set_xlabel("Films Watched")
+                fig4.tight_layout()
+                st.pyplot(fig4)
+
+            st.caption(f"Showing {len(_filtered):,} of {len(_compare):,} rated films based on current filters.")
+
 # --- Data tables (tucked away so the hero + stats lead the page) ---
 with st.expander("📋 Browse full IMDb Ratings table"):
     if not IMDB_Ratings.empty:
