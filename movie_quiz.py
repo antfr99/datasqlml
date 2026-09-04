@@ -207,6 +207,19 @@ if not IMDB_Ratings_2019.empty:
 # --- Merge votes ---
 if not Votes.empty:
     IMDB_Ratings = IMDB_Ratings.merge(Votes, on="Movie ID", how="left")
+    My_Ratings = My_Ratings.merge(Votes, on="Movie ID", how="left")
+
+# --- Vote-count floor: this app only covers films with a meaningful number
+# of IMDb votes, so a handful of stray low-vote titles don't skew stats or
+# ML training. Applied globally, right after the votes join, so every
+# scenario (and the Dashboard) works off the same filtered dataset. A film
+# with no vote count at all (not present in votes.xlsx) is excluded too,
+# since there's no way to confirm it clears the bar. ---
+MIN_VOTES = 10000
+if "Num Votes" in IMDB_Ratings.columns:
+    IMDB_Ratings = IMDB_Ratings[IMDB_Ratings["Num Votes"] > MIN_VOTES]
+if "Num Votes" in My_Ratings.columns:
+    My_Ratings = My_Ratings[My_Ratings["Num Votes"] > MIN_VOTES]
 
 # --- Scenarios: grouped, icon-led sidebar navigation ---
 # NOTE: the underlying option strings are left exactly as before so every
