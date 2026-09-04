@@ -437,7 +437,7 @@ ORDER BY Decade, [IMDb Rating] DESC, [Num Votes] DESC;
 
 
 
-# 
+# --- Scenario 9: Python ML ---
 if scenario == "10 – Predict My Ratings (ML)":
     st.header("10 – Predict My Ratings (ML)")
     st.write("""
@@ -461,7 +461,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
+
 
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
@@ -471,13 +471,11 @@ predict_df = df_ml[df_ml['Your Rating'].isna()]
 categorical_features = ['Genre', 'Director']
 numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
+
 preprocessor = ColumnTransformer(
     transformers=[
-        ('cat', Pipeline([
-            ('impute', SimpleImputer(strategy='constant', fill_value='Unknown')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))
-        ]), categorical_features),
-        ('num', SimpleImputer(strategy='median'), numerical_features)
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+        ('num', 'passthrough', numerical_features)
     ]
 )
 
@@ -1036,28 +1034,23 @@ if scenario == "12 – Feature Hypothesis Testing":
         train_df = df_ml[df_ml['Your Rating'].notna()]
         y = train_df['Your Rating']  # Target variable: your ratings
 
-       baseline_features = ['Num Votes','IMDb Rating']
-       X_base = train_df[baseline_features]
-        model_base = Pipeline([
-            ('impute', SimpleImputer(strategy='median')),
-            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
-        ])
+        # --- Baseline model (numeric only) ---
+        baseline_features = ['Num Votes','IMDb Rating']
+        X_base = train_df[baseline_features]
+        model_base = RandomForestRegressor(n_estimators=100, random_state=42)
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         scores_base = -cross_val_score(model_base, X_base, y, cv=cv, scoring='neg_root_mean_squared_error')
-        
+
         # --- Feature-added model ---
         categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
         numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
         features_to_use = categorical_features + numerical_features
-        
+
         if features_to_use:
             preprocessor = ColumnTransformer(
                 transformers=[
-                    ('cat', Pipeline([
-                        ('impute', SimpleImputer(strategy='constant', fill_value='Unknown')),
-                        ('onehot', OneHotEncoder(handle_unknown='ignore'))
-                    ]), categorical_features),
-                    ('num', SimpleImputer(strategy='median'), numerical_features)
+                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
+                    ('num', 'passthrough', numerical_features)
                 ]
             )
             X_test = train_df[features_to_use]
