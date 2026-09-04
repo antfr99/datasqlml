@@ -278,13 +278,19 @@ category = st.sidebar.radio(
     label_visibility="collapsed",
 )
 
-st.sidebar.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
-
-scenario = st.sidebar.radio(
-    "Feature",
-    SCENARIO_CATEGORIES[category],
-    label_visibility="collapsed",
-)
+# The Dashboard category has exactly one entry ("0 – Dashboard"), so showing
+# a second radio with a single option underneath it is just noise — skip
+# straight to that scenario instead. Every other category still gets the
+# normal two-level picker.
+if category == "🏠 Dashboard":
+    scenario = SCENARIO_CATEGORIES[category][0]
+else:
+    st.sidebar.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
+    scenario = st.sidebar.radio(
+        "Feature",
+        SCENARIO_CATEGORIES[category],
+        label_visibility="collapsed",
+    )
 
 # --- Dashboard (start screen): KPI cards, filterable charts, and the raw
 # data tables. It's the first category/scenario in the sidebar, so it's what
@@ -293,25 +299,21 @@ scenario = st.sidebar.radio(
 # "0 – Dashboard" and this whole block is skipped in favor of that scenario's
 # own block further down. ---
 if scenario == "0 – Dashboard":
-    if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.columns:
-        _compare = IMDB_Ratings.merge(My_Ratings[["Movie ID", "Your Rating"]], on="Movie ID", how="inner")
-        # Belt-and-suspenders: keep only rows with an actual personal rating, in
-        # case My_Ratings contains watchlist/unrated rows that share a Movie ID
-        # with a rated title (an inner join alone doesn't guarantee Your Rating
-        # is populated). Every metric and chart below is built on this, so this
-        # one filter is what keeps everything scoped to films you've rated.
-        _compare = _compare[_compare["Your Rating"].notna()]
+    if not My_Ratings.empty and "Your Rating" in My_Ratings.columns:
+        # KPIs and charts here come only from myratings.xlsx — it already
+        # carries IMDb Rating, Genre, Director, Year and Runtime per title,
+        # so there's no merge against the larger IMDB_Ratings catalog (that
+        # merge was also the source of the earlier count mismatches).
+        _compare = My_Ratings[My_Ratings["Your Rating"].notna()].copy()
         total_rated = len(_compare)
         if total_rated:
             avg_mine = _compare["Your Rating"].mean()
             agreement_pct = ((_compare["Your Rating"] - _compare["IMDb Rating"]).abs() <= 1).mean() * 100
-            unseen_count = IMDB_Ratings["Movie ID"].nunique() - _compare["Movie ID"].nunique()
 
-            c1, c2, c3, c4 = st.columns(4)
+            c1, c2, c3 = st.columns(3)
             c1.metric("Films Rated", f"{total_rated:,}")
             c2.metric("My Avg Rating", f"{avg_mine:.1f}")
             c3.metric("Agreement w/ IMDb", f"{agreement_pct:.0f}%")
-            c4.metric("Unseen in Catalog", f"{unseen_count:,}")
             st.write("")
 
             # --- Dashboard charts: filterable overview, scoped to films
@@ -327,8 +329,14 @@ if scenario == "0 – Dashboard":
             _year_series = pd.to_numeric(_compare["Year"], errors="coerce").dropna()
             _min_year = int(_year_series.min()) if not _year_series.empty else 1950
             _max_year = int(_year_series.max()) if not _year_series.empty else 2026
+            _min_rating = int(_compare["Your Rating"].min())
+            _max_rating = int(_compare["Your Rating"].max())
+            # Column name varies a bit between exports ("Runtime (min)",
+            # "Runtime (mins)", etc.) - match on it loosely so the runtime
+            # charts below work without hardcoding an exact header.
+            _runtime_col = next((c for c in _compare.columns if "runtime" in c.lower()), None)
 
-            f1, f2, f3 = st.columns(3)
+            f1, f2, f3, f4 = st.columns(4)
             with f1:
                 landing_genres = st.multiselect(
                     "Filter by genre", _all_genres, default=[], key="landing_genre_filter"
@@ -342,11 +350,20 @@ if scenario == "0 – Dashboard":
                     "Release year range", _min_year, _max_year, (_min_year, _max_year),
                     key="landing_year_filter"
                 )
+            with f4:
+                landing_rating_range = st.slider(
+                    "My rating range", _min_rating, _max_rating, (_min_rating, _max_rating),
+                    key="landing_rating_filter"
+                )
 
             _filtered = _compare.copy()
             _filtered["Year"] = pd.to_numeric(_filtered["Year"], errors="coerce")
             _filtered = _filtered[
                 (_filtered["Year"] >= landing_year_range[0]) & (_filtered["Year"] <= landing_year_range[1])
+            ]
+            _filtered = _filtered[
+                (_filtered["Your Rating"] >= landing_rating_range[0])
+                & (_filtered["Your Rating"] <= landing_rating_range[1])
             ]
             if landing_genres:
                 _pattern = "|".join(g for g in landing_genres)
@@ -355,29 +372,11 @@ if scenario == "0 – Dashboard":
                 _filtered = _filtered[_filtered["Director"].isin(landing_directors)]
 
             if _filtered.empty:
-                st.info("No films match these filters — widen the year range or clear a filter.")
+                st.info("No films match these filters — widen a range or clear a filter.")
             else:
                 chart_col1, chart_col2 = st.columns(2)
 
                 with chart_col1:
-                    st.markdown("**My Average Rating by Decade**")
-                    _decade_df = _filtered.dropna(subset=["Year"]).copy()
-                    _decade_df["Decade"] = (_decade_df["Year"].astype(int) // 10) * 10
-                    _decade_stats = (
-                        _decade_df.groupby("Decade")["Your Rating"]
-                        .mean().reset_index().sort_values("Decade")
-                    )
-                    _decade_labels = _decade_stats["Decade"].astype(str) + "s"
-                    fig1, ax1 = plt.subplots(figsize=(4.2, 3.4))
-                    ax1.bar(_decade_labels, _decade_stats["Your Rating"], color="#E3A857")
-                    ax1.set_xlabel("Decade")
-                    ax1.set_ylabel("Avg My Rating")
-                    ax1.set_ylim(0, 10)
-                    ax1.tick_params(axis="x", rotation=45)
-                    fig1.tight_layout()
-                    st.pyplot(fig1)
-
-                with chart_col2:
                     st.markdown("**Top Directors by Average Rating**")
                     _dir_stats = (
                         _filtered.dropna(subset=["Director"]).groupby("Director")["Your Rating"]
@@ -390,13 +389,78 @@ if scenario == "0 – Dashboard":
                     if _dir_stats.empty:
                         st.info("No director has 2+ rated films in this selection yet.")
                     else:
-                        fig2, ax2 = plt.subplots(figsize=(4.2, 3.4))
-                        ax2.barh(_dir_stats["Director"][::-1], _dir_stats["mean"][::-1], color="#4FA88F")
-                        ax2.set_xlabel("Avg My Rating")
-                        ax2.set_xlim(0, 10)
-                        fig2.tight_layout()
-                        st.pyplot(fig2)
+                        fig1, ax1 = plt.subplots(figsize=(4.2, 3.4))
+                        ax1.barh(_dir_stats["Director"][::-1], _dir_stats["mean"][::-1], color="#4FA88F")
+                        ax1.set_xlabel("Avg My Rating")
+                        ax1.set_xlim(0, 10)
+                        fig1.tight_layout()
+                        st.pyplot(fig1)
                         st.caption("Directors with at least 2 rated films.")
+
+                with chart_col2:
+                    st.markdown("**Genre × Rating**")
+                    _heat_df = _filtered.dropna(subset=["Genre"]).assign(
+                        Genre=lambda d: d["Genre"].str.split(",")
+                    ).explode("Genre")
+                    _heat_df["Genre"] = _heat_df["Genre"].str.strip()
+                    _heat_df["Your Rating"] = _heat_df["Your Rating"].astype(int)
+                    _pivot = _heat_df.pivot_table(
+                        index="Genre", columns="Your Rating", values="Movie ID",
+                        aggfunc="count", fill_value=0
+                    )
+                    # Keep the top 10 genres by total films so the heatmap
+                    # stays readable, and show every whole rating so a genre
+                    # with zero films at a given rating still shows as blank
+                    # rather than shifting the columns around.
+                    _top_genres = _pivot.sum(axis=1).sort_values(ascending=False).head(10).index
+                    _pivot = _pivot.loc[_top_genres].reindex(
+                        columns=range(_min_rating, _max_rating + 1), fill_value=0
+                    )
+                    fig2, ax2 = plt.subplots(figsize=(4.2, 3.4))
+                    im = ax2.imshow(_pivot.values, cmap="magma", aspect="auto")
+                    ax2.set_xticks(range(len(_pivot.columns)))
+                    ax2.set_xticklabels(_pivot.columns)
+                    ax2.set_yticks(range(len(_pivot.index)))
+                    ax2.set_yticklabels(_pivot.index, fontsize=7)
+                    ax2.set_xlabel("My Rating")
+                    cbar = fig2.colorbar(im, ax=ax2, fraction=0.046, pad=0.04)
+                    cbar.set_label("Films", color="#EDEEF0")
+                    cbar.ax.yaxis.set_tick_params(color="#EDEEF0")
+                    cbar.ax.tick_params(labelcolor="#EDEEF0")
+                    fig2.tight_layout()
+                    st.pyplot(fig2)
+
+                chart_col3, chart_col4 = st.columns(2)
+
+                with chart_col3:
+                    st.markdown("**My Rating vs Runtime**")
+                    if _runtime_col is None:
+                        st.info("No runtime column found in your ratings file.")
+                    else:
+                        _rt_df = _filtered.dropna(subset=[_runtime_col, "Your Rating"])
+                        _rng2 = np.random.default_rng(7)
+                        _jitter2 = _rng2.uniform(-0.18, 0.18, size=len(_rt_df))
+                        fig3, ax3 = plt.subplots(figsize=(4.2, 3.4))
+                        ax3.scatter(
+                            _rt_df[_runtime_col], _rt_df["Your Rating"] + _jitter2,
+                            alpha=0.35, color="#C1524B", s=18, edgecolors="none"
+                        )
+                        ax3.set_xlabel("Runtime (min)")
+                        ax3.set_ylabel("My Rating")
+                        fig3.tight_layout()
+                        st.pyplot(fig3)
+
+                with chart_col4:
+                    st.markdown("**Runtime Distribution**")
+                    if _runtime_col is None:
+                        st.info("No runtime column found in your ratings file.")
+                    else:
+                        fig4, ax4 = plt.subplots(figsize=(4.2, 3.4))
+                        ax4.hist(_filtered[_runtime_col].dropna(), bins=20, color="#E3A857")
+                        ax4.set_xlabel("Runtime (min)")
+                        ax4.set_ylabel("Films")
+                        fig4.tight_layout()
+                        st.pyplot(fig4)
 
                 st.caption(f"Showing {len(_filtered):,} of {len(_compare):,} rated films based on current filters.")
 
