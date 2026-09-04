@@ -320,46 +320,36 @@ if scenario == "0 – Dashboard":
         _compare = My_Ratings[My_Ratings["Your Rating"].notna()].copy()
         total_rated = len(_compare)
         if total_rated:
-            avg_mine = _compare["Your Rating"].mean()
-            agreement_pct = ((_compare["Your Rating"] - _compare["IMDb Rating"]).abs() <= 1).mean() * 100
+            # Declared here so the KPI cards render at the top of the page,
+            # but filled in further down once `_filtered` is known — that
+            # way the numbers react to the filters below instead of always
+            # showing the full unfiltered total.
+            kpi_placeholder = st.container()
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Films Rated", f"{total_rated:,}")
-            c2.metric("My Avg Rating", f"{avg_mine:.1f}")
-            c3.metric("Agreement w/ IMDb", f"{agreement_pct:.0f}%")
-            st.write("")
-
-            # --- Dashboard charts: filterable overview, scoped to films
-            # you've actually rated (`_compare`, built above for the KPI cards). ---
             st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
             st.markdown("### 🎞️ Explore Ratings")
-            st.caption("Filter your rated films and the charts below update together.")
+            st.caption("Filter your rated films — the KPIs and charts below update together.")
 
             _all_genres = sorted({
                 g.strip() for sub in _compare["Genre"].dropna().str.split(",") for g in sub if g.strip()
             })
-            _all_directors = sorted(_compare["Director"].dropna().unique().tolist())
             _year_series = pd.to_numeric(_compare["Year"], errors="coerce").dropna()
             _min_year = int(_year_series.min()) if not _year_series.empty else 1950
             _max_year = int(_year_series.max()) if not _year_series.empty else 2026
             _min_rating = int(_compare["Your Rating"].min())
             _max_rating = int(_compare["Your Rating"].max())
 
-            f1, f2, f3, f4 = st.columns(4)
+            f1, f2, f3 = st.columns(3)
             with f1:
                 landing_genres = st.multiselect(
                     "Filter by genre", _all_genres, default=[], key="landing_genre_filter"
                 )
             with f2:
-                landing_directors = st.multiselect(
-                    "Filter by director", _all_directors, default=[], key="landing_director_filter"
-                )
-            with f3:
                 landing_year_range = st.slider(
                     "Release year range", _min_year, _max_year, (_min_year, _max_year),
                     key="landing_year_filter"
                 )
-            with f4:
+            with f3:
                 landing_rating_range = st.slider(
                     "My rating range", _min_rating, _max_rating, (_min_rating, _max_rating),
                     key="landing_rating_filter"
@@ -377,8 +367,18 @@ if scenario == "0 – Dashboard":
             if landing_genres:
                 _pattern = "|".join(g for g in landing_genres)
                 _filtered = _filtered[_filtered["Genre"].str.contains(_pattern, case=False, na=False)]
-            if landing_directors:
-                _filtered = _filtered[_filtered["Director"].isin(landing_directors)]
+
+            with kpi_placeholder:
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Films Rated", f"{len(_filtered):,}")
+                if len(_filtered):
+                    _kpi_avg = _filtered["Your Rating"].mean()
+                    _kpi_agreement = ((_filtered["Your Rating"] - _filtered["IMDb Rating"]).abs() <= 1).mean() * 100
+                    c2.metric("My Avg Rating", f"{_kpi_avg:.1f}")
+                    c3.metric("Agreement w/ IMDb", f"{_kpi_agreement:.0f}%")
+                else:
+                    c2.metric("My Avg Rating", "—")
+                    c3.metric("Agreement w/ IMDb", "—")
 
             if _filtered.empty:
                 st.info("No films match these filters — widen a range or clear a filter.")
@@ -404,7 +404,6 @@ if scenario == "0 – Dashboard":
                         ax1.set_xlim(0, 10)
                         fig1.tight_layout()
                         st.pyplot(fig1)
-                        st.caption("Directors with at least 2 rated films.")
 
                 with chart_col2:
                     st.markdown("**Top Directors by Movies Watched**")
@@ -417,8 +416,6 @@ if scenario == "0 – Dashboard":
                         ax2.set_xlabel("Films Watched")
                         fig2.tight_layout()
                         st.pyplot(fig2)
-
-                st.caption(f"Showing {len(_filtered):,} of {len(_compare):,} rated films based on current filters.")
 
     # --- Data tables ---
     with st.expander("📋 Browse full IMDb Ratings table"):
