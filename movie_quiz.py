@@ -331,10 +331,6 @@ if scenario == "0 – Dashboard":
             _max_year = int(_year_series.max()) if not _year_series.empty else 2026
             _min_rating = int(_compare["Your Rating"].min())
             _max_rating = int(_compare["Your Rating"].max())
-            # Column name varies a bit between exports ("Runtime (min)",
-            # "Runtime (mins)", etc.) - match on it loosely so the runtime
-            # charts below work without hardcoding an exact header.
-            _runtime_col = next((c for c in _compare.columns if "runtime" in c.lower()), None)
 
             f1, f2, f3, f4 = st.columns(4)
             with f1:
@@ -398,69 +394,16 @@ if scenario == "0 – Dashboard":
                         st.caption("Directors with at least 2 rated films.")
 
                 with chart_col2:
-                    st.markdown("**Genre × Rating**")
-                    _heat_df = _filtered.dropna(subset=["Genre"]).assign(
-                        Genre=lambda d: d["Genre"].str.split(",")
-                    ).explode("Genre")
-                    _heat_df["Genre"] = _heat_df["Genre"].str.strip()
-                    _heat_df["Your Rating"] = _heat_df["Your Rating"].astype(int)
-                    _pivot = _heat_df.pivot_table(
-                        index="Genre", columns="Your Rating", values="Movie ID",
-                        aggfunc="count", fill_value=0
-                    )
-                    # Keep the top 10 genres by total films so the heatmap
-                    # stays readable, and show every whole rating so a genre
-                    # with zero films at a given rating still shows as blank
-                    # rather than shifting the columns around.
-                    _top_genres = _pivot.sum(axis=1).sort_values(ascending=False).head(10).index
-                    _pivot = _pivot.loc[_top_genres].reindex(
-                        columns=range(_min_rating, _max_rating + 1), fill_value=0
-                    )
-                    fig2, ax2 = plt.subplots(figsize=(4.2, 3.4))
-                    im = ax2.imshow(_pivot.values, cmap="magma", aspect="auto")
-                    ax2.set_xticks(range(len(_pivot.columns)))
-                    ax2.set_xticklabels(_pivot.columns)
-                    ax2.set_yticks(range(len(_pivot.index)))
-                    ax2.set_yticklabels(_pivot.index, fontsize=7)
-                    ax2.set_xlabel("My Rating")
-                    cbar = fig2.colorbar(im, ax=ax2, fraction=0.046, pad=0.04)
-                    cbar.set_label("Films", color="#EDEEF0")
-                    cbar.ax.yaxis.set_tick_params(color="#EDEEF0")
-                    cbar.ax.tick_params(labelcolor="#EDEEF0")
-                    fig2.tight_layout()
-                    st.pyplot(fig2)
-
-                chart_col3, chart_col4 = st.columns(2)
-
-                with chart_col3:
-                    st.markdown("**My Rating vs Runtime**")
-                    if _runtime_col is None:
-                        st.info("No runtime column found in your ratings file.")
+                    st.markdown("**Top Directors by Movies Watched**")
+                    _dir_counts = _filtered["Director"].dropna().value_counts().head(10)
+                    if _dir_counts.empty:
+                        st.info("No director data in this selection yet.")
                     else:
-                        _rt_df = _filtered.dropna(subset=[_runtime_col, "Your Rating"])
-                        _rng2 = np.random.default_rng(7)
-                        _jitter2 = _rng2.uniform(-0.18, 0.18, size=len(_rt_df))
-                        fig3, ax3 = plt.subplots(figsize=(4.2, 3.4))
-                        ax3.scatter(
-                            _rt_df[_runtime_col], _rt_df["Your Rating"] + _jitter2,
-                            alpha=0.35, color="#C1524B", s=18, edgecolors="none"
-                        )
-                        ax3.set_xlabel("Runtime (min)")
-                        ax3.set_ylabel("My Rating")
-                        fig3.tight_layout()
-                        st.pyplot(fig3)
-
-                with chart_col4:
-                    st.markdown("**Runtime Distribution**")
-                    if _runtime_col is None:
-                        st.info("No runtime column found in your ratings file.")
-                    else:
-                        fig4, ax4 = plt.subplots(figsize=(4.2, 3.4))
-                        ax4.hist(_filtered[_runtime_col].dropna(), bins=20, color="#E3A857")
-                        ax4.set_xlabel("Runtime (min)")
-                        ax4.set_ylabel("Films")
-                        fig4.tight_layout()
-                        st.pyplot(fig4)
+                        fig2, ax2 = plt.subplots(figsize=(4.2, 3.4))
+                        ax2.barh(_dir_counts.index[::-1], _dir_counts.values[::-1], color="#C1524B")
+                        ax2.set_xlabel("Films Watched")
+                        fig2.tight_layout()
+                        st.pyplot(fig2)
 
                 st.caption(f"Showing {len(_filtered):,} of {len(_compare):,} rated films based on current filters.")
 
