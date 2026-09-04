@@ -1029,29 +1029,36 @@ if scenario == "12 – Feature Hypothesis Testing":
         from sklearn.ensemble import RandomForestRegressor
         from scipy.stats import ttest_rel
         import matplotlib.pyplot as plt
+        from sklearn.impute import SimpleImputer
 
         # --- Prepare training data ---
         df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
         train_df = df_ml[df_ml['Your Rating'].notna()]
         y = train_df['Your Rating']  # Target variable: your ratings
-
+                        
         # --- Baseline model (numeric only) ---
         baseline_features = ['Num Votes','IMDb Rating']
         X_base = train_df[baseline_features]
-        model_base = RandomForestRegressor(n_estimators=100, random_state=42)
+        model_base = Pipeline([
+            ('impute', SimpleImputer(strategy='median')),
+            ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
+        ])
         cv = KFold(n_splits=5, shuffle=True, random_state=42)
         scores_base = -cross_val_score(model_base, X_base, y, cv=cv, scoring='neg_root_mean_squared_error')
-
+        
         # --- Feature-added model ---
         categorical_features = [f for f in selected_features if f in ['Director','Genre','Year']]
         numerical_features = [f for f in selected_features if f in ['Num Votes','IMDb Rating']]
         features_to_use = categorical_features + numerical_features
-
+        
         if features_to_use:
             preprocessor = ColumnTransformer(
                 transformers=[
-                    ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-                    ('num', 'passthrough', numerical_features)
+                    ('cat', Pipeline([
+                        ('impute', SimpleImputer(strategy='constant', fill_value='Unknown')),
+                        ('onehot', OneHotEncoder(handle_unknown='ignore'))
+                    ]), categorical_features),
+                    ('num', SimpleImputer(strategy='median'), numerical_features)
                 ]
             )
             X_test = train_df[features_to_use]
@@ -1059,7 +1066,7 @@ if scenario == "12 – Feature Hypothesis Testing":
                 ('prep', preprocessor),
                 ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
             ])
-            scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
+            scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error'
 
             # --- Paired t-test ---
             t_stat, p_val = ttest_rel(scores_base, scores_test)
