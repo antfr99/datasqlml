@@ -211,6 +211,12 @@ if not Votes.empty:
 # --- Quick Stats Dashboard ---
 if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.columns:
     _compare = IMDB_Ratings.merge(My_Ratings[["Movie ID", "Your Rating"]], on="Movie ID", how="inner")
+    # Belt-and-suspenders: keep only rows with an actual personal rating, in
+    # case My_Ratings contains watchlist/unrated rows that share a Movie ID
+    # with a rated title (an inner join alone doesn't guarantee Your Rating
+    # is populated). Every metric and chart below is built on this, so this
+    # one filter is what keeps everything scoped to films you've rated.
+    _compare = _compare[_compare["Your Rating"].notna()]
     total_rated = len(_compare)
     if total_rated:
         avg_mine = _compare["Your Rating"].mean()
@@ -265,10 +271,17 @@ if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.
 
             with chart_col1:
                 st.markdown("**My Rating vs IMDb Rating**")
+                # Your Rating is a whole number, so identical ratings stack into
+                # flat horizontal bands and hide how many films sit at each
+                # point. A little vertical jitter (display-only, not written
+                # back to the data) plus lower alpha spreads the overlap out
+                # so density is actually visible.
+                _rng = np.random.default_rng(42)
+                _jitter = _rng.uniform(-0.18, 0.18, size=len(_filtered))
                 fig1, ax1 = plt.subplots(figsize=(5, 4))
                 ax1.scatter(
-                    _filtered["IMDb Rating"], _filtered["Your Rating"],
-                    alpha=0.6, color="#E3A857", s=25
+                    _filtered["IMDb Rating"], _filtered["Your Rating"] + _jitter,
+                    alpha=0.3, color="#E3A857", s=20, edgecolors="none"
                 )
                 ax1.plot([0, 10], [0, 10], color="#4FA88F", linestyle="--", linewidth=1)
                 ax1.set_xlabel("IMDb Rating")
@@ -295,12 +308,25 @@ if not My_Ratings.empty and not IMDB_Ratings.empty and "Movie ID" in My_Ratings.
 
             with chart_col3:
                 st.markdown("**Rating Distribution**")
+                # Your Rating is a whole number but IMDb Rating is decimal, so
+                # overlapping alpha-blended histograms at 0.5-wide bins let one
+                # color hide the other and made totals hard to read. Grouping
+                # both into whole-number buckets and drawing them as separate
+                # side-by-side bars avoids that and makes the comparison a
+                # straightforward "count of films at this rating" per side.
+                _bin_edges = np.arange(0.5, 11.5, 1)
+                _labels = list(range(1, 11))
+                _mine_counts, _ = np.histogram(_filtered["Your Rating"].dropna(), bins=_bin_edges)
+                _imdb_counts, _ = np.histogram(_filtered["IMDb Rating"].dropna(), bins=_bin_edges)
+                _x = np.arange(len(_labels))
+                _width = 0.38
                 fig3, ax3 = plt.subplots(figsize=(5, 4))
-                bins = np.arange(0, 10.5, 0.5)
-                ax3.hist(_filtered["Your Rating"].dropna(), bins=bins, alpha=0.6, label="Mine", color="#E3A857")
-                ax3.hist(_filtered["IMDb Rating"].dropna(), bins=bins, alpha=0.6, label="IMDb", color="#4FA88F")
+                ax3.bar(_x - _width / 2, _mine_counts, _width, label="Mine", color="#E3A857")
+                ax3.bar(_x + _width / 2, _imdb_counts, _width, label="IMDb", color="#4FA88F")
+                ax3.set_xticks(_x)
+                ax3.set_xticklabels(_labels)
                 ax3.set_xlabel("Rating")
-                ax3.set_ylabel("Count")
+                ax3.set_ylabel("Films")
                 ax3.legend()
                 fig3.tight_layout()
                 st.pyplot(fig3)
