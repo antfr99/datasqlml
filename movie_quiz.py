@@ -441,7 +441,10 @@ if scenario == "0 – Dashboard":
     # --- Data tables (reflect the filters above, if any were applied) ---
     with st.expander("📋 Browse IMDb Ratings table"):
         if not IMDB_Ratings.empty:
-            st.dataframe(_imdb_view, width="stretch", height=400)
+            st.dataframe(
+                _imdb_view.drop(columns=["Movie URL"], errors="ignore"),
+                width="stretch", height=400
+            )
         else:
             st.warning("IMDb Ratings table is empty or failed to load.")
 
@@ -452,7 +455,7 @@ if scenario == "0 – Dashboard":
             _my_view_sorted = _my_view.sort_values(by="Year_Sort", ascending=False)
             # Rename column only for display
             display_ratings = _my_view_sorted.rename(columns={"Your Rating": "My Ratings"})
-            display_ratings = display_ratings.drop(columns=['Year_Sort'])
+            display_ratings = display_ratings.drop(columns=['Year_Sort', 'URL'], errors='ignore')
             st.dataframe(display_ratings, width="stretch", height=400)
         else:
             st.warning("My Ratings table is empty or failed to load.")
