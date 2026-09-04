@@ -1066,7 +1066,7 @@ if scenario == "12 – Feature Hypothesis Testing":
                 ('prep', preprocessor),
                 ('reg', RandomForestRegressor(n_estimators=100, random_state=42))
             ])
-            scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error'
+            scores_test = -cross_val_score(model_test, X_test, y, cv=cv, scoring='neg_root_mean_squared_error')
 
             # --- Paired t-test ---
             t_stat, p_val = ttest_rel(scores_base, scores_test)
