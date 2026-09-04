@@ -312,6 +312,12 @@ else:
 # "0 – Dashboard" and this whole block is skipped in favor of that scenario's
 # own block further down. ---
 if scenario == "0 – Dashboard":
+    # Default table views (unfiltered) - overridden below with the filtered
+    # versions once the filter widgets exist, so the tables at the bottom
+    # of the page always reflect whatever's currently selected above.
+    _imdb_view = IMDB_Ratings.copy()
+    _my_view = My_Ratings.copy()
+
     if not My_Ratings.empty and "Your Rating" in My_Ratings.columns:
         # KPIs and charts here come only from myratings.xlsx — it already
         # carries IMDb Rating, Genre, Director, Year and Runtime per title,
@@ -328,7 +334,7 @@ if scenario == "0 – Dashboard":
 
             st.markdown("<hr class='nav-divider'>", unsafe_allow_html=True)
             st.markdown("### 🎞️ Explore Ratings")
-            st.caption("Filter your rated films — the KPIs and charts below update together.")
+            st.caption("Filter your rated films — the KPIs, charts, and tables below update together.")
 
             _all_genres = sorted({
                 g.strip() for sub in _compare["Genre"].dropna().str.split(",") for g in sub if g.strip()
@@ -417,19 +423,35 @@ if scenario == "0 – Dashboard":
                         fig2.tight_layout()
                         st.pyplot(fig2)
 
-    # --- Data tables ---
-    with st.expander("📋 Browse full IMDb Ratings table"):
+            # Carry the same genre/year filters over to the raw tables below
+            # (the rating filter only applies to My Ratings — IMDB_Ratings
+            # covers the whole catalog, not just films you've rated).
+            _my_view = _filtered.copy()
+
+            if not _imdb_view.empty:
+                if "Year" in _imdb_view.columns:
+                    _imdb_view["Year"] = pd.to_numeric(_imdb_view["Year"], errors="coerce")
+                    _imdb_view = _imdb_view[
+                        (_imdb_view["Year"] >= landing_year_range[0])
+                        & (_imdb_view["Year"] <= landing_year_range[1])
+                    ]
+                if landing_genres and "Genre" in _imdb_view.columns:
+                    _imdb_view = _imdb_view[_imdb_view["Genre"].str.contains(_pattern, case=False, na=False)]
+
+    # --- Data tables (reflect the filters above, if any were applied) ---
+    with st.expander("📋 Browse IMDb Ratings table"):
         if not IMDB_Ratings.empty:
-            st.dataframe(IMDB_Ratings, width="stretch", height=400)
+            st.dataframe(_imdb_view, width="stretch", height=400)
         else:
             st.warning("IMDb Ratings table is empty or failed to load.")
 
-    with st.expander("📋 Browse full My Ratings table"):
+    with st.expander("📋 Browse My Ratings table"):
         if not My_Ratings.empty:
-            My_Ratings['Year_Sort'] = pd.to_numeric(My_Ratings['Year'], errors='coerce')
-            My_Ratings_sorted = My_Ratings.sort_values(by="Year_Sort", ascending=False)
+            _my_view = _my_view.copy()
+            _my_view['Year_Sort'] = pd.to_numeric(_my_view['Year'], errors='coerce')
+            _my_view_sorted = _my_view.sort_values(by="Year_Sort", ascending=False)
             # Rename column only for display
-            display_ratings = My_Ratings_sorted.rename(columns={"Your Rating": "My Ratings"})
+            display_ratings = _my_view_sorted.rename(columns={"Your Rating": "My Ratings"})
             display_ratings = display_ratings.drop(columns=['Year_Sort'])
             st.dataframe(display_ratings, width="stretch", height=400)
         else:
