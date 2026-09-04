@@ -461,21 +461,22 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-
+from sklearn.impute import SimpleImputer
 
 df_ml = IMDB_Ratings.merge(My_Ratings[['Movie ID','Your Rating']], on='Movie ID', how='left')
 train_df = df_ml[df_ml['Your Rating'].notna()]
 predict_df = df_ml[df_ml['Your Rating'].isna()]
 
-
 categorical_features = ['Genre', 'Director']
 numerical_features = ['IMDb Rating', 'Num Votes', 'Year']
 
-
 preprocessor = ColumnTransformer(
     transformers=[
-        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features),
-        ('num', 'passthrough', numerical_features)
+        ('cat', Pipeline([
+            ('impute', SimpleImputer(strategy='constant', fill_value='Unknown')),
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))
+        ]), categorical_features),
+        ('num', SimpleImputer(strategy='median'), numerical_features)
     ]
 )
 
