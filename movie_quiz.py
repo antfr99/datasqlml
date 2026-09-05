@@ -339,23 +339,28 @@ if scenario == "0 – Dashboard":
             _all_genres = sorted({
                 g.strip() for sub in _compare["Genre"].dropna().str.split(",") for g in sub if g.strip()
             })
+            _all_directors = sorted(_compare["Director"].dropna().unique().tolist())
             _year_series = pd.to_numeric(_compare["Year"], errors="coerce").dropna()
             _min_year = int(_year_series.min()) if not _year_series.empty else 1950
             _max_year = int(_year_series.max()) if not _year_series.empty else 2026
             _min_rating = int(_compare["Your Rating"].min())
             _max_rating = int(_compare["Your Rating"].max())
 
-            f1, f2, f3 = st.columns(3)
+            f1, f2, f3, f4 = st.columns(4)
             with f1:
                 landing_genres = st.multiselect(
                     "Filter by genre", _all_genres, default=[], key="landing_genre_filter"
                 )
             with f2:
+                landing_directors = st.multiselect(
+                    "Filter by director", _all_directors, default=[], key="landing_director_filter"
+                )
+            with f3:
                 landing_year_range = st.slider(
                     "Release year range", _min_year, _max_year, (_min_year, _max_year),
                     key="landing_year_filter"
                 )
-            with f3:
+            with f4:
                 landing_rating_range = st.slider(
                     "My rating range", _min_rating, _max_rating, (_min_rating, _max_rating),
                     key="landing_rating_filter"
@@ -373,6 +378,8 @@ if scenario == "0 – Dashboard":
             if landing_genres:
                 _pattern = "|".join(g for g in landing_genres)
                 _filtered = _filtered[_filtered["Genre"].str.contains(_pattern, case=False, na=False)]
+            if landing_directors:
+                _filtered = _filtered[_filtered["Director"].isin(landing_directors)]
 
             with kpi_placeholder:
                 c1, c2, c3 = st.columns(3)
@@ -389,43 +396,66 @@ if scenario == "0 – Dashboard":
             if _filtered.empty:
                 st.info("No films match these filters — widen a range or clear a filter.")
             else:
-                chart_col1, chart_col2 = st.columns(2)
+                st.markdown("**Top 15 Watched Directors by Average Rating**")
+                _dir_stats = (
+                    _filtered.dropna(subset=["Director"]).groupby("Director")["Your Rating"]
+                    .agg(["mean", "count"]).reset_index()
+                )
+                # Require at least 2 rated films so a single high score from
+                # a one-off director doesn't dominate the ranking, then rank
+                # by how many films were watched (not by score) since this
+                # is framed as "most watched", with average rating as the
+                # value plotted on the radar.
+                _dir_stats = _dir_stats[_dir_stats["count"] >= 2]
+                _dir_stats = _dir_stats.sort_values("count", ascending=False).head(15)
+                _dir_stats = _dir_stats.sort_values("mean", ascending=False)
 
-                with chart_col1:
-                    st.markdown("**Top Directors by Average Rating**")
-                    _dir_stats = (
-                        _filtered.dropna(subset=["Director"]).groupby("Director")["Your Rating"]
-                        .agg(["mean", "count"]).reset_index()
+                if _dir_stats.empty:
+                    st.info("No director has 2+ rated films in this selection yet.")
+                else:
+                    _categories = _dir_stats["Director"].tolist()
+                    _values = _dir_stats["mean"].tolist()
+
+                    # Zoom the radial axis into the actual spread of the data
+                    # instead of a fixed 0-10 scale, same approach as the
+                    # Taste Profile Radar scenario, so differences between
+                    # directors are actually visible.
+                    _lo = max(0, min(_values) - 1)
+                    _hi = min(10, max(_values) + 1)
+
+                    _values_closed = _values + _values[:1]
+                    _angles = np.linspace(0, 2 * np.pi, len(_categories), endpoint=False).tolist()
+                    _angles_closed = _angles + _angles[:1]
+
+                    _fig, _ax = plt.subplots(figsize=(6.5, 6.5), subplot_kw=dict(polar=True))
+                    _ax.plot(_angles_closed, _values_closed, color="#4FA88F", linewidth=2)
+                    _ax.fill(_angles_closed, _values_closed, color="#4FA88F", alpha=0.25)
+                    _ax.set_xticks(_angles)
+                    _ax.set_xticklabels(_categories, fontsize=7.5)
+                    _ax.set_ylim(_lo, _hi)
+                    _ax.tick_params(axis='y', labelsize=6)
+
+                    for _angle, _value in zip(_angles, _values):
+                        _ax.annotate(
+                            f"{_value:.1f}", xy=(_angle, _value), fontsize=6.5, color="#EDEEF0",
+                            ha="center", va="bottom"
+                        )
+
+                    _fig.tight_layout()
+
+                    _chart_col, _ = st.columns([1, 1])
+                    with _chart_col:
+                        st.pyplot(_fig)
+
+                    st.caption(
+                        f"Axis zoomed to {_lo:.1f}–{_hi:.1f} (not 0–10) — ranked among the 15 directors "
+                        f"you've watched the most (2+ films), ordered by your average rating of them."
                     )
-                    # Require at least 2 rated films so a single high score from
-                    # a one-off director doesn't dominate the ranking.
-                    _dir_stats = _dir_stats[_dir_stats["count"] >= 2]
-                    _dir_stats = _dir_stats.sort_values("mean", ascending=False).head(10)
-                    if _dir_stats.empty:
-                        st.info("No director has 2+ rated films in this selection yet.")
-                    else:
-                        fig1, ax1 = plt.subplots(figsize=(4.2, 3.4))
-                        ax1.barh(_dir_stats["Director"][::-1], _dir_stats["mean"][::-1], color="#4FA88F")
-                        ax1.set_xlabel("Avg My Rating")
-                        ax1.set_xlim(0, 10)
-                        fig1.tight_layout()
-                        st.pyplot(fig1)
 
-                with chart_col2:
-                    st.markdown("**Top Directors by Movies Watched**")
-                    _dir_counts = _filtered["Director"].dropna().value_counts().head(10)
-                    if _dir_counts.empty:
-                        st.info("No director data in this selection yet.")
-                    else:
-                        fig2, ax2 = plt.subplots(figsize=(4.2, 3.4))
-                        ax2.barh(_dir_counts.index[::-1], _dir_counts.values[::-1], color="#C1524B")
-                        ax2.set_xlabel("Films Watched")
-                        fig2.tight_layout()
-                        st.pyplot(fig2)
-
-            # Carry the same genre/year filters over to the raw tables below
-            # (the rating filter only applies to My Ratings — IMDB_Ratings
-            # covers the whole catalog, not just films you've rated).
+            # Carry the same genre/director/year filters over to the raw
+            # tables below (the rating filter only applies to My Ratings —
+            # IMDB_Ratings covers the whole catalog, not just films you've
+            # rated).
             _my_view = _filtered.copy()
 
             if not _imdb_view.empty:
@@ -437,6 +467,8 @@ if scenario == "0 – Dashboard":
                     ]
                 if landing_genres and "Genre" in _imdb_view.columns:
                     _imdb_view = _imdb_view[_imdb_view["Genre"].str.contains(_pattern, case=False, na=False)]
+                if landing_directors and "Director" in _imdb_view.columns:
+                    _imdb_view = _imdb_view[_imdb_view["Director"].isin(landing_directors)]
 
     # --- Data tables (reflect the filters above, if any were applied) ---
     with st.expander("📋 Browse IMDb Ratings table"):
